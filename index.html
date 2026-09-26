@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Pahlawan Bintang: Penjaga Istana Imut 3D</title>
+  <title>Pahlawan Bintang 3D - Space Arcade</title>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,7 +30,7 @@
     <div id="hud-overlay" class="hidden">
       <div class="hud-top">
         <div class="hud-pill profile-pill">
-          <span id="actor-avatar" class="avatar-icon">🚀</span>
+          <span id="actor-avatar" class="avatar-icon">🤖</span>
           <span id="player-name-display" class="hud-text">Pahlawan</span>
         </div>
         <div class="hud-pill level-pill">
@@ -50,10 +50,26 @@
         </div>
       </div>
 
+      <!-- Tombol Aksi Kontrol & Powerup -->
       <div class="hud-bottom">
-        <button id="btn-freeze" class="btn-action btn-blue" title="Bekukan Monster">❄️</button>
-        <button id="btn-bomb" class="btn-action btn-rainbow" title="Bom Pelangi">🌈</button>
-        <button id="btn-audio" class="btn-action btn-purple"><span id="audio-icon">🔊</span></button>
+        <!-- Tombol Gerak Kiri-Kanan Touch -->
+        <div class="movement-controls">
+          <button id="btn-move-left" class="btn-touch-move">◀</button>
+          <button id="btn-move-right" class="btn-touch-move">▶</button>
+        </div>
+
+        <!-- Powerup Skills dengan Lencana Limit -->
+        <div class="skill-controls">
+          <button id="btn-freeze" class="btn-action btn-blue" title="Bekukan Monster">
+            ❄️ <span id="freeze-count" class="charge-badge">2</span>
+          </button>
+          <button id="btn-bomb" class="btn-action btn-rainbow" title="Bom Pelangi">
+            🌈 <span id="bomb-count" class="charge-badge">2</span>
+          </button>
+          <button id="btn-audio" class="btn-action btn-purple">
+            <span id="audio-icon">🔊</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -63,7 +79,7 @@
         <div class="logo-container">
           <div class="crown-badge">👑</div>
           <h1 class="game-title">PAHLAWAN BINTANG 3D</h1>
-          <div class="subtitle-badge">PENJAGA ISTANA IMUT</div>
+          <div class="subtitle-badge">SPACE ARCADE SHOOTER</div>
         </div>
 
         <div class="input-card">
@@ -76,7 +92,7 @@
 
         <div class="menu-stack">
           <button id="btn-prepare-play" class="btn-3d btn-green"><span>🎮 MAIN SEKARANG!</span></button>
-          <button id="btn-select-actor" class="btn-3d btn-pink"><span>🎭 PILIH AKTOR HERO (<span id="selected-actor-name">Meriam Bintang</span>)</span></button>
+          <button id="btn-select-actor" class="btn-3d btn-pink"><span>🎭 PILIH AKTOR HERO (<span id="selected-actor-name">Robot Cyber</span>)</span></button>
           <button id="btn-leaderboard" class="btn-3d btn-yellow"><span>🏆 10 BESAR GLOBAL</span></button>
           <button id="btn-stickers" class="btn-3d btn-blue"><span>🖼️ ALBUM STIKER (<span id="unlocked-count">0</span>/30)</span></button>
           <button id="btn-pwa-install" class="btn-3d btn-orange hidden"><span>📱 INSTALL APLIKASI DI HP</span></button>
@@ -84,12 +100,12 @@
       </div>
     </div>
 
-    <!-- Modal Konfirmasi Fullscreen & Landscape -->
+    <!-- Modal Fullscreen Prompt -->
     <div id="modal-fullscreen-prompt" class="modal-screen hidden">
       <div class="modal-card bounce-in">
         <div class="fullscreen-icon">📱 ➔ 🔄</div>
-        <h2>MODAL LAYAR PENUH & LANDSCAPE</h2>
-        <p class="modal-sub">Untuk pengalaman bermain 3D yang maksimal dan seru, aktifkan mode Layar Penuh Lanskap!</p>
+        <h2>MODE LAYAR PENUH & LANDSCAPE</h2>
+        <p class="modal-sub">Geser Karakter Hero milikmu ke Kiri dan Kanan untuk menembak semua monster di udara!</p>
         
         <div class="menu-stack" style="margin-top: 20px;">
           <button id="btn-start-fullscreen" class="btn-3d btn-green">🚀 AKTIFKAN FULLSCREEN & MAIN!</button>
@@ -103,17 +119,17 @@
       <div class="modal-card bounce-in">
         <div class="modal-header">
           <h2>🎭 PILIH AKTOR HERO 3D 🎭</h2>
-          <p class="modal-sub">Pilih karakter pahlawan favoritmu!</p>
+          <p class="modal-sub">Karakter ini akan bergerak dan menembak di layar!</p>
         </div>
         
         <div id="actor-grid" class="actor-grid">
-          <div class="actor-card selected" data-actor="cannon">
-            <div class="actor-icon">🚀</div>
-            <div class="actor-title">Meriam Bintang</div>
-          </div>
-          <div class="actor-card" data-actor="robot">
+          <div class="actor-card selected" data-actor="robot">
             <div class="actor-icon">🤖</div>
             <div class="actor-title">Robot Cyber</div>
+          </div>
+          <div class="actor-card" data-actor="cannon">
+            <div class="actor-icon">🚀</div>
+            <div class="actor-title">Meriam Bintang</div>
           </div>
           <div class="actor-card" data-actor="unicorn">
             <div class="actor-icon">🦄</div>
@@ -156,11 +172,11 @@
       </div>
     </div>
 
-    <!-- Modal Game Over / Level Complete -->
+    <!-- Modal Result Game -->
     <div id="modal-result" class="modal-screen hidden">
       <div class="modal-card bounce-in">
         <div id="result-badge-icon" class="result-badge">🎉</div>
-        <h2 id="result-title" class="result-heading">LEVEL SELESAI!</h2>
+        <h2 id="result-title" class="result-heading">MISI SELESAI!</h2>
         
         <div class="result-stats-card">
           <div class="stat-row"><span>PAHLAWAN</span><strong id="result-player-name">Pahlawan</strong></div>
