@@ -1,5 +1,6 @@
 :root {
   --font-game: 'Fredoka', cursive, sans-serif;
+  --font-arcade: 'Press Start 2P', cursive, sans-serif;
 }
 
 * {
@@ -34,37 +35,18 @@ canvas {
 }
 
 /* SVG UI Icons */
-.ui-svg-icon {
-  width: 18px;
-  height: 18px;
-}
-
-.ui-svg-icon-large {
-  width: 26px;
-  height: 26px;
-}
-
-.ui-svg-huge {
-  width: 50px;
-  height: 50px;
-}
+.ui-svg-icon { width: 18px; height: 18px; }
+.ui-svg-icon-large { width: 26px; height: 26px; }
+.ui-svg-huge { width: 50px; height: 50px; }
 
 /* Floating Popups */
 #popup-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 50;
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 50;
 }
 
 .floating-text {
-  position: absolute;
-  font-size: 26px;
-  font-weight: 700;
-  color: #fff;
+  position: absolute; font-size: 26px; font-weight: 700; color: #fff;
   text-shadow: 0 4px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000;
   animation: floatUp 0.8s ease-out forwards;
 }
@@ -77,12 +59,9 @@ canvas {
 
 /* HUD Overlay */
 #hud-overlay {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-  display: flex; flex-direction: column; justify-content: space-between;
-  padding: 12px; z-index: 20;
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; display: flex; flex-direction: column;
+  justify-content: space-between; padding: 12px; z-index: 20;
 }
 
 .hud-top {
@@ -90,11 +69,9 @@ canvas {
 }
 
 .hud-pill {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(10px);
   padding: 5px 12px; border-radius: 50px; border: 3px solid #ffffff;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
-  display: flex; align-items: center; gap: 6px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 6px;
 }
 
 .hud-badge {
@@ -147,51 +124,123 @@ canvas {
 /* Modal & UI Screens */
 .modal-screen {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(12, 16, 43, 0.85); backdrop-filter: blur(12px);
-  display: flex; justify-content: center; align-items: center; z-index: 100; padding: 16px;
+  background: radial-gradient(circle at center, rgba(30, 144, 255, 0.2) 0%, rgba(12, 16, 43, 0.95) 80%);
+  backdrop-filter: blur(12px); display: flex; justify-content: center; align-items: center;
+  z-index: 100; padding: 16px;
 }
 
 .modal-card {
   background: linear-gradient(180deg, #ffffff 0%, #f1f2f6 100%);
-  border: 5px solid #ffffff; border-radius: 28px; padding: 22px 18px;
+  border: 4px solid #ffffff; border-radius: 28px; padding: 20px 18px;
   width: 100%; max-width: 420px; text-align: center;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.6); position: relative;
+  box-shadow: 0 20px 60px rgba(0, 210, 211, 0.3), inset 0 0 15px rgba(255,255,255,0.8);
+  position: relative;
 }
 
 .modal-wide { max-width: 620px; }
-.bounce-in { animation: bounceIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
 
-@keyframes bounceIn {
-  0% { transform: scale(0.6); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+/* Visual Hero Logo Spacecraft Animation */
+.hero-logo-wrapper {
+  position: relative; width: 180px; height: 130px; margin: 0 auto 5px auto;
+  display: flex; justify-content: center; align-items: center;
 }
 
-.logo-container { margin-bottom: 12px; }
-.badge-header { font-size: 12px; font-weight: 700; color: #ff4757; letter-spacing: 2px; }
-.fullscreen-header-icon { margin-bottom: 10px; }
+.glow-aura {
+  position: absolute; width: 110px; height: 110px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 210, 211, 0.6) 0%, rgba(30, 144, 255, 0) 70%);
+  animation: auraPulse 2s infinite alternate ease-in-out;
+}
 
-.game-title { font-size: 28px; font-weight: 700; color: #1e90ff; text-shadow: 0 4px 0 #0c56b3; }
+.hero-ship-svg {
+  width: 100%; height: 100%; z-index: 2; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.5));
+  animation: heroFloat 3s infinite ease-in-out;
+}
+
+@keyframes heroFloat {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(1.5deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+@keyframes auraPulse {
+  0% { transform: scale(0.85); opacity: 0.5; }
+  100% { transform: scale(1.25); opacity: 0.9; }
+}
+
+.rotating-ring {
+  transform-origin: center; animation: ringRotate 12s linear infinite;
+}
+
+@keyframes ringRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.flame-pulse { animation: flameAnim 0.15s infinite alternate; }
+.flame-pulse-inner { animation: flameAnim 0.1s infinite alternate; }
+
+@keyframes flameAnim {
+  0% { transform: scaleY(0.85); opacity: 0.8; }
+  100% { transform: scaleY(1.15); opacity: 1; }
+}
+
+/* Header & Typography Game Profesional */
+.logo-container { margin-bottom: 12px; }
+
+.badge-header {
+  font-size: 10px; font-weight: 800; color: #ff4757; letter-spacing: 3px;
+  text-transform: uppercase; margin-bottom: 2px;
+}
+
+.game-title-3d {
+  font-size: 26px; font-weight: 800;
+  background: linear-gradient(180deg, #ffd700 0%, #ff7f50 50%, #ff4757 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 0 #801819); letter-spacing: 1px;
+}
+
 .subtitle-badge {
-  display: inline-block; background: #2ed573; color: #fff;
-  font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-top: 4px;
+  display: inline-block; background: linear-gradient(90deg, #1e90ff, #00d2d3); color: #fff;
+  font-size: 10px; font-weight: 700; padding: 4px 12px; border-radius: 20px;
+  margin-top: 4px; box-shadow: 0 4px 10px rgba(0, 210, 211, 0.4); letter-spacing: 1px;
 }
 
 .input-card {
-  background: #eccc681f; border: 2px dashed #ffa502;
-  border-radius: 14px; padding: 8px; margin-bottom: 14px; text-align: left;
+  background: #f1f2f6; border: 2px dashed #1e90ff; border-radius: 14px;
+  padding: 8px; margin-bottom: 12px; text-align: left;
 }
 
-.input-card label { display: block; font-size: 10px; font-weight: 700; color: #d63031; margin-bottom: 4px; }
-.input-wrapper { display: flex; align-items: center; background: #fff; border-radius: 10px; padding: 6px 10px; border: 2px solid #ffa502; }
-.input-wrapper input { width: 100%; border: none; outline: none; font-size: 15px; font-weight: 700; color: #2f3542; margin-left: 6px; }
+.input-card label {
+  display: block; font-size: 10px; font-weight: 800; color: #1e90ff; margin-bottom: 4px;
+}
+
+.input-wrapper {
+  display: flex; align-items: center; background: #fff; border-radius: 10px;
+  padding: 6px 10px; border: 2px solid #1e90ff;
+}
+
+.input-wrapper input {
+  width: 100%; border: none; outline: none; font-size: 15px; font-weight: 700;
+  color: #2f3542; margin-left: 6px;
+}
 
 .menu-stack { display: flex; flex-direction: column; gap: 8px; }
 
 .btn-3d {
-  width: 100%; padding: 13px; border-radius: 16px; border: none;
-  font-size: 14px; font-weight: 700; color: #ffffff; cursor: pointer;
-  position: relative; transition: all 0.1s ease;
+  width: 100%; padding: 12px; border-radius: 16px; border: none;
+  font-size: 13px; font-weight: 800; color: #ffffff; cursor: pointer;
+  position: relative; transition: all 0.1s ease; display: flex;
+  justify-content: center; align-items: center;
 }
+
+.btn-hero-start {
+  padding: 14px; font-size: 15px;
+  background: linear-gradient(180deg, #2ed573 0%, #1e8449 100%);
+  box-shadow: 0 6px 0 #145a32, 0 10px 20px rgba(46, 213, 115, 0.4);
+}
+
+.btn-content { display: flex; align-items: center; gap: 8px; }
+.btn-icon { width: 20px; height: 20px; }
 
 .btn-green { background: linear-gradient(180deg, #2ed573 0%, #26af5f 100%); box-shadow: 0 5px 0 #1e8449; }
 .btn-pink { background: linear-gradient(180deg, #ff4757 0%, #d63031 100%); box-shadow: 0 5px 0 #a12829; }
