@@ -1,0 +1,12 @@
+[
+  { "id": "P-1", "name": "Bintang", "score": 2500, "levelReached": 30, "date": "2026-09-20T10:00:00.000Z" },
+  { "id": "P-2", "name": "Kiki", "score": 2100, "levelReached": 25, "date": "2026-09-21T11:30:00.000Z" },
+  { "id": "P-3", "name": "Rafa", "score": 1800, "levelReached": 20, "date": "2026-09-22T08:15:00.000Z" },
+  { "id": "P-4", "name": "Alya", "score": 1500, "levelReached": 18, "date": "2026-09-23T14:20:00.000Z" },
+  { "id": "P-5", "name": "Nizam", "score": 1200, "levelReached": 15, "date": "2026-09-24T09:45:00.000Z" },
+  { "id": "P-6", "name": "Zahra", "score": 950, "levelReached": 12, "date": "2026-09-25T16:10:00.000Z" },
+  { "id": "P-7", "name": "Arfan", "score": 800, "levelReached": 10, "date": "2026-09-26T07:00:00.000Z" },
+  { "id": "P-8", "name": "Fio", "score": 650, "levelReached": 8, "date": "2026-09-26T07:30:00.000Z" },
+  { "id": "P-9", "name": "Cika", "score": 500, "levelReached": 6, "date": "2026-09-26T07:45:00.000Z" },
+  { "id": "P-10", "name": "Lio", "score": 350, "levelReached": 4, "date": "2026-09-26T08:00:00.000Z" }
+]
