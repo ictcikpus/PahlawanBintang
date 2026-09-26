@@ -4,6 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Pahlawan Bintang: Penjaga Istana Vector</title>
+    
+    <!-- PWA Web App Meta Tags -->
+    <meta name="theme-color" content="#1e1b4b">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pahlawan Bintang">
+    <meta name="application-name" content="Pahlawan Bintang">
+
+    <!-- Dynamic Favicon & PWA Manifest Links -->
+    <link id="appFavicon" rel="icon" type="image/svg+xml" href="">
+    <link id="appleTouchIcon" rel="apple-touch-icon" href="">
+    <link id="pwaManifestLink" rel="manifest" href="">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Tone.js Audio Framework -->
@@ -81,8 +95,20 @@
                 <span>MAIN SEKARANG!</span>
             </button>
             
-            <div class="flex items-center gap-2 text-xs text-indigo-300 mt-5 font-medium">
-                <svg class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <!-- PWA Install Button -->
+            <button id="btnPwaInstall" class="btn-action w-full mt-3 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:brightness-110 text-white font-black text-base rounded-2xl shadow-lg border-b-4 border-blue-800 cursor-pointer flex items-center justify-center gap-2.5 hidden">
+                <svg class="w-6 h-6 stroke-current stroke-[2.5] fill-none animate-bounce" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>INSTALL GAME DI HP 📲</span>
+            </button>
+
+            <!-- PWA Settings / Change Icon Button -->
+            <button id="btnOpenPwaSettings" class="btn-action w-full mt-2.5 py-2.5 bg-slate-900/80 hover:bg-slate-800 text-indigo-200 font-bold text-xs rounded-xl border border-indigo-500/40 cursor-pointer flex items-center justify-center gap-2">
+                <svg class="w-4 h-4 fill-current text-amber-300" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/></svg>
+                <span>Pengaturan Icon PWA & Install</span>
+            </button>
+            
+            <div class="flex items-center gap-2 text-xs text-indigo-300 mt-4 font-medium">
+                <svg class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                 <span>100% Ramah Anak & Tanpa Kekerasan</span>
             </div>
         </div>
@@ -137,6 +163,9 @@
 
         <!-- HUD Controls -->
         <div class="flex items-center gap-1.5 sm:gap-2">
+            <button id="btnPwaHudInstall" class="btn-action bg-gradient-to-r from-cyan-500 to-blue-500 hover:brightness-110 p-2 sm:p-2.5 rounded-2xl border border-cyan-300/60 text-white cursor-pointer shadow hidden" title="Install Game ke Layar Utama">
+                <svg class="w-5 h-5 stroke-current stroke-[2.5] fill-none" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
             <button id="btnPause" class="btn-action bg-indigo-900/80 hover:bg-indigo-800 p-2 sm:p-2.5 rounded-2xl border border-indigo-400/50 text-amber-300 cursor-pointer shadow">
                 <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
             </button>
@@ -239,497 +268,404 @@
 
     <!-- Trophy / Sticker Album Modal -->
     <div id="trophyModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/88 backdrop-blur-md p-4 hidden">
-        <div class="glass-panel p-5 rounded-3xl border-4 border-indigo-400/80 shadow-2xl text-center max-w-md w-full flex flex-col max-h-[85vh]">
+        <div class="glass-panel p-5 sm:p-6 rounded-3xl border-4 border-amber-300/80 shadow-2xl text-center max-w-md w-full flex flex-col max-h-[85vh] overflow-hidden">
             <div class="flex justify-between items-center mb-3 border-b border-indigo-500/40 pb-2">
-                <h2 class="text-lg font-black text-amber-300 flex items-center gap-2">
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V18H8v2h8v-2h-3v-2.1a5.01 5.01 0 0 0 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2z"/></svg>
-                    <span>ALBUM STIKER BINTANG</span>
+                <h2 class="text-xl font-black text-amber-300 flex items-center gap-2">
+                    <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V18H8v2h8v-2h-3v-2.1a5.01 5.01 0 0 0 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2z"/></svg>
+                    <span>ALBUM STIKER PAHLAWAN</span>
                 </h2>
                 <button id="btnCloseTrophy" class="btn-action text-indigo-300 hover:text-white cursor-pointer p-1">
                     <svg class="w-6 h-6 stroke-current stroke-[3]" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
-            
-            <div class="flex-1 overflow-y-auto grid grid-cols-3 gap-2.5 p-1" id="stickerGrid">
+            <p class="text-xs text-indigo-200 mb-3">Selesaikan level untuk membuka stiker pahlawan galaksi baru!</p>
+
+            <div id="stickerGrid" class="grid grid-cols-3 sm:grid-cols-4 gap-2.5 overflow-y-auto pr-1 flex-1 py-1">
                 <!-- Dynamically populated stickers -->
             </div>
+        </div>
+    </div>
 
-            <div class="mt-3 pt-2 border-t border-indigo-500/40 text-[11px] text-indigo-200 font-bold">
-                Selesaikan level untuk membuka 30 stiker pahlawan!
+    <!-- PWA Customization & Installation Modal -->
+    <div id="pwaModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/88 backdrop-blur-md p-4 hidden">
+        <div class="glass-panel p-5 sm:p-6 rounded-3xl border-4 border-cyan-400/80 shadow-2xl text-center max-w-md w-full flex flex-col max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-3 border-b border-indigo-500/40 pb-2">
+                <h2 class="text-lg font-black text-cyan-300 flex items-center gap-2">
+                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
+                    <span>PENGATURAN APLIKASI PWA</span>
+                </h2>
+                <button id="btnClosePwa" class="btn-action text-indigo-300 hover:text-white cursor-pointer p-1">
+                    <svg class="w-6 h-6 stroke-current stroke-[3]" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <!-- Current Icon Preview -->
+            <div class="bg-slate-900/90 p-4 rounded-2xl mb-4 border border-indigo-400/40 flex flex-col items-center">
+                <span class="text-[11px] text-indigo-300 font-extrabold uppercase mb-2">PREVIEW ICON PWA SAAT INI:</span>
+                <div id="pwaIconPreviewBox" class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-amber-400 via-purple-600 to-indigo-600 border-4 border-white shadow-xl flex items-center justify-center p-3 mb-2 transition-all duration-300">
+                    <!-- SVG / Image render here -->
+                </div>
+                <span id="pwaIconNameDisplay" class="text-xs font-black text-amber-300">Bintang Emas (Default)</span>
+            </div>
+
+            <!-- Preset Icon Selector -->
+            <div class="mb-4 text-left">
+                <label class="text-xs font-black text-indigo-200 block mb-2">PILIH ICON DEFAULT GAME:</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <button class="pwa-preset-btn p-2 rounded-xl bg-slate-900 border border-amber-400 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-800 transition" data-icon="star">
+                        <div class="w-8 h-8 text-amber-300"><svg class="w-full h-full" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+                        <span class="text-[9px] font-bold text-amber-300 mt-1">Bintang</span>
+                    </button>
+                    <button class="pwa-preset-btn p-2 rounded-xl bg-slate-900 border border-indigo-500/40 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-800 transition opacity-60" data-icon="rocket">
+                        <div class="w-8 h-8 text-cyan-400"><svg class="w-full h-full" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5s3 3.5 3 8.5h-6c0-5 3-8.5 3-8.5zm-5 8.5v5l-3 2v3.5l4.5-1.5 2 2h3l2-2 4.5 1.5v-3.5l-3-2v-5h-10z"/></svg></div>
+                        <span class="text-[9px] font-bold text-indigo-200 mt-1">Roket</span>
+                    </button>
+                    <button class="pwa-preset-btn p-2 rounded-xl bg-slate-900 border border-indigo-500/40 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-800 transition opacity-60" data-icon="cat">
+                        <div class="w-8 h-8 text-pink-400"><svg class="w-full h-full" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c2.5 0 4.5 1.8 5 4.2 1.8.8 3 2.6 3 4.8 0 3-2.5 5.5-5.5 5.5-1.1 0-2.1-.3-3-.9-.9.6-1.9.9-3 .9C5.5 16.5 3 14 3 11c0-2.2 1.2-4 3-4.8C6.5 3.8 8.5 2 12 2z"/></svg></div>
+                        <span class="text-[9px] font-bold text-indigo-200 mt-1">Kucing</span>
+                    </button>
+                    <button class="pwa-preset-btn p-2 rounded-xl bg-slate-900 border border-indigo-500/40 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-800 transition opacity-60" data-icon="crown">
+                        <div class="w-8 h-8 text-yellow-400"><svg class="w-full h-full" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg></div>
+                        <span class="text-[9px] font-bold text-indigo-200 mt-1">Mahkota</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Custom URL Image Option -->
+            <div class="mb-4 text-left">
+                <label class="text-xs font-black text-indigo-200 block mb-1">ATAU GUNAKAN URL GAMBAR CUSTOM:</label>
+                <div class="flex gap-2">
+                    <input type="url" id="pwaCustomIconUrl" placeholder="https://example.com/my-icon.png" class="flex-1 bg-slate-900/90 border border-indigo-500/50 rounded-xl px-3 py-2 text-xs text-white placeholder-indigo-400/50 focus:outline-none focus:border-amber-400">
+                    <button id="btnApplyCustomUrl" class="btn-action bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-black px-3 py-2 rounded-xl text-xs cursor-pointer">
+                        TERAPKAN
+                    </button>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col gap-2 mt-2">
+                <button id="btnModalInstallPwa" class="btn-action w-full py-3 bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-black text-sm rounded-2xl shadow-lg border-b-4 border-blue-700 cursor-pointer flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5 stroke-current stroke-[2.5] fill-none" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>INSTALL APLIKASI SEKARANG</span>
+                </button>
             </div>
         </div>
     </div>
 
 <script>
+// Correct Canvas Initialization
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-let displayWidth = 0;
-let displayHeight = 0;
+let displayWidth = 800;
+let displayHeight = 600;
+let dpr = window.devicePixelRatio || 1;
 
 function resizeCanvas() {
-    if (!canvas) return;
-    const rect = canvas.parentElement.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-
-    displayWidth = rect.width;
-    displayHeight = rect.height;
-
-    canvas.width = displayWidth * dpr;
-    canvas.height = displayHeight * dpr;
-
-    ctx.resetTransform();
+    const rect = canvas.getBoundingClientRect();
+    displayWidth = rect.width || 800;
+    displayHeight = rect.height || 600;
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(displayWidth * dpr);
+    canvas.height = Math.floor(displayHeight * dpr);
     ctx.scale(dpr, dpr);
-
-    if (!gameState.heroX) {
-        gameState.heroX = displayWidth / 2;
+    if (typeof hero !== 'undefined' && hero) {
+        hero.y = displayHeight - 40;
     }
 }
 window.addEventListener('resize', resizeCanvas);
 
+// Lightweight Web Audio API Synthesizer
 const AudioEngine = {
-    initialized: false,
+    ctx: null,
     muted: false,
-    audioCtx: null,
-
     init() {
-        if (this.initialized) return;
         try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            this.audioCtx = new AudioContext();
-            if (typeof Tone !== 'undefined') {
-                Tone.start();
+            if (!this.ctx) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) this.ctx = new AudioCtx();
             }
-            this.initialized = true;
-        } catch (e) {
-            console.warn("Audio Context fallback", e);
-        }
+            if (this.ctx && this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+        } catch(e) {}
     },
-
-    playTone(freq, duration, type = 'sine', volume = 0.1) {
-        if (!this.initialized || this.muted || !this.audioCtx) return;
+    playTone(freq, duration, type='sine') {
+        if (this.muted || !this.ctx) return;
         try {
-            if (this.audioCtx.state === 'suspended') {
-                this.audioCtx.resume();
-            }
-            const osc = this.audioCtx.createOscillator();
-            const gain = this.audioCtx.createGain();
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
             osc.type = type;
-            osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
-            gain.gain.setValueAtTime(volume, this.audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + duration);
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
             osc.connect(gain);
-            gain.connect(this.audioCtx.destination);
+            gain.connect(this.ctx.destination);
             osc.start();
-            osc.stop(this.audioCtx.currentTime + duration);
-        } catch (e) {}
+            osc.stop(this.ctx.currentTime + duration);
+        } catch(e) {}
     },
-
     playPop() {
-        const freqs = [380, 480, 580, 680];
-        const randomFreq = freqs[Math.floor(Math.random() * freqs.length)];
-        this.playTone(randomFreq, 0.1, 'sine', 0.15);
+        this.playTone(600, 0.08, 'sine');
+        setTimeout(() => this.playTone(850, 0.08, 'sine'), 40);
     },
-
-    playSplash() {
-        this.playTone(240, 0.08, 'triangle', 0.1);
-    },
-
     playFreeze() {
-        this.playTone(850, 0.25, 'sine', 0.15);
-        setTimeout(() => this.playTone(1250, 0.25, 'sine', 0.12), 90);
+        this.playTone(300, 0.25, 'triangle');
+        this.playTone(450, 0.25, 'sine');
     },
-
     playVictory() {
-        const notes = [523.25, 659.25, 783.99, 1046.50];
-        notes.forEach((freq, idx) => {
-            setTimeout(() => this.playTone(freq, 0.22, 'triangle', 0.18), idx * 110);
+        [523.25, 659.25, 783.99, 1046.50].forEach((f, idx) => {
+            setTimeout(() => this.playTone(f, 0.22, 'triangle'), idx * 110);
         });
     },
-
     speak(text) {
-        if ('speechSynthesis' in window && !this.muted) {
-            try {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'id-ID';
-                utterance.rate = 1.15;
-                utterance.pitch = 1.3;
-                window.speechSynthesis.speak(utterance);
-            } catch (e) {}
-        }
+        if (this.muted || !('speechSynthesis' in window)) return;
+        try {
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'id-ID';
+            u.rate = 1.1;
+            u.pitch = 1.2;
+            window.speechSynthesis.speak(u);
+        } catch(e) {}
     }
 };
-
-// Vector SVG helper function for album badges
-function createVectorIconSvg(type, color = '#facc15') {
-    const icons = {
-        rocket: `<path fill="${color}" d="M12 2.5s3 3.5 3 8.5h-6c0-5 3-8.5 3-8.5zm-5 8.5v5l-3 2v3.5l4.5-1.5 2 2h3l2-2 4.5 1.5v-3.5l-3-2v-5h-10z"/>`,
-        robot: `<path fill="${color}" d="M12 2a2 2 0 0 1 2 2v1h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-1v2a1 1 0 0 1-1 1h-6a1 1 0 0 1-1-1v-2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3V4a2 2 0 0 1 2-2zm-3 8a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm6 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>`,
-        unicorn: `<path fill="${color}" d="M19 3l-3 5h3l-2 3 4 1-5 4 2 5-9-4-3 4V14L3 9l5-1L6 3l5 3 3-3z"/>`,
-        dragon: `<path fill="${color}" d="M12 2L9 7H4l4 4-2 6 6-3 6 3-2-6 4-4h-5l-3-5z"/>`,
-        shield: `<path fill="${color}" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>`,
-        crown: `<path fill="${color}" d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>`,
-        star: `<path fill="${color}" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>`,
-        donut: `<path fill="${color}" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 14a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/>`
-    };
-    return `<svg class="w-full h-full" viewBox="0 0 24 24">${icons[type] || icons.star}</svg>`;
-}
-
-const STICKERS_DATA = Array.from({ length: 30 }, (_, i) => {
-    const idx = i + 1;
-    const types = ['rocket', 'robot', 'unicorn', 'dragon', 'shield', 'crown', 'star', 'donut'];
-    const names = [
-        'Kucing Antariksa', 'Robot Penjaga', 'Kuda Pelangi', 'Naga Imut', 'Beruang Es',
-        'Piring Terbang', 'Mahkota Bintang', 'Donut Raksasa', 'Raja Permen', 'Es Krim Ajaib',
-        'Cupcake Menari', 'Roket Bintang', 'Planet Permen', 'Alien Sahabat', 'Istana Pelangi',
-        'Kuas Pelangi', 'Rubah Bintang', 'Panda Imut', 'Ayam Ajaib', 'Paus Antariksa',
-        'Lebah Manis', 'Kupu Pelangi', 'Dino Ceria', 'Gurita Menari', 'Singa Berani',
-        'Penyihir Cilik', 'Putri Duyung', 'Super Pahlawan', 'Bintang Mahkota', 'Raja Bintang Galaksi'
-    ];
-    return {
-        id: idx,
-        vectorType: types[i % types.length],
-        name: names[i],
-        levelReq: idx
-    };
-});
-
-const MONSTER_TYPES = [
-    { type: 'candy', color: '#f43f5e', points: 10, speed: 1.1, radius: 26, hp: 1 },
-    { type: 'slime', color: '#10b981', points: 15, speed: 1.3, radius: 24, hp: 1 },
-    { type: 'cloud', color: '#38bdf8', points: 20, speed: 0.9, radius: 30, hp: 1 },
-    { type: 'star_enemy', color: '#a855f7', points: 25, speed: 1.6, radius: 22, hp: 1 },
-    { type: 'giant_donut', color: '#ec4899', points: 50, speed: 0.7, radius: 36, hp: 2, isGiant: true },
-    { type: 'speed_rocket', color: '#06b6d4', points: 35, speed: 2.2, radius: 20, hp: 1 },
-    { type: 'bonus_star', color: '#f59e0b', points: 50, speed: 1.0, radius: 22, isBonus: true, hp: 1 }
-];
-
-function getLevelConfig(level) {
-    const titles = [
-        "Taman Permen", "Lembah Slime", "Awan Ceria", "Bintang Warna", "Rumah Cokelat",
-        "Buah Pelangi", "Hutan Sirup", "Lembah Donut", "Awan Manis", "Puncak Es",
-        "Pesta Cupcake", "Stasiun Roket", "Orbit Manis", "Teman Antariksa", "Benteng Bintang",
-        "Warna-Warni", "Rubah Cerdik", "Hutan Bintang", "Puncak Pelangi", "Samudra Bintang",
-        "Taman Madu", "Tarian Kupu", "Lembah Dino", "Lautan Permen", "Rimba Bintang",
-        "Sihir Bintang", "Istana Laut", "Perisai Emas", "Kristal Galaksi", "Puncak Galaksi"
-    ];
-
-    const safeLevel = Math.min(Math.max(1, level), 30);
-    const targetScore = 50 + (safeLevel * 30);
-    const spawnInterval = Math.max(500, 1900 - (safeLevel * 45));
-    const speedMultiplier = 1.0 + (safeLevel * 0.04);
-
-    let pool = [MONSTER_TYPES[0], MONSTER_TYPES[1]];
-    if (safeLevel >= 3) pool.push(MONSTER_TYPES[2], MONSTER_TYPES[6]);
-    if (safeLevel >= 6) pool.push(MONSTER_TYPES[3]);
-    if (safeLevel >= 8) pool.push(MONSTER_TYPES[4]);
-    if (safeLevel >= 12) pool.push(MONSTER_TYPES[5]);
-
-    return {
-        level: safeLevel,
-        title: titles[safeLevel - 1],
-        targetScore: targetScore,
-        spawnInterval: spawnInterval,
-        speedMultiplier: speedMultiplier,
-        monsterPool: pool
-    };
-}
 
 const gameState = {
     level: 1,
     maxLevel: 30,
     score: 0,
-    lives: 3,
     targetScore: 80,
+    lives: 3,
+    isGameActive: false,
+    isPaused: false,
+    isFrozen: false,
+    freezeTimer: 0,
+    hasShield: false,
+    powerups: { freeze: 1, rainbow: 1, shield: 1 },
+    unlockedStickers: [1],
     activeMonsters: [],
     projectiles: [],
     particles: [],
     floatingTexts: [],
-    powerups: { freeze: 1, rainbow: 1, shield: 1 },
-    unlockedStickers: [1],
-    isFrozen: false,
-    freezeTimer: 0,
-    hasShield: false,
-    isPaused: false,
-    gameLoopId: null,
-    lastSpawnTime: 0,
+    heroX: 400,
     spawnInterval: 1800,
-    speedMultiplier: 1.0,
-    currentMonsterPool: [MONSTER_TYPES[0], MONSTER_TYPES[1]],
-    heroX: 0,
-    isGameActive: false,
+    speedMultiplier: 1,
+    lastSpawnTime: 0,
+    gameLoopId: null,
     comboCount: 0,
-    lastHitTime: 0
+    lastHitTime: 0,
+    currentMonsterPool: ['candy', 'slime']
 };
 
+// Hero Cannon Class
 class CannonHero {
+    constructor() {
+        this.x = displayWidth / 2;
+        this.y = displayHeight - 40;
+        this.radius = 24;
+    }
     draw() {
-        if (!ctx) return;
-        const heroX = gameState.heroX || displayWidth / 2;
+        this.x += (gameState.heroX - this.x) * 0.25;
         ctx.save();
-        ctx.translate(heroX, displayHeight - 28);
+        ctx.translate(this.x, this.y);
         
-        // Base Metallic Dome
-        const baseGrad = ctx.createLinearGradient(-25, 0, 25, 0);
-        baseGrad.addColorStop(0, '#312e81');
-        baseGrad.addColorStop(0.5, '#6366f1');
-        baseGrad.addColorStop(1, '#312e81');
-
-        ctx.fillStyle = baseGrad;
+        // Base glow
         ctx.beginPath();
-        ctx.arc(0, 10, 26, Math.PI, 0);
+        ctx.arc(0, 0, 32, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(250, 204, 21, 0.2)';
         ctx.fill();
-        ctx.strokeStyle = '#a5b4fc';
+
+        // Metallic body gradient
+        const grad = ctx.createRadialGradient(-5, -5, 2, 0, 0, 24);
+        grad.addColorStop(0, '#fef08a');
+        grad.addColorStop(0.5, '#facc15');
+        grad.addColorStop(1, '#ca8a04');
+
+        ctx.beginPath();
+        ctx.arc(0, 0, 24, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 3;
         ctx.stroke();
 
-        // Cannon Nozzle Barrel
-        const barrelGrad = ctx.createLinearGradient(-9, -24, 9, 0);
-        barrelGrad.addColorStop(0, '#38bdf8');
-        barrelGrad.addColorStop(1, '#0284c7');
-
-        ctx.fillStyle = barrelGrad;
-        ctx.fillRect(-9, -22, 18, 22);
-        ctx.strokeStyle = '#bae6fd';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(-9, -22, 18, 22);
-
-        // Gold Star Crest Emblem
-        ctx.fillStyle = '#facc15';
+        // Star emblem center
+        ctx.fillStyle = '#1e1b4b';
         ctx.beginPath();
-        this.drawStar(0, 0, 5, 8, 4);
+        for(let i=0; i<5; i++){
+            const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+            const r = 10;
+            const x = Math.cos(angle) * r;
+            const y = Math.sin(angle) * r;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
         ctx.fill();
 
         ctx.restore();
     }
-
-    drawStar(cx, cy, spikes, outerRadius, innerRadius) {
-        let rot = Math.PI / 2 * 3;
-        let x = cx;
-        let y = cy;
-        let step = Math.PI / spikes;
-
-        ctx.beginPath();
-        ctx.moveTo(cx, cy - outerRadius);
-        for (let i = 0; i < spikes; i++) {
-            x = cx + Math.cos(rot) * outerRadius;
-            y = cy + Math.sin(rot) * outerRadius;
-            ctx.lineTo(x, y);
-            rot += step;
-
-            x = cx + Math.cos(rot) * innerRadius;
-            y = cy + Math.sin(rot) * innerRadius;
-            ctx.lineTo(x, y);
-            rot += step;
-        }
-        ctx.lineTo(cx, cy - outerRadius);
-        ctx.closePath();
-    }
 }
 
+// Monster Class
 class Monster {
-    constructor(template, speedMultiplier) {
-        this.x = Math.random() * (displayWidth - 80) + 40;
-        this.y = -40;
-        this.type = template.type;
-        this.color = template.color;
-        this.points = template.points;
-        this.radius = template.radius;
-        this.hp = template.hp || 1;
-        this.maxHp = this.hp;
-        this.speed = (template.speed * (speedMultiplier || 1.0));
-        this.isBonus = template.isBonus || false;
-        this.isGiant = template.isGiant || false;
-        this.floatOffset = Math.random() * Math.PI * 2;
-        this.animTimer = 0;
+    constructor(type, x) {
+        this.type = type;
+        this.x = x;
+        this.y = -30;
+        this.radius = 22;
+        this.maxHp = type === 'donut' ? 2 : 1;
+        this.hp = this.maxHp;
+        this.points = type === 'donut' ? 20 : (type === 'rocket' ? 20 : (type === 'star' ? 30 : 10));
+        this.isBonus = type === 'star';
+        this.speed = (type === 'rocket' ? 2.5 : (type === 'star' ? 2.2 : 1.2)) * gameState.speedMultiplier;
+        this.rotation = 0;
+        this.pulse = Math.random() * Math.PI;
+
+        const colors = {
+            candy: '#f43f5e',
+            slime: '#10b981',
+            cloud: '#38bdf8',
+            donut: '#f59e0b',
+            rocket: '#a855f7',
+            star: '#facc15'
+        };
+        this.color = colors[type] || '#ec4899';
     }
 
     update() {
-        if (gameState.isFrozen) return;
-        this.y += this.speed;
-        this.x += Math.sin(this.y * 0.03 + this.floatOffset) * 0.9;
-        this.animTimer += 0.05;
+        if (!gameState.isFrozen) {
+            this.y += this.speed;
+            this.rotation += 0.02;
+        }
+        this.pulse += 0.05;
     }
 
     draw() {
         ctx.save();
         ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
 
-        // Outer Aura Ring
-        ctx.fillStyle = this.color + '22';
-        ctx.beginPath();
-        ctx.arc(0, 0, this.radius + 7, 0, Math.PI * 2);
-        ctx.fill();
+        const scale = 1 + Math.sin(this.pulse) * 0.08;
+        ctx.scale(scale, scale);
 
-        // Custom Vector Graphics per Monster Type
+        if (gameState.isFrozen) {
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius + 6, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+            ctx.fill();
+        }
+
         if (this.type === 'candy') {
-            // Jelly Gummy Monster
-            const grad = ctx.createRadialGradient(-4, -6, 2, 0, 0, this.radius);
-            grad.addColorStop(0, '#fda4af');
-            grad.addColorStop(1, '#f43f5e');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Specular Highlight
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-            ctx.beginPath();
-            ctx.ellipse(-6, -8, 6, 3, -Math.PI / 4, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Eyes
-            ctx.fillStyle = '#1e1b4b';
-            ctx.beginPath();
-            ctx.arc(-7, -2, 3.5, 0, Math.PI * 2);
-            ctx.arc(7, -2, 3.5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(-8, -3, 1.2, 0, Math.PI * 2);
-            ctx.arc(6, -3, 1.2, 0, Math.PI * 2);
-            ctx.fill();
-
-        } else if (this.type === 'slime') {
-            // Wobbly Slime Blob
-            const grad = ctx.createRadialGradient(0, -4, 2, 0, 0, this.radius);
-            grad.addColorStop(0, '#6ee7b7');
-            grad.addColorStop(1, '#10b981');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            const wobble = Math.sin(this.animTimer * 2) * 2;
-            ctx.ellipse(0, 2, this.radius + wobble, this.radius - wobble, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Eyes
-            ctx.fillStyle = '#064e3b';
-            ctx.beginPath();
-            ctx.arc(-6, -2, 4, 0, Math.PI * 2);
-            ctx.arc(6, -2, 4, 0, Math.PI * 2);
-            ctx.fill();
-
-        } else if (this.type === 'cloud') {
-            // Fluffy Cloud Monster
-            ctx.fillStyle = '#e0f2fe';
-            ctx.beginPath();
-            ctx.arc(-10, 2, 12, 0, Math.PI * 2);
-            ctx.arc(10, 2, 12, 0, Math.PI * 2);
-            ctx.arc(0, -6, 15, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Cheeks
-            ctx.fillStyle = '#f472b6';
-            ctx.beginPath();
-            ctx.arc(-10, 4, 3, 0, Math.PI * 2);
-            ctx.arc(10, 4, 3, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Smile
-            ctx.strokeStyle = '#0284c7';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(0, 3, 4, 0, Math.PI);
-            ctx.stroke();
-
-        } else if (this.type === 'giant_donut') {
-            // Frosted Donut
-            ctx.fillStyle = '#fde047';
-            ctx.beginPath();
-            ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Icing Layer
-            ctx.fillStyle = '#f472b6';
-            ctx.beginPath();
-            ctx.arc(0, 0, this.radius - 4, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Donut Hole
-            ctx.fillStyle = '#0f172a';
-            ctx.beginPath();
-            ctx.arc(0, 0, 10, 0, Math.PI * 2);
-            ctx.fill();
-
-        } else if (this.type === 'speed_rocket') {
-            // Retro Rocket Monster
-            ctx.fillStyle = '#38bdf8';
-            ctx.beginPath();
-            ctx.moveTo(0, -this.radius);
-            ctx.lineTo(this.radius - 4, this.radius);
-            ctx.lineTo(-this.radius + 4, this.radius);
-            ctx.closePath();
-            ctx.fill();
-
-            // Flame Exhaust
-            ctx.fillStyle = '#f97316';
-            ctx.beginPath();
-            ctx.arc(0, this.radius + 3, 6, 0, Math.PI * 2);
-            ctx.fill();
-
-        } else {
-            // Golden Star / Orb Monster
             ctx.fillStyle = this.color;
             ctx.beginPath();
             ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = '#ffffff';
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(0, 0, 12, 0, Math.PI);
+            ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+        } else if (this.type === 'donut') {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius + 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#f472b6';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(0, 0, 16, 0, Math.PI * 2);
+            ctx.stroke();
+        } else if (this.type === 'star') {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const a = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+                const r = this.radius + 4;
+                ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
             ctx.lineWidth = 2;
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
             ctx.stroke();
         }
 
-        // HP Badge for Giant Monsters
+        // Cute eyes
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-7, -4, 5, 0, Math.PI * 2);
+        ctx.arc(7, -4, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(-6, -4, 2.5, 0, Math.PI * 2);
+        ctx.arc(8, -4, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cute mouth
+        ctx.beginPath();
+        ctx.arc(0, 4, 4, 0, Math.PI);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // HP indicator for 2HP monsters
         if (this.maxHp > 1) {
             ctx.fillStyle = '#ef4444';
-            ctx.beginPath();
-            ctx.arc(this.radius - 2, -this.radius + 2, 9, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'black 10px Fredoka, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(this.hp, this.radius - 2, -this.radius + 2);
-        }
-
-        // Frozen Effect Overlay
-        if (gameState.isFrozen) {
-            ctx.fillStyle = 'rgba(165, 243, 252, 0.55)';
-            ctx.beginPath();
-            ctx.arc(0, 0, this.radius + 3, 0, Math.PI * 2);
-            ctx.fill();
+            for(let h=0; h<this.hp; h++) {
+                ctx.beginPath();
+                ctx.arc(-8 + h*16, -this.radius - 8, 4, 0, Math.PI*2);
+                ctx.fill();
+            }
         }
 
         ctx.restore();
     }
 }
 
+// Projectile, Particle, and FloatingText Classes
 class Projectile {
     constructor(x, y, targetX, targetY) {
         this.x = x;
         this.y = y;
+        this.radius = 8;
         const angle = Math.atan2(targetY - y, targetX - x);
-        this.speed = 12;
-        this.vx = Math.cos(angle) * this.speed;
-        this.vy = Math.sin(angle) * this.speed;
-        this.radius = 9;
+        const speed = 12;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
     }
-
     update() {
         this.x += this.vx;
         this.y += this.vy;
     }
-
     draw() {
         ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
         ctx.fillStyle = '#facc15';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(this.x - 2, this.y - 2, 3, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
         ctx.restore();
     }
 }
@@ -739,19 +675,16 @@ class Particle {
         this.x = x;
         this.y = y;
         this.color = color;
-        this.radius = Math.random() * 5 + 3;
+        this.radius = Math.random() * 4 + 2;
         this.vx = (Math.random() - 0.5) * 8;
         this.vy = (Math.random() - 0.5) * 8;
         this.alpha = 1;
-        this.decay = Math.random() * 0.03 + 0.02;
     }
-
     update() {
         this.x += this.vx;
         this.y += this.vy;
-        this.alpha -= this.decay;
+        this.alpha -= 0.03;
     }
-
     draw() {
         ctx.save();
         ctx.globalAlpha = Math.max(0, this.alpha);
@@ -769,37 +702,101 @@ class FloatingText {
         this.x = x;
         this.y = y;
         this.color = color;
-        this.alpha = 1.0;
-        this.vy = -1.8;
+        this.alpha = 1;
+        this.vy = -1.5;
     }
     update() {
         this.y += this.vy;
-        this.alpha -= 0.025;
+        this.alpha -= 0.02;
     }
     draw() {
         ctx.save();
         ctx.globalAlpha = Math.max(0, this.alpha);
+        ctx.font = '900 16px Fredoka, sans-serif';
         ctx.fillStyle = this.color;
-        ctx.font = '800 18px Fredoka, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(this.text, this.x, this.y);
         ctx.restore();
     }
 }
 
-const hero = new CannonHero();
+let hero = new CannonHero();
 
-function showFloatingText(text, x, y, color = '#facc15') {
-    gameState.floatingTexts.push(new FloatingText(text, x, y, color));
+function getLevelConfig(lvl) {
+    const titles = [
+        "Taman Permen", "Lembah Donut", "Bukit Slime", "Puncak Es", "Stasiun Roket",
+        "Istana Pelangi", "Galaksi Bintang", "Hutan Permen", "Sarang Slime", "Awan Ajaib",
+        "Kota Donut", "Lautan Gelembung", "Kawah Meteor", "Planet Es", "Benteng Bintang",
+        "Lembah Pelangi", "Taman Karamel", "Menara Cokelat", "Labirin Slime", "Puncak Galaksi",
+        "Super Permen", "Mega Donut", "Koleksioner Roket", "Badai Pelangi", "Perisai Utama",
+        "Zona Bintang", "Tantangan Es", "Invasi Slime", "Garda Istana", "Raja Galaksi"
+    ];
+
+    const baseTarget = 60 + (lvl * 20);
+    const speed = 1 + (lvl * 0.04);
+    const spawnInt = Math.max(600, 2000 - (lvl * 45));
+
+    let pool = ['candy', 'slime'];
+    if (lvl >= 3) pool.push('cloud');
+    if (lvl >= 6) pool.push('donut');
+    if (lvl >= 10) pool.push('rocket');
+    if (lvl % 2 === 0) pool.push('star');
+
+    return {
+        title: titles[(lvl - 1) % titles.length],
+        targetScore: baseTarget,
+        spawnInterval: spawnInt,
+        speedMultiplier: speed,
+        monsterPool: pool
+    };
 }
 
-function triggerPopEffect(x, y, color, points) {
+const STICKERS_DATA = Array.from({ length: 30 }, (_, i) => ({
+    id: i + 1,
+    name: `Stiker Hero ${i + 1}`,
+    vectorType: ['star', 'rocket', 'cat', 'crown'][i % 4]
+}));
+
+function createVectorIconSvg(type, color = '#facc15') {
+    if (type === 'rocket') {
+        return `<svg class="w-full h-full" viewBox="0 0 24 24" fill="${color}"><path d="M12 2.5s3 3.5 3 8.5h-6c0-5 3-8.5 3-8.5zm-5 8.5v5l-3 2v3.5l4.5-1.5 2 2h3l2-2 4.5 1.5v-3.5l-3-2v-5h-10z"/></svg>`;
+    } else if (type === 'cat') {
+        return `<svg class="w-full h-full" viewBox="0 0 24 24" fill="${color}"><path d="M12 2c2.5 0 4.5 1.8 5 4.2 1.8.8 3 2.6 3 4.8 0 3-2.5 5.5-5.5 5.5-1.1 0-2.1-.3-3-.9-.9.6-1.9.9-3 .9C5.5 16.5 3 14 3 11c0-2.2 1.2-4 3-4.8C6.5 3.8 8.5 2 12 2z"/></svg>`;
+    } else if (type === 'crown') {
+        return `<svg class="w-full h-full" viewBox="0 0 24 24" fill="${color}"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>`;
+    }
+    return `<svg class="w-full h-full" viewBox="0 0 24 24" fill="${color}"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
+}
+
+function spawnMonster() {
+    if (!gameState.currentMonsterPool || gameState.currentMonsterPool.length === 0) return;
+    const type = gameState.currentMonsterPool[Math.floor(Math.random() * gameState.currentMonsterPool.length)];
+    const margin = 35;
+    const x = margin + Math.random() * Math.max(100, displayWidth - margin * 2);
+    gameState.activeMonsters.push(new Monster(type, x));
+}
+
+function triggerPopEffect(x, y, color, pts) {
     AudioEngine.playPop();
-    showFloatingText(`+${points} ⭐`, x, y, '#facc15');
-    
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 12; i++) {
         gameState.particles.push(new Particle(x, y, color));
     }
+    showFloatingText(`+${pts} ✨`, x, y, '#facc15');
+    
+    const now = performance.now();
+    if (now - gameState.lastHitTime < 800) {
+        gameState.comboCount++;
+        if (gameState.comboCount === 3) triggerCheer("HEBAT! 🔥");
+        else if (gameState.comboCount === 5) triggerCheer("FANTASTIK! 🌟");
+        else if (gameState.comboCount >= 8) triggerCheer("SUPER HERO! 👑");
+    } else {
+        gameState.comboCount = 1;
+    }
+    gameState.lastHitTime = now;
+}
+
+function showFloatingText(text, x, y, color) {
+    gameState.floatingTexts.push(new FloatingText(text, x, y, color));
 }
 
 function triggerCheer(text) {
@@ -808,94 +805,225 @@ function triggerCheer(text) {
     banner.innerText = text;
     banner.classList.remove('scale-0');
     banner.classList.add('scale-100');
-    
+    AudioEngine.speak(text.replace(/[^\w\s]/gi, ''));
     setTimeout(() => {
         banner.classList.remove('scale-100');
         banner.classList.add('scale-0');
-    }, 1400);
+    }, 1200);
 }
 
-function spawnMonster() {
-    const template = gameState.currentMonsterPool[Math.floor(Math.random() * gameState.currentMonsterPool.length)];
-    gameState.activeMonsters.push(new Monster(template, gameState.speedMultiplier));
-}
-
-function handleCanvasInput(clientX, clientY) {
+function handleInteraction(clientX, clientY) {
     if (!gameState.isGameActive || gameState.isPaused) return;
 
     const rect = canvas.getBoundingClientRect();
-    const touchX = clientX - rect.left;
-    const touchY = clientY - rect.top;
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
 
-    gameState.heroX = touchX;
-    let hitAnyMonster = false;
+    gameState.heroX = x;
+    gameState.projectiles.push(new Projectile(hero.x, hero.y, x, y));
 
-    // Direct Tap Monster Hit Check
     for (let i = gameState.activeMonsters.length - 1; i >= 0; i--) {
         const m = gameState.activeMonsters[i];
-        const dist = Math.hypot(touchX - m.x, touchY - m.y);
-
-        if (dist < m.radius + 25) {
-            hitAnyMonster = true;
+        const dist = Math.hypot(x - m.x, y - m.y);
+        if (dist < m.radius + 18) {
             m.hp--;
-
-            // Combo calculation
-            const now = performance.now();
-            if (now - gameState.lastHitTime < 900) {
-                gameState.comboCount++;
-            } else {
-                gameState.comboCount = 1;
-            }
-            gameState.lastHitTime = now;
-
-            if (gameState.comboCount >= 3) {
-                triggerCheer(`KOMBO ${gameState.comboCount}x! 🔥`);
-            }
-
             if (m.hp <= 0) {
-                const totalPts = m.points * (gameState.comboCount >= 3 ? 2 : 1);
-                gameState.score += totalPts;
-                triggerPopEffect(m.x, m.y, m.color, totalPts);
+                gameState.score += m.points;
+                triggerPopEffect(m.x, m.y, m.color, m.points);
                 gameState.activeMonsters.splice(i, 1);
             } else {
                 AudioEngine.playPop();
                 showFloatingText("HIT! 💥", m.x, m.y, '#f43f5e');
             }
+            checkLevelProgress();
             break;
         }
     }
-
-    // Fire Projectile Energy Shot if no direct hit
-    if (!hitAnyMonster) {
-        AudioEngine.playSplash();
-        gameState.projectiles.push(new Projectile(gameState.heroX, displayHeight - 40, touchX, touchY));
-    }
-
-    updateUI();
-    checkLevelProgress();
 }
-
-// Touch & Pointer Event Listeners
-canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    handleCanvasInput(touch.clientX, touch.clientY);
-}, { passive: false });
-
-canvas.addEventListener('mousedown', (e) => {
-    handleCanvasInput(e.clientX, e.clientY);
-});
-
-canvas.addEventListener('touchmove', (e) => {
-    if (e.touches[0]) {
-        const rect = canvas.getBoundingClientRect();
-        gameState.heroX = e.touches[0].clientX - rect.left;
-    }
-});
 
 canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
     gameState.heroX = e.clientX - rect.left;
+});
+
+canvas.addEventListener('mousedown', (e) => {
+    handleInteraction(e.clientX, e.clientY);
+});
+
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (e.touches.length > 0) {
+        handleInteraction(e.touches[0].clientX, e.touches[0].clientY);
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (e.touches.length > 0) {
+        const rect = canvas.getBoundingClientRect();
+        gameState.heroX = e.touches[0].clientX - rect.left;
+    }
+}, { passive: false });
+
+// Register Inline Service Worker via Blob URL
+if ('serviceWorker' in navigator) {
+    try {
+        const swScript = `
+            const CACHE_NAME = 'pahlawan-bintang-pwa-v1';
+            self.addEventListener('install', (e) => self.skipWaiting());
+            self.addEventListener('activate', (e) => self.clients.claim());
+            self.addEventListener('fetch', (e) => {
+                e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+            });
+        `;
+        const blob = new Blob([swScript], { type: 'application/javascript' });
+        navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+    } catch (e) {}
+}
+
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    
+    const btnPwaInstall = document.getElementById('btnPwaInstall');
+    const btnPwaHudInstall = document.getElementById('btnPwaHudInstall');
+    if (btnPwaInstall) btnPwaInstall.classList.remove('hidden');
+    if (btnPwaHudInstall) btnPwaHudInstall.classList.remove('hidden');
+});
+
+window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    const btnPwaInstall = document.getElementById('btnPwaInstall');
+    const btnPwaHudInstall = document.getElementById('btnPwaHudInstall');
+    if (btnPwaInstall) btnPwaInstall.classList.add('hidden');
+    if (btnPwaHudInstall) btnPwaHudInstall.classList.add('hidden');
+    AudioEngine.speak("Aplikasi Pahlawan Bintang berhasil diinstall!");
+});
+
+const PWA_ICON_PRESETS = {
+    star: {
+        name: "Bintang Emas (Default)",
+        svg: `<svg viewBox="0 0 24 24" fill="#facc15" class="w-full h-full"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`
+    },
+    rocket: {
+        name: "Roket Antariksa",
+        svg: `<svg viewBox="0 0 24 24" fill="#38bdf8" class="w-full h-full"><path d="M12 2.5s3 3.5 3 8.5h-6c0-5 3-8.5 3-8.5zm-5 8.5v5l-3 2v3.5l4.5-1.5 2 2h3l2-2 4.5 1.5v-3.5l-3-2v-5h-10z"/></svg>`
+    },
+    cat: {
+        name: "Kucing Cyber",
+        svg: `<svg viewBox="0 0 24 24" fill="#f472b6" class="w-full h-full"><path d="M12 2c2.5 0 4.5 1.8 5 4.2 1.8.8 3 2.6 3 4.8 0 3-2.5 5.5-5.5 5.5-1.1 0-2.1-.3-3-.9-.9.6-1.9.9-3 .9C5.5 16.5 3 14 3 11c0-2.2 1.2-4 3-4.8C6.5 3.8 8.5 2 12 2z"/></svg>`
+    },
+    crown: {
+        name: "Mahkota Bintang",
+        svg: `<svg viewBox="0 0 24 24" fill="#fde047" class="w-full h-full"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>`
+    }
+};
+
+let currentPwaIconType = 'star';
+let currentCustomIconUrl = null;
+
+function updatePwaManifestAndIcons() {
+    let iconDataUrl = "";
+
+    if (currentCustomIconUrl) {
+        iconDataUrl = currentCustomIconUrl;
+    } else {
+        const svgContent = PWA_ICON_PRESETS[currentPwaIconType]?.svg || PWA_ICON_PRESETS.star.svg;
+        const fullSvgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" rx="128" fill="#1e1b4b"/><g transform="translate(96, 96) scale(13.33)">${svgContent}</g></svg>`;
+        iconDataUrl = "data:image/svg+xml;utf8," + encodeURIComponent(fullSvgStr);
+    }
+
+    const favEl = document.getElementById('appFavicon');
+    const appleEl = document.getElementById('appleTouchIcon');
+    if (favEl) favEl.href = iconDataUrl;
+    if (appleEl) appleEl.href = iconDataUrl;
+
+    const manifestObj = {
+        name: "Pahlawan Bintang: Penjaga Istana",
+        short_name: "PahlawanBintang",
+        description: "Game Edukasi & Aksi Ramah Anak Pahlawan Bintang",
+        start_url: "./",
+        display: "standalone",
+        background_color: "#0f172a",
+        theme_color: "#1e1b4b",
+        icons: [
+            {
+                src: iconDataUrl,
+                sizes: "192x192 512x512",
+                type: "image/svg+xml",
+                purpose: "any maskable"
+            }
+        ]
+    };
+
+    const manifestDataUri = "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(manifestObj));
+    const manifestEl = document.getElementById('pwaManifestLink');
+    if (manifestEl) manifestEl.href = manifestDataUri;
+
+    const previewBox = document.getElementById('pwaIconPreviewBox');
+    const nameDisplay = document.getElementById('pwaIconNameDisplay');
+
+    if (previewBox && nameDisplay) {
+        if (currentCustomIconUrl) {
+            previewBox.innerHTML = `<img src="${currentCustomIconUrl}" class="w-full h-full object-cover rounded-xl">`;
+            nameDisplay.innerText = "Gambar Custom URL";
+        } else {
+            previewBox.innerHTML = PWA_ICON_PRESETS[currentPwaIconType].svg;
+            nameDisplay.innerText = PWA_ICON_PRESETS[currentPwaIconType].name;
+        }
+    }
+}
+
+function triggerPwaInstallPrompt() {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            deferredPrompt = null;
+        });
+    }
+}
+
+document.getElementById('btnPwaInstall')?.addEventListener('click', triggerPwaInstallPrompt);
+document.getElementById('btnPwaHudInstall')?.addEventListener('click', triggerPwaInstallPrompt);
+document.getElementById('btnModalInstallPwa')?.addEventListener('click', triggerPwaInstallPrompt);
+
+document.getElementById('btnOpenPwaSettings')?.addEventListener('click', () => {
+    updatePwaManifestAndIcons();
+    document.getElementById('pwaModal')?.classList.remove('hidden');
+});
+
+document.getElementById('btnClosePwa')?.addEventListener('click', () => {
+    document.getElementById('pwaModal')?.classList.add('hidden');
+});
+
+document.querySelectorAll('.pwa-preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const iconKey = btn.getAttribute('data-icon');
+        if (PWA_ICON_PRESETS[iconKey]) {
+            currentPwaIconType = iconKey;
+            currentCustomIconUrl = null;
+
+            document.querySelectorAll('.pwa-preset-btn').forEach(b => {
+                b.classList.remove('border-amber-400');
+                b.classList.add('border-indigo-500/40', 'opacity-60');
+            });
+
+            btn.classList.add('border-amber-400');
+            btn.classList.remove('border-indigo-500/40', 'opacity-60');
+
+            updatePwaManifestAndIcons();
+        }
+    });
+});
+
+document.getElementById('btnApplyCustomUrl')?.addEventListener('click', () => {
+    const input = document.getElementById('pwaCustomIconUrl');
+    if (input && input.value.trim() !== '') {
+        currentCustomIconUrl = input.value.trim();
+        updatePwaManifestAndIcons();
+    }
 });
 
 function useFreezePowerup() {
@@ -903,7 +1031,7 @@ function useFreezePowerup() {
 
     gameState.powerups.freeze--;
     gameState.isFrozen = true;
-    gameState.freezeTimer = 300; // 5 seconds
+    gameState.freezeTimer = 300;
     AudioEngine.playFreeze();
     AudioEngine.speak("Monster Beku!");
 
@@ -1120,11 +1248,9 @@ function updateUI() {
     document.getElementById('levelTitleDisplay').innerText = currentConfig.title;
     document.getElementById('scoreDisplay').innerText = `${gameState.score} / ${gameState.targetScore}`;
 
-    // Progress bar width percentage
     const progressPercent = Math.min(100, Math.floor((gameState.score / gameState.targetScore) * 100));
     document.getElementById('progressBar').style.width = `${progressPercent}%`;
 
-    // Render Vector Hearts
     const heartsContainer = document.getElementById('heartsContainer');
     heartsContainer.innerHTML = '';
     for (let i = 0; i < 3; i++) {
@@ -1135,7 +1261,6 @@ function updateUI() {
         heartsContainer.appendChild(heart);
     }
 
-    // Powerup Badges
     document.getElementById('badgeShield').innerText = gameState.powerups.shield;
     document.getElementById('badgeFreeze').innerText = gameState.powerups.freeze;
     document.getElementById('badgeRainbow').innerText = gameState.powerups.rainbow;
@@ -1151,7 +1276,6 @@ function gameLoop(timestamp) {
     if (!gameState.isPaused) {
         ctx.clearRect(0, 0, displayWidth, displayHeight);
 
-        // Freeze Timer logic
         if (gameState.isFrozen) {
             gameState.freezeTimer--;
             if (gameState.freezeTimer <= 0) {
@@ -1160,7 +1284,6 @@ function gameLoop(timestamp) {
             }
         }
 
-        // Spawn monsters
         if (timestamp - gameState.lastSpawnTime > gameState.spawnInterval) {
             spawnMonster();
             gameState.lastSpawnTime = timestamp;
@@ -1248,7 +1371,6 @@ function gameLoop(timestamp) {
     gameState.gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-// Auto Pause when tab becomes hidden
 document.addEventListener('visibilitychange', () => {
     if (document.hidden && gameState.isGameActive) {
         gameState.isPaused = true;
@@ -1260,6 +1382,7 @@ window.onload = () => {
     resizeCanvas();
     applyLevelConfig();
     updateUI();
+    updatePwaManifestAndIcons();
 };
 </script>
 </body>
