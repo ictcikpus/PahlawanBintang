@@ -3,38 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Pahlawan Bintang: Penjaga Istana Imut</title>
+  <title>Pahlawan Bintang: Penjaga Istana Imut 3D</title>
 
-  <!-- Google Font Modern Game -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <!-- PWA Metadata & Favicon -->
   <link rel="icon" id="appFavicon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23FFD700'/><path d='M50 15 L62 38 L88 42 L69 60 L73 85 L50 73 L27 85 L31 60 L12 42 L38 38 Z' fill='%23FF4500'/></svg>">
-  <meta name="theme-color" content="#4A90E2">
+  <meta name="theme-color" content="#0c102b">
   <meta name="apple-mobile-web-app-capable" content="yes">
   
   <link rel="stylesheet" href="style.css">
 
-  <!-- Firebase SDK Client untuk Realtime Leaderboard -->
+  <!-- Firebase Client SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
   <div id="game-container">
-    <!-- Canvas Utama Game -->
     <canvas id="gameCanvas"></canvas>
-
-    <!-- Overlay Teks Floating/Score Popup -->
     <div id="popup-container"></div>
 
-    <!-- HUD Game (Tampilan Saat Bermain) -->
+    <!-- HUD Game -->
     <div id="hud-overlay" class="hidden">
       <div class="hud-top">
         <div class="hud-pill profile-pill">
-          <span class="avatar-icon">🦸‍♂️</span>
+          <span id="actor-avatar" class="avatar-icon">🚀</span>
           <span id="player-name-display" class="hud-text">Pahlawan</span>
         </div>
         <div class="hud-pill level-pill">
@@ -42,27 +38,22 @@
           <span id="hud-level" class="hud-text">1</span>
         </div>
         <div class="hud-pill score-pill">
-          <span class="hud-badge">⭐</span>
+          <span class="hud-badge">⭐ SKOR</span>
           <span id="hud-score" class="hud-text">0</span>
+        </div>
+        <div class="hud-pill mission-pill">
+          <span class="hud-badge">🎯 MISI</span>
+          <span id="hud-mission" class="hud-text">0/10</span>
         </div>
         <div class="hud-pill lives-pill">
           <div id="hud-lives" class="hud-lives">❤️❤️❤️</div>
         </div>
       </div>
 
-      <!-- Tombol Skill & Aksi -->
       <div class="hud-bottom">
-        <button id="btn-freeze" class="btn-action btn-blue" title="Bekukan Monster">
-          <span class="btn-icon">❄️</span>
-          <span class="btn-glow"></span>
-        </button>
-        <button id="btn-bomb" class="btn-action btn-rainbow" title="Bom Pelangi">
-          <span class="btn-icon">🌈</span>
-          <span class="btn-glow"></span>
-        </button>
-        <button id="btn-audio" class="btn-action btn-purple">
-          <span id="audio-icon" class="btn-icon">🔊</span>
-        </button>
+        <button id="btn-freeze" class="btn-action btn-blue" title="Bekukan Monster">❄️</button>
+        <button id="btn-bomb" class="btn-action btn-rainbow" title="Bom Pelangi">🌈</button>
+        <button id="btn-audio" class="btn-action btn-purple"><span id="audio-icon">🔊</span></button>
       </div>
     </div>
 
@@ -71,7 +62,7 @@
       <div class="modal-card bounce-in">
         <div class="logo-container">
           <div class="crown-badge">👑</div>
-          <h1 class="game-title">PAHLAWAN BINTANG</h1>
+          <h1 class="game-title">PAHLAWAN BINTANG 3D</h1>
           <div class="subtitle-badge">PENJAGA ISTANA IMUT</div>
         </div>
 
@@ -84,23 +75,65 @@
         </div>
 
         <div class="menu-stack">
-          <button id="btn-start" class="btn-3d btn-green">
-            <span>🎮 MAIN SEKARANG!</span>
-          </button>
-          <button id="btn-leaderboard" class="btn-3d btn-yellow">
-            <span>🏆 10 BESAR GLOBAL</span>
-          </button>
-          <button id="btn-stickers" class="btn-3d btn-blue">
-            <span>🖼️ ALBUM STIKER (<span id="unlocked-count">0</span>/30)</span>
-          </button>
-          <button id="btn-pwa-install" class="btn-3d btn-orange hidden">
-            <span>📱 INSTALL APLIKASI DI HP</span>
-          </button>
+          <button id="btn-prepare-play" class="btn-3d btn-green"><span>🎮 MAIN SEKARANG!</span></button>
+          <button id="btn-select-actor" class="btn-3d btn-pink"><span>🎭 PILIH AKTOR HERO (<span id="selected-actor-name">Meriam Bintang</span>)</span></button>
+          <button id="btn-leaderboard" class="btn-3d btn-yellow"><span>🏆 10 BESAR GLOBAL</span></button>
+          <button id="btn-stickers" class="btn-3d btn-blue"><span>🖼️ ALBUM STIKER (<span id="unlocked-count">0</span>/30)</span></button>
+          <button id="btn-pwa-install" class="btn-3d btn-orange hidden"><span>📱 INSTALL APLIKASI DI HP</span></button>
         </div>
       </div>
     </div>
 
-    <!-- Modal Leaderboard (Papan Peringkat Realtime Top 10) -->
+    <!-- Modal Konfirmasi Fullscreen & Landscape -->
+    <div id="modal-fullscreen-prompt" class="modal-screen hidden">
+      <div class="modal-card bounce-in">
+        <div class="fullscreen-icon">📱 ➔ 🔄</div>
+        <h2>MODAL LAYAR PENUH & LANDSCAPE</h2>
+        <p class="modal-sub">Untuk pengalaman bermain 3D yang maksimal dan seru, aktifkan mode Layar Penuh Lanskap!</p>
+        
+        <div class="menu-stack" style="margin-top: 20px;">
+          <button id="btn-start-fullscreen" class="btn-3d btn-green">🚀 AKTIFKAN FULLSCREEN & MAIN!</button>
+          <button id="btn-skip-fullscreen" class="btn-3d btn-purple">MAIN TANPA FULLSCREEN</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Pilih Aktor Hero -->
+    <div id="modal-actors" class="modal-screen hidden">
+      <div class="modal-card bounce-in">
+        <div class="modal-header">
+          <h2>🎭 PILIH AKTOR HERO 3D 🎭</h2>
+          <p class="modal-sub">Pilih karakter pahlawan favoritmu!</p>
+        </div>
+        
+        <div id="actor-grid" class="actor-grid">
+          <div class="actor-card selected" data-actor="cannon">
+            <div class="actor-icon">🚀</div>
+            <div class="actor-title">Meriam Bintang</div>
+          </div>
+          <div class="actor-card" data-actor="robot">
+            <div class="actor-icon">🤖</div>
+            <div class="actor-title">Robot Cyber</div>
+          </div>
+          <div class="actor-card" data-actor="unicorn">
+            <div class="actor-icon">🦄</div>
+            <div class="actor-title">Unicorn Ajaib</div>
+          </div>
+          <div class="actor-card" data-actor="cat">
+            <div class="actor-icon">🐱</div>
+            <div class="actor-title">Kucing Ninja</div>
+          </div>
+          <div class="actor-card" data-actor="dragon">
+            <div class="actor-icon">🐲</div>
+            <div class="actor-title">Naga Api Imut</div>
+          </div>
+        </div>
+
+        <button id="btn-close-actors" class="btn-3d btn-purple">SIMPAN & KEMBALI</button>
+      </div>
+    </div>
+
+    <!-- Modal Leaderboard Realtime -->
     <div id="modal-leaderboard" class="modal-screen hidden">
       <div class="modal-card bounce-in">
         <div class="modal-header">
@@ -111,12 +144,7 @@
         <div class="leaderboard-container">
           <table class="leaderboard-table">
             <thead>
-              <tr>
-                <th>POS</th>
-                <th>NAMA</th>
-                <th>LEVEL</th>
-                <th>SKOR</th>
-              </tr>
+              <tr><th>POS</th><th>NAMA</th><th>LEVEL</th><th>SKOR</th></tr>
             </thead>
             <tbody id="leaderboard-body">
               <tr><td colspan="4" class="loading-text">Memuat Papan Peringkat...</td></tr>
@@ -135,18 +163,10 @@
         <h2 id="result-title" class="result-heading">LEVEL SELESAI!</h2>
         
         <div class="result-stats-card">
-          <div class="stat-row">
-            <span>PAHLAWAN</span>
-            <strong id="result-player-name">Pahlawan</strong>
-          </div>
-          <div class="stat-row">
-            <span>TOTAL SKOR</span>
-            <strong id="result-score" class="highlight-yellow">0</strong>
-          </div>
-          <div class="stat-row">
-            <span>LEVEL DICAPAI</span>
-            <strong id="result-level" class="highlight-green">1</strong>
-          </div>
+          <div class="stat-row"><span>PAHLAWAN</span><strong id="result-player-name">Pahlawan</strong></div>
+          <div class="stat-row"><span>TOTAL SKOR</span><strong id="result-score" class="highlight-yellow">0</strong></div>
+          <div class="stat-row"><span>LEVEL DICAPAI</span><strong id="result-level" class="highlight-green">1</strong></div>
+          <div class="stat-row"><span>ELIMINASI</span><strong id="result-kills" class="highlight-pink">0 Kills</strong></div>
         </div>
 
         <div class="menu-stack">
