@@ -2,61 +2,49 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Pahlawan Bintang: Penjaga Istana Imut</title>
 
-  <!-- Pengaturan PWA & Favicon via Kode HTML -->
+  <!-- PWA Metadata & Favicon -->
   <link rel="icon" id="appFavicon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23FFD700'/><path d='M50 15 L62 38 L88 42 L69 60 L73 85 L50 73 L27 85 L31 60 L12 42 L38 38 Z' fill='%23FF4500'/></svg>">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23FFD700'/><path d='M50 15 L62 38 L88 42 L69 60 L73 85 L50 73 L27 85 L31 60 L12 42 L38 38 Z' fill='%23FF4500'/></svg>">
   <meta name="theme-color" content="#4A90E2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  
   <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase SDK Client untuk Realtime Leaderboard di GitHub Pages -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
   <div id="game-container">
-    <!-- Canvas Game -->
     <canvas id="gameCanvas"></canvas>
 
-    <!-- UI Overlay HUD -->
+    <!-- HUD Game -->
     <div id="hud-overlay" class="hidden">
       <div class="hud-top">
-        <div class="hud-card">
-          <span class="hud-label">PAHLAWAN</span>
-          <span id="player-name-display" class="hud-value">Pahlawan</span>
-        </div>
-        <div class="hud-card">
-          <span class="hud-label">LEVEL</span>
-          <span id="hud-level" class="hud-value">1</span>
-        </div>
-        <div class="hud-card">
-          <span class="hud-label">SKOR</span>
-          <span id="hud-score" class="hud-value">0</span>
-        </div>
-        <div class="hud-card">
-          <span class="hud-label">NYAWA</span>
-          <div id="hud-lives" class="hud-lives">❤️❤️❤️</div>
-        </div>
+        <div class="hud-card"><span class="hud-label">PAHLAWAN</span><span id="player-name-display" class="hud-value">Pahlawan</span></div>
+        <div class="hud-card"><span class="hud-label">LEVEL</span><span id="hud-level" class="hud-value">1</span></div>
+        <div class="hud-card"><span class="hud-label">SKOR</span><span id="hud-score" class="hud-value">0</span></div>
+        <div class="hud-card"><span class="hud-label">NYAWA</span><div id="hud-lives" class="hud-lives">❤️❤️❤️</div></div>
       </div>
-
-      <!-- Powerups & Controls -->
       <div class="hud-bottom">
-        <button id="btn-freeze" class="btn-powerup" title="Bekukan Monster">❄️</button>
-        <button id="btn-bomb" class="btn-powerup" title="Bom Pelangi">🌈</button>
+        <button id="btn-freeze" class="btn-powerup">❄️</button>
+        <button id="btn-bomb" class="btn-powerup">🌈</button>
         <button id="btn-audio" class="btn-icon">🔊</button>
-        <button id="btn-pause" class="btn-icon">⏸️</button>
       </div>
     </div>
 
-    <!-- Main Menu Screen -->
+    <!-- Menu Utama -->
     <div id="screen-main-menu" class="modal-screen">
-      <div class="modal-box card-animation">
+      <div class="modal-box">
         <h1 class="game-title">PAHLAWAN BINTANG 🌟</h1>
         <p class="subtitle">Penjaga Istana Imut</p>
 
-        <!-- Form Input Nama Pemain -->
         <div class="input-group">
           <label for="player-name-input">Nama Pahlawan Cilik:</label>
-          <input type="text" id="player-name-input" placeholder="Masukkan Namamu..." maxlength="12" value="Pahlawan">
+          <input type="text" id="player-name-input" placeholder="Ketik Namamu..." maxlength="12" value="Pahlawan">
         </div>
 
         <div class="menu-buttons">
@@ -68,24 +56,19 @@
       </div>
     </div>
 
-    <!-- Modal Leaderboard (Papan Peringkat Realtime Top 10) -->
+    <!-- Modal Leaderboard Realtime -->
     <div id="modal-leaderboard" class="modal-screen hidden">
       <div class="modal-box">
         <h2>🏆 PAPAN PERINGKAT 10 BESAR 🏆</h2>
-        <p class="small-text">Skor Tertinggi Seluruh Pahlawan Bintang</p>
+        <p class="small-text">Skor Tertinggi Seluruh Pemain (Global)</p>
         
         <div class="leaderboard-table-container">
           <table class="leaderboard-table">
             <thead>
-              <tr>
-                <th>Peringkat</th>
-                <th>Nama</th>
-                <th>Level</th>
-                <th>Skor</th>
-              </tr>
+              <tr><th>Pos</th><th>Nama</th><th>Level</th><th>Skor</th></tr>
             </thead>
             <tbody id="leaderboard-body">
-              <tr><td colspan="4">Memuat data skor...</td></tr>
+              <tr><td colspan="4">Memuat Papan Peringkat...</td></tr>
             </tbody>
           </table>
         </div>
@@ -94,19 +77,15 @@
       </div>
     </div>
 
-    <!-- Modal Game Over / Level Complete -->
+    <!-- Modal Hasil Selesai -->
     <div id="modal-result" class="modal-screen hidden">
       <div class="modal-box">
         <h2 id="result-title">LEVEL SELESAI! 🎉</h2>
-        <div id="result-stars" class="stars-display">⭐⭐⭐</div>
-        
         <div class="result-details">
           <p>Pahlawan: <strong id="result-player-name">Pahlawan</strong></p>
           <p>Skor Akhir: <strong id="result-score">0</strong></p>
           <p>Level Dicapai: <strong id="result-level">1</strong></p>
-          <p>Peringkat Global Anda: <strong id="result-rank">#1</strong></p>
         </div>
-
         <div class="menu-buttons">
           <button id="btn-next-level" class="btn-primary">LANJUT LEVEL ▶</button>
           <button id="btn-restart" class="btn-secondary">MAIN LAGI 🔄</button>
