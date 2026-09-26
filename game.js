@@ -15,6 +15,26 @@ class SoundEngine {
     }
   }
 
+  playLaser() {
+    if (this.isMuted) return;
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.05);
+
+    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.05);
+  }
+
   playPop() {
     if (this.isMuted) return;
     this.init();
@@ -100,14 +120,9 @@ class SoundEngine {
 
 const sounds = new SoundEngine();
 
-// Helper Getar (Vibration API)
 function triggerVibrate(pattern) {
   if ('vibrate' in navigator) {
-    try {
-      navigator.vibrate(pattern);
-    } catch (e) {
-      // Ignored if device blocks auto vibrate
-    }
+    try { navigator.vibrate(pattern); } catch (e) {}
   }
 }
 
@@ -137,15 +152,24 @@ let score = 0;
 let levelKills = 0;
 let lives = 3;
 let isGameRunning = false;
+
+let playerX = 0;
+let playerSpeed = 8;
+let bullets = [];
+let lastShotTime = 0;
+
+let freezeCharges = 2;
+let bombCharges = 2;
+
 let monsters = [];
 let particles = [];
 let isFrozen = false;
 let screenShake = 0;
-let cannonAngle = 0;
-let comboCount = 0;
-let lastHitTime = 0;
 
-let currentActor = localStorage.getItem('pahlawan_actor') || 'cannon';
+let isMovingLeft = false;
+let isMovingRight = false;
+
+let currentActor = localStorage.getItem('pahlawan_actor') || 'robot';
 let playerName = localStorage.getItem('pahlawan_nama') || 'Pahlawan';
 
 const canvas = document.getElementById('gameCanvas');
@@ -153,11 +177,11 @@ const ctx = canvas.getContext('2d');
 let deferredPrompt;
 
 const actorMap = {
-  cannon: { name: 'Meriam Bintang', icon: '🚀' },
-  robot: { name: 'Robot Cyber', icon: '🤖' },
-  unicorn: { name: 'Unicorn Ajaib', icon: '🦄' },
-  cat: { name: 'Kucing Ninja', icon: '🐱' },
-  dragon: { name: 'Naga Api Imut', icon: '🐲' }
+  robot: { name: 'Robot Cyber', icon: '🤖', color: '#1e90ff' },
+  cannon: { name: 'Meriam Bintang', icon: '🚀', color: '#ff4757' },
+  unicorn: { name: 'Unicorn Ajaib', icon: '🦄', color: '#a55eea' },
+  cat: { name: 'Kucing Ninja', icon: '🐱', color: '#ffa502' },
+  dragon: { name: 'Naga Api Imut', icon: '🐲', color: '#2ed573' }
 };
 
 window.addEventListener('load', async () => {
@@ -185,6 +209,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+  if (!isGameRunning) playerX = canvas.width / 2;
 }
 
 async function loadGameData() {
@@ -201,13 +226,11 @@ async function loadGameData() {
 }
 
 function setupEventListeners() {
-  // Tombol Main -> Buka Prompt Fullscreen
   document.getElementById('btn-prepare-play').onclick = () => {
     document.getElementById('screen-main-menu').classList.add('hidden');
     document.getElementById('modal-fullscreen-prompt').classList.remove('hidden');
   };
 
-  // Trigger Fullscreen & Landscape API
   document.getElementById('btn-start-fullscreen').onclick = () => {
     requestFullscreenAndLandscape();
     document.getElementById('modal-fullscreen-prompt').classList.add('hidden');
@@ -243,6 +266,38 @@ function setupEventListeners() {
     document.getElementById('audio-icon').innerText = sounds.isMuted ? '🔇' : '🔊';
   };
 
+  // Touch Move Buttons
+  const btnLeft = document.getElementById('btn-move-left');
+  const btnRight = document.getElementById('btn-move-right');
+
+  btnLeft.addEventListener('pointerdown', (e) => { e.preventDefault(); isMovingLeft = true; });
+  btnLeft.addEventListener('pointerup', () => isMovingLeft = false);
+  btnLeft.addEventListener('pointerleave', () => isMovingLeft = false);
+
+  btnRight.addEventListener('pointerdown', (e) => { e.preventDefault(); isMovingRight = true; });
+  btnRight.addEventListener('pointerup', () => isMovingRight = false);
+  btnRight.addEventListener('pointerleave', () => isMovingRight = false);
+
+  // Keyboard Navigation
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isMovingLeft = true;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') isMovingRight = true;
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isMovingLeft = false;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') isMovingRight = false;
+  });
+
+  // Touch Drag Anywhere on Canvas
+  canvas.addEventListener('pointermove', (e) => {
+    if (!isGameRunning) return;
+    if (e.buttons > 0 || e.pointerType === 'touch') {
+      const rect = canvas.getBoundingClientRect();
+      playerX = e.clientX - rect.left;
+    }
+  });
+
   document.getElementById('btn-next-level').onclick = () => {
     document.getElementById('modal-result').classList.add('hidden');
     currentLevelIndex++;
@@ -262,23 +317,29 @@ function setupEventListeners() {
     isGameRunning = false;
   };
 
-  canvas.addEventListener('pointerdown', handleCanvasTouch);
-
+  // Skill Freeze dengan Limit
   document.getElementById('btn-freeze').onclick = () => {
-    if (isFrozen) return;
+    if (freezeCharges <= 0 || isFrozen) return;
+    freezeCharges--;
     isFrozen = true;
     sounds.playFreeze();
     triggerVibrate([50, 50, 50]);
+    updateSkillButtonsUI();
+
     spawnFloatingText(canvas.width / 2, canvas.height / 2, 'BEKU! ❄️', '#1e90ff');
-    setTimeout(() => isFrozen = false, 3000);
+    setTimeout(() => isFrozen = false, 3500);
   };
 
+  // Skill Bomb dengan Limit
   document.getElementById('btn-bomb').onclick = () => {
+    if (bombCharges <= 0) return;
+    bombCharges--;
     screenShake = 18;
     sounds.playBomb();
     triggerVibrate([100, 50, 100]);
+    updateSkillButtonsUI();
+
     monsters.forEach(m => createBurstParticles3D(m.x, m.y, m.color));
-    
     let pointsGained = monsters.length * 100;
     score += pointsGained;
     levelKills += monsters.length;
@@ -293,11 +354,8 @@ function setupEventListeners() {
 
 function requestFullscreenAndLandscape() {
   const doc = document.documentElement;
-  if (doc.requestFullscreen) {
-    doc.requestFullscreen().catch(() => {});
-  } else if (doc.webkitRequestFullscreen) {
-    doc.webkitRequestFullscreen();
-  }
+  if (doc.requestFullscreen) { doc.requestFullscreen().catch(() => {}); }
+  else if (doc.webkitRequestFullscreen) { doc.webkitRequestFullscreen(); }
 
   if (screen.orientation && screen.orientation.lock) {
     screen.orientation.lock('landscape').catch(() => {});
@@ -307,6 +365,20 @@ function requestFullscreenAndLandscape() {
 function updateActorSelectionUI() {
   document.getElementById('selected-actor-name').innerText = actorMap[currentActor].name;
   document.getElementById('actor-avatar').innerText = actorMap[currentActor].icon;
+}
+
+function updateSkillButtonsUI() {
+  const btnFreeze = document.getElementById('btn-freeze');
+  const btnBomb = document.getElementById('btn-bomb');
+  
+  document.getElementById('freeze-count').innerText = freezeCharges;
+  document.getElementById('bomb-count').innerText = bombCharges;
+
+  if (freezeCharges <= 0) btnFreeze.classList.add('disabled');
+  else btnFreeze.classList.remove('disabled');
+
+  if (bombCharges <= 0) btnBomb.classList.add('disabled');
+  else btnBomb.classList.remove('disabled');
 }
 
 function startGame() {
@@ -327,9 +399,14 @@ function startGame() {
 
 function startCurrentLevel() {
   levelKills = 0;
-  comboCount = 0;
-  const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
+  playerX = canvas.width / 2;
+  bullets = [];
   
+  // Reset Limit Skill Setiap Level Baru
+  freezeCharges = 2;
+  bombCharges = 2;
+  updateSkillButtonsUI();
+
   updateHUDValues();
   updateLivesDisplay();
 
@@ -361,18 +438,22 @@ function spawnMonsterLoop() {
   if (!isFrozen) {
     const algo = levelConfig.algorithm;
     let countToSpawn = (algo === 'swarm') ? 2 : 1;
+    const typeList = levelConfig.types || ['jelly'];
 
     for (let c = 0; c < countToSpawn; c++) {
       const isBoss = (algo === 'boss_hybrid' && Math.random() < 0.25);
+      const chosenType = isBoss ? 'boss' : typeList[Math.floor(Math.random() * typeList.length)];
+
       monsters.push({
-        x: Math.random() * (canvas.width - 100) + 50,
-        startX: Math.random() * (canvas.width - 100) + 50,
+        x: Math.random() * (canvas.width - 120) + 60,
+        startX: Math.random() * (canvas.width - 120) + 60,
         y: -60,
-        speed: (1.2 + Math.random() * 1.3) * levelConfig.speed,
-        size: isBoss ? 55 : 34,
-        hp: isBoss ? 6 : 1,
-        maxHp: isBoss ? 6 : 1,
+        speed: (1.2 + Math.random() * 1.2) * levelConfig.speed,
+        size: isBoss ? 55 : (chosenType === 'donut' ? 36 : 30),
+        hp: isBoss ? 7 : (chosenType === 'donut' ? 2 : 1),
+        maxHp: isBoss ? 7 : (chosenType === 'donut' ? 2 : 1),
         color: isBoss ? '#8854d0' : ['#ff4757', '#2ed573', '#ffa502', '#1e90ff'][Math.floor(Math.random() * 4)],
+        type: chosenType,
         algorithm: algo,
         timeAlive: 0,
         opacity: 1
@@ -381,72 +462,6 @@ function spawnMonsterLoop() {
   }
 
   setTimeout(spawnMonsterLoop, levelConfig.spawnRate);
-}
-
-function handleCanvasTouch(e) {
-  if (!isGameRunning) return;
-  sounds.init();
-  const rect = canvas.getBoundingClientRect();
-  const touchX = e.clientX - rect.left;
-  const touchY = e.clientY - rect.top;
-
-  const cannonX = canvas.width / 2;
-  const cannonY = canvas.height - 35;
-  cannonAngle = Math.atan2(touchY - cannonY, touchX - cannonX);
-
-  const now = Date.now();
-  if (now - lastHitTime < 1200) {
-    comboCount++;
-  } else {
-    comboCount = 1;
-  }
-  lastHitTime = now;
-
-  const comboMultiplier = comboCount > 5 ? 5 : comboCount > 2 ? 3 : comboCount > 1 ? 2 : 1;
-
-  for (let i = monsters.length - 1; i >= 0; i--) {
-    const m = monsters[i];
-    const dist = Math.hypot(m.x - touchX, m.y - touchY);
-    if (dist < m.size + 20) {
-      m.hp--;
-      sounds.playPop();
-      triggerVibrate(25);
-
-      if (m.hp <= 0) {
-        createBurstParticles3D(m.x, m.y, m.color);
-        
-        let earnedPoints = 50 * comboMultiplier;
-        score += earnedPoints;
-        levelKills++;
-
-        spawnFloatingText(m.x, m.y, `+${earnedPoints}${comboMultiplier > 1 ? ' ('+comboMultiplier+'x)' : ''}`, '#ffd700');
-
-        if (m.algorithm === 'splitter' && m.size > 22) {
-          monsters.push(
-            { x: m.x - 25, startX: m.x - 25, y: m.y, speed: m.speed * 1.25, size: 22, hp: 1, maxHp: 1, color: '#ff7f50', algorithm: 'linear', timeAlive: 0, opacity: 1 },
-            { x: m.x + 25, startX: m.x + 25, y: m.y, speed: m.speed * 1.25, size: 22, hp: 1, maxHp: 1, color: '#ff7f50', algorithm: 'linear', timeAlive: 0, opacity: 1 }
-          );
-        }
-
-        monsters.splice(i, 1);
-        updateHUDValues();
-        checkLevelObjectives();
-
-      } else {
-        m.size *= 0.95;
-        spawnFloatingText(m.x, m.y, 'HIT!', '#ff4757');
-        triggerVibrate([15, 15]);
-      }
-      break;
-    }
-  }
-}
-
-function checkLevelObjectives() {
-  const levelConfig = levelsData[currentLevelIndex];
-  if (levelKills >= levelConfig.targetKills && score >= levelConfig.targetScore) {
-    levelComplete();
-  }
 }
 
 function spawnFloatingText(x, y, text, color) {
@@ -474,6 +489,13 @@ function createBurstParticles3D(x, y, color) {
   }
 }
 
+function checkLevelObjectives() {
+  const levelConfig = levelsData[currentLevelIndex];
+  if (levelKills >= levelConfig.targetKills && score >= levelConfig.targetScore) {
+    levelComplete();
+  }
+}
+
 function gameLoop() {
   if (!isGameRunning) return;
 
@@ -497,20 +519,88 @@ function gameLoop() {
   ctx.fillStyle = '#44bd32';
   ctx.fillRect(0, canvas.height - 45, canvas.width, 5);
 
-  // Render Aktor Utama (3D Specular Model)
-  const cannonX = canvas.width / 2;
-  const cannonY = canvas.height - 35;
-  ctx.save();
-  ctx.translate(cannonX, cannonY);
-  ctx.rotate(cannonAngle + Math.PI / 2);
+  // Update Pergerakan Hero (Kiri / Kanan)
+  if (isMovingLeft) playerX -= playerSpeed;
+  if (isMovingRight) playerX += playerSpeed;
+  playerX = Math.max(40, Math.min(canvas.width - 40, playerX));
 
-  ctx.font = '40px sans-serif';
+  // Penembakan Peluru Laser Otomatis
+  const now = Date.now();
+  if (now - lastShotTime > 180) {
+    bullets.push({
+      x: playerX,
+      y: canvas.height - 65,
+      speed: 12,
+      color: actorMap[currentActor].color
+    });
+    sounds.playLaser();
+    lastShotTime = now;
+  }
+
+  // Render Peluru & Cek Tabrakan dengan Musuh
+  for (let b = bullets.length - 1; b >= 0; b--) {
+    const bullet = bullets[b];
+    bullet.y -= bullet.speed;
+
+    // Gambar Peluru Laser 3D
+    ctx.beginPath();
+    ctx.arc(bullet.x, bullet.y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = bullet.color;
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+
+    // Hapus jika keluar layar atas
+    if (bullet.y < -10) {
+      bullets.splice(b, 1);
+      continue;
+    }
+
+    // Tabrakan Peluru dengan Musuh
+    for (let i = monsters.length - 1; i >= 0; i--) {
+      const m = monsters[i];
+      const dist = Math.hypot(m.x - bullet.x, m.y - bullet.y);
+      if (dist < m.size + 8) {
+        bullets.splice(b, 1);
+        m.hp--;
+        sounds.playPop();
+        triggerVibrate(20);
+
+        if (m.hp <= 0) {
+          createBurstParticles3D(m.x, m.y, m.color);
+          score += 100;
+          levelKills++;
+          spawnFloatingText(m.x, m.y, '+100', '#ffd700');
+
+          if (m.algorithm === 'splitter' && m.size > 22) {
+            monsters.push(
+              { x: m.x - 20, startX: m.x - 20, y: m.y, speed: m.speed * 1.25, size: 22, hp: 1, maxHp: 1, color: '#ff7f50', type: 'jelly', algorithm: 'linear', timeAlive: 0, opacity: 1 },
+              { x: m.x + 20, startX: m.x + 20, y: m.y, speed: m.speed * 1.25, size: 22, hp: 1, maxHp: 1, color: '#ff7f50', type: 'jelly', algorithm: 'linear', timeAlive: 0, opacity: 1 }
+            );
+          }
+
+          monsters.splice(i, 1);
+          updateHUDValues();
+          checkLevelObjectives();
+        } else {
+          spawnFloatingText(m.x, m.y, 'HIT!', '#ff4757');
+        }
+        break;
+      }
+    }
+  }
+
+  // Render Karakter Hero Aktor
+  ctx.save();
+  ctx.translate(playerX, canvas.height - 45);
+  ctx.font = '42px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(actorMap[currentActor].icon, 0, -12);
+  ctx.fillText(actorMap[currentActor].icon, 0, 0);
   ctx.restore();
 
-  // Render & Update Musuh (Visual 3D Shading)
+  // Render & Update Musuh (Visual 3D Shapes)
   for (let i = monsters.length - 1; i >= 0; i--) {
     const m = monsters[i];
     m.timeAlive += 0.05;
@@ -522,7 +612,7 @@ function gameLoop() {
           m.x = m.startX + Math.sin(m.timeAlive * 3) * 65;
           break;
         case 'gravity':
-          m.speed += 0.05;
+          m.speed += 0.04;
           m.y += m.speed;
           break;
         case 'stealth':
@@ -549,38 +639,87 @@ function gameLoop() {
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.fill();
 
-    // Bola 3D Monster dengan Radial Gradient
+    // RENDERING BENTUK VISUAL MUSUH (3D Shapes)
     ctx.translate(m.x, m.y);
-    const radGrad = ctx.createRadialGradient(
-      -m.size * 0.3, -m.size * 0.3, m.size * 0.1,
-      0, 0, m.size
-    );
-    radGrad.addColorStop(0, '#ffffff');
-    radGrad.addColorStop(0.3, m.color);
-    radGrad.addColorStop(1, '#000000');
 
-    ctx.beginPath();
-    ctx.arc(0, 0, m.size, 0, Math.PI * 2);
-    ctx.fillStyle = radGrad;
-    ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-    ctx.stroke();
+    if (m.type === 'donut' || m.type === 'boss') {
+      // Donut 3D dengan Icing & Sprinkles
+      ctx.beginPath();
+      ctx.arc(0, 0, m.size, 0, Math.PI * 2);
+      ctx.fillStyle = '#fa8231';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(0, 0, m.size * 0.85, 0, Math.PI * 2);
+      ctx.fillStyle = '#ff78ae';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(0, 0, m.size * 0.35, 0, Math.PI * 2);
+      ctx.fillStyle = '#0a0d24';
+      ctx.fill();
+
+      // Sprinkles Warna-Warni
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-m.size * 0.5, -m.size * 0.5, 4, 8);
+      ctx.fillStyle = '#2ed573';
+      ctx.fillRect(m.size * 0.3, -m.size * 0.4, 8, 4);
+    } 
+    else if (m.type === 'cloud') {
+      // Awan 3D
+      ctx.fillStyle = '#f1f2f6';
+      ctx.beginPath();
+      ctx.arc(-12, 0, m.size * 0.6, 0, Math.PI * 2);
+      ctx.arc(12, 0, m.size * 0.6, 0, Math.PI * 2);
+      ctx.arc(0, -10, m.size * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    } 
+    else if (m.type === 'crystal') {
+      // Kristal Berlian 3D
+      ctx.beginPath();
+      ctx.moveTo(0, -m.size);
+      ctx.lineTo(m.size, 0);
+      ctx.lineTo(0, m.size);
+      ctx.lineTo(-m.size, 0);
+      ctx.closePath();
+      ctx.fillStyle = '#00d2d3';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.stroke();
+    } 
+    else {
+      // Jelly / Default 3D Radial Sphere
+      const radGrad = ctx.createRadialGradient(
+        -m.size * 0.3, -m.size * 0.3, m.size * 0.1,
+        0, 0, m.size
+      );
+      radGrad.addColorStop(0, '#ffffff');
+      radGrad.addColorStop(0.3, m.color);
+      radGrad.addColorStop(1, '#000000');
+
+      ctx.beginPath();
+      ctx.arc(0, 0, m.size, 0, Math.PI * 2);
+      ctx.fillStyle = radGrad;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.stroke();
+    }
 
     // Mata 3D
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(-8, -6, 6, 0, Math.PI * 2);
-    ctx.arc(8, -6, 6, 0, Math.PI * 2);
+    ctx.arc(-8, -4, 5, 0, Math.PI * 2);
+    ctx.arc(8, -4, 5, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = '#000';
     ctx.beginPath();
-    ctx.arc(-8, -6, 2.5, 0, Math.PI * 2);
-    ctx.arc(8, -6, 2.5, 0, Math.PI * 2);
+    ctx.arc(-8, -4, 2, 0, Math.PI * 2);
+    ctx.arc(8, -4, 2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Bar Darah 3D
+    // Bar Darah Jika Musuh Punya HP > 1
     if (m.maxHp > 1) {
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
       ctx.fillRect(-22, -m.size - 14, 44, 7);
