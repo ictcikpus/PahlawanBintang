@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Pahlawan Bintang 3D - Space Arcade</title>
+  <title>Pahlawan Bintang - Space Arcade</title>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <link rel="icon" id="appFavicon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23FFD700'/><path d='M50 15 L62 38 L88 42 L69 60 L73 85 L50 73 L27 85 L31 60 L12 42 L38 38 Z' fill='%23FF4500'/></svg>">
+  <link rel="icon" id="appFavicon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%231e90ff'/><path d='M50 15 L62 38 L88 42 L69 60 L73 85 L50 73 L27 85 L31 60 L12 42 L38 38 Z' fill='%23FFD700'/></svg>">
   <meta name="theme-color" content="#0c102b">
   <meta name="apple-mobile-web-app-capable" content="yes">
   
@@ -30,7 +30,7 @@
     <div id="hud-overlay" class="hidden">
       <div class="hud-top">
         <div class="hud-pill profile-pill">
-          <span id="actor-avatar" class="avatar-icon">🤖</span>
+          <svg class="ui-svg-icon" viewBox="0 0 24 24"><path fill="#1e90ff" d="M12 2A10 10 0 0 0 2 12A10 10 0 0 0 12 22A10 10 0 0 0 22 12A10 10 0 0 0 12 2M12 4A8 8 0 0 1 20 12A8 8 0 0 1 12 20A8 8 0 0 1 4 12A8 8 0 0 1 12 4M12 6A3 3 0 0 0 9 9A3 3 0 0 0 12 12A3 3 0 0 0 15 9A3 3 0 0 0 12 6M12 13C9.33 13 4 14.33 4 17V18H20V17C20 14.33 14.67 13 12 13Z"/></svg>
           <span id="player-name-display" class="hud-text">Pahlawan</span>
         </div>
         <div class="hud-pill level-pill">
@@ -38,36 +38,40 @@
           <span id="hud-level" class="hud-text">1</span>
         </div>
         <div class="hud-pill score-pill">
-          <span class="hud-badge">⭐ SKOR</span>
+          <svg class="ui-svg-icon" viewBox="0 0 24 24"><path fill="#ffa502" d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z"/></svg>
           <span id="hud-score" class="hud-text">0</span>
         </div>
         <div class="hud-pill mission-pill">
-          <span class="hud-badge">🎯 MISI</span>
+          <span class="hud-badge">TARGET</span>
           <span id="hud-mission" class="hud-text">0/10</span>
         </div>
         <div class="hud-pill lives-pill">
-          <div id="hud-lives" class="hud-lives">❤️❤️❤️</div>
+          <div id="hud-lives" class="hud-lives-icons"></div>
         </div>
       </div>
 
       <!-- Tombol Aksi Kontrol & Powerup -->
       <div class="hud-bottom">
-        <!-- Tombol Gerak Kiri-Kanan Touch -->
         <div class="movement-controls">
-          <button id="btn-move-left" class="btn-touch-move">◀</button>
-          <button id="btn-move-right" class="btn-touch-move">▶</button>
+          <button id="btn-move-left" class="btn-touch-move">
+            <svg class="ui-svg-icon-large" viewBox="0 0 24 24"><path fill="#ffffff" d="M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z"/></svg>
+          </button>
+          <button id="btn-move-right" class="btn-touch-move">
+            <svg class="ui-svg-icon-large" viewBox="0 0 24 24"><path fill="#ffffff" d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/></svg>
+          </button>
         </div>
 
-        <!-- Powerup Skills dengan Lencana Limit -->
         <div class="skill-controls">
           <button id="btn-freeze" class="btn-action btn-blue" title="Bekukan Monster">
-            ❄️ <span id="freeze-count" class="charge-badge">2</span>
+            <svg class="ui-svg-icon-large" viewBox="0 0 24 24"><path fill="#ffffff" d="M12 2V6L15 3L16.4 4.4L13.8 7L17 7V9H14.8L17.4 11.6L16 13L13 10V14L16 11L17.4 12.4L14.8 15H17V17H13.8L16.4 19.6L15 21L12 18V22H10V18L7 21L5.6 19.6L8.2 17H5V15H8.2L5.6 12.4L7 11L10 14V10L7 13L5.6 11.6L8.2 9H5V7H8.2L5.6 4.4L7 3L10 6V2H12Z"/></svg>
+            <span id="freeze-count" class="charge-badge">2</span>
           </button>
           <button id="btn-bomb" class="btn-action btn-rainbow" title="Bom Pelangi">
-            🌈 <span id="bomb-count" class="charge-badge">2</span>
+            <svg class="ui-svg-icon-large" viewBox="0 0 24 24"><path fill="#ffffff" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6Z"/></svg>
+            <span id="bomb-count" class="charge-badge">2</span>
           </button>
           <button id="btn-audio" class="btn-action btn-purple">
-            <span id="audio-icon">🔊</span>
+            <svg id="audio-icon-svg" class="ui-svg-icon-large" viewBox="0 0 24 24"><path fill="#ffffff" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16.02C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"/></svg>
           </button>
         </div>
       </div>
@@ -77,25 +81,25 @@
     <div id="screen-main-menu" class="modal-screen">
       <div class="modal-card bounce-in">
         <div class="logo-container">
-          <div class="crown-badge">👑</div>
-          <h1 class="game-title">PAHLAWAN BINTANG 3D</h1>
-          <div class="subtitle-badge">SPACE ARCADE SHOOTER</div>
+          <div class="badge-header">PAHLAWAN BINTANG</div>
+          <h1 class="game-title">SPACE ARCADE</h1>
+          <div class="subtitle-badge">EDISI BLASTER 3D</div>
         </div>
 
         <div class="input-card">
           <label for="player-name-input">NAMA PAHLAWAN CILIK:</label>
           <div class="input-wrapper">
-            <span class="input-icon">✏️</span>
+            <svg class="ui-svg-icon" viewBox="0 0 24 24"><path fill="#ffa502" d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/></svg>
             <input type="text" id="player-name-input" placeholder="Ketik Namamu..." maxlength="12" value="Pahlawan">
           </div>
         </div>
 
         <div class="menu-stack">
-          <button id="btn-prepare-play" class="btn-3d btn-green"><span>🎮 MAIN SEKARANG!</span></button>
-          <button id="btn-select-actor" class="btn-3d btn-pink"><span>🎭 PILIH AKTOR HERO (<span id="selected-actor-name">Robot Cyber</span>)</span></button>
-          <button id="btn-leaderboard" class="btn-3d btn-yellow"><span>🏆 10 BESAR GLOBAL</span></button>
-          <button id="btn-stickers" class="btn-3d btn-blue"><span>🖼️ ALBUM STIKER (<span id="unlocked-count">0</span>/30)</span></button>
-          <button id="btn-pwa-install" class="btn-3d btn-orange hidden"><span>📱 INSTALL APLIKASI DI HP</span></button>
+          <button id="btn-prepare-play" class="btn-3d btn-green"><span>MAIN SEKARANG</span></button>
+          <button id="btn-select-actor" class="btn-3d btn-pink"><span>PILIH HERO (<span id="selected-actor-name">Robot Cyber</span>)</span></button>
+          <button id="btn-leaderboard" class="btn-3d btn-yellow"><span>PAPAN PERINGKAT</span></button>
+          <button id="btn-stickers" class="btn-3d btn-blue"><span>ALBUM STIKER (<span id="unlocked-count">0</span>/30)</span></button>
+          <button id="btn-pwa-install" class="btn-3d btn-orange hidden"><span>INSTALL APLIKASI DI HP</span></button>
         </div>
       </div>
     </div>
@@ -103,12 +107,14 @@
     <!-- Modal Fullscreen Prompt -->
     <div id="modal-fullscreen-prompt" class="modal-screen hidden">
       <div class="modal-card bounce-in">
-        <div class="fullscreen-icon">📱 ➔ 🔄</div>
-        <h2>MODE LAYAR PENUH & LANDSCAPE</h2>
-        <p class="modal-sub">Geser Karakter Hero milikmu ke Kiri dan Kanan untuk menembak semua monster di udara!</p>
+        <div class="fullscreen-header-icon">
+          <svg class="ui-svg-huge" viewBox="0 0 24 24"><path fill="#2ed573" d="M5,5H10V7H7V10H5V5M14,5H19V10H17V7H14V5M17,14H19V19H14V17H17V14M7,14V17H10V19H5V14H7Z"/></svg>
+        </div>
+        <h2>MODAL LAYAR PENUH</h2>
+        <p class="modal-sub">Geser Karakter Robot milikmu ke Kiri dan Kanan untuk menembak monster & Boss!</p>
         
         <div class="menu-stack" style="margin-top: 20px;">
-          <button id="btn-start-fullscreen" class="btn-3d btn-green">🚀 AKTIFKAN FULLSCREEN & MAIN!</button>
+          <button id="btn-start-fullscreen" class="btn-3d btn-green">AKTIFKAN FULLSCREEN & MAIN!</button>
           <button id="btn-skip-fullscreen" class="btn-3d btn-purple">MAIN TANPA FULLSCREEN</button>
         </div>
       </div>
@@ -118,30 +124,25 @@
     <div id="modal-actors" class="modal-screen hidden">
       <div class="modal-card bounce-in">
         <div class="modal-header">
-          <h2>🎭 PILIH AKTOR HERO 3D 🎭</h2>
+          <h2>PILIH AKTOR HERO 3D</h2>
           <p class="modal-sub">Karakter ini akan bergerak dan menembak di layar!</p>
         </div>
         
         <div id="actor-grid" class="actor-grid">
           <div class="actor-card selected" data-actor="robot">
-            <div class="actor-icon">🤖</div>
             <div class="actor-title">Robot Cyber</div>
           </div>
           <div class="actor-card" data-actor="cannon">
-            <div class="actor-icon">🚀</div>
             <div class="actor-title">Meriam Bintang</div>
           </div>
-          <div class="actor-card" data-actor="unicorn">
-            <div class="actor-icon">🦄</div>
-            <div class="actor-title">Unicorn Ajaib</div>
+          <div class="actor-card" data-actor="dragon">
+            <div class="actor-title">Cyber Dragon</div>
           </div>
           <div class="actor-card" data-actor="cat">
-            <div class="actor-icon">🐱</div>
-            <div class="actor-title">Kucing Ninja</div>
+            <div class="actor-title">Ninja Cat</div>
           </div>
-          <div class="actor-card" data-actor="dragon">
-            <div class="actor-icon">🐲</div>
-            <div class="actor-title">Naga Api Imut</div>
+          <div class="actor-card" data-actor="unicorn">
+            <div class="actor-title">Unicorn Star</div>
           </div>
         </div>
 
@@ -153,7 +154,7 @@
     <div id="modal-leaderboard" class="modal-screen hidden">
       <div class="modal-card bounce-in">
         <div class="modal-header">
-          <h2>🏆 PAPAN PERINGKAT 🏆</h2>
+          <h2>PAPAN PERINGKAT</h2>
           <p class="modal-sub">10 Pahlawan Terhebat di Dunia</p>
         </div>
         
@@ -175,7 +176,6 @@
     <!-- Modal Result Game -->
     <div id="modal-result" class="modal-screen hidden">
       <div class="modal-card bounce-in">
-        <div id="result-badge-icon" class="result-badge">🎉</div>
         <h2 id="result-title" class="result-heading">MISI SELESAI!</h2>
         
         <div class="result-stats-card">
@@ -197,7 +197,7 @@
     <div id="modal-stickers" class="modal-screen hidden">
       <div class="modal-card modal-wide bounce-in">
         <div class="modal-header">
-          <h2>🖼️ ALBUM STIKER HADIAH 🖼️</h2>
+          <h2>ALBUM STIKER HADIAH</h2>
           <p class="modal-sub">Selesaikan level untuk membuka stiker baru</p>
         </div>
         <div id="sticker-grid" class="sticker-grid"></div>
