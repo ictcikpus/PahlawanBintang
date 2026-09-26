@@ -240,7 +240,7 @@ window.addEventListener('load', async () => {
   await loadGameData();
   
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=2.0').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=4.0').catch(err => console.log('SW Fail:', err));
   }
 
   setupEventListeners();
@@ -262,8 +262,8 @@ function resizeCanvas() {
 async function loadGameData() {
   try {
     const [resLevels, resStickers] = await Promise.all([
-      fetch('./levels.json?v=2.0'),
-      fetch('./stickers.json?v=2.0')
+      fetch('./levels.json?v=4.0'),
+      fetch('./stickers.json?v=4.0')
     ]);
     levelsData = await resLevels.json();
     stickersData = await resStickers.json();
@@ -574,10 +574,17 @@ function createBurstParticles3D(x, y, color) {
   }
 }
 
+// -------------------------------------------------------------
+// EVALUASI KELULUSAN LEVEL (SKOR & TARGET KILLS)
+// -------------------------------------------------------------
 function checkLevelObjectives() {
   const levelConfig = levelsData[currentLevelIndex];
-  if (levelKills >= levelConfig.targetKills && score >= levelConfig.targetScore) {
-    levelComplete();
+  if (levelKills >= levelConfig.targetKills) {
+    if (score >= levelConfig.targetScore) {
+      levelComplete(); // BERHASIL: Buka Level Selanjutnya
+    } else {
+      levelFailed("SKOR BELUM MENCAPAI TARGET!"); // GAGAL SKOR: Wajib Ulang
+    }
   }
 }
 
@@ -850,7 +857,11 @@ function gameLoop() {
         triggerVibrate([100, 50, 100]);
         updateLivesDisplay();
         spawnFloatingText(playerX, canvas.height - 60, '-1 NYAWA!', '#ff4757');
-        if (lives <= 0) { gameOver(); ctx.restore(); return; }
+        if (lives <= 0) { 
+          levelFailed("GAME OVER! NYAWA HABIS"); 
+          ctx.restore(); 
+          return; 
+        }
       }
       continue;
     }
@@ -983,7 +994,11 @@ function gameLoop() {
         screenShake = 14;
         triggerVibrate([100, 50, 100]);
         updateLivesDisplay();
-        if (lives <= 0) { gameOver(); ctx.restore(); return; }
+        if (lives <= 0) { 
+          levelFailed("GAME OVER! NYAWA HABIS"); 
+          ctx.restore(); 
+          return; 
+        }
       }
     }
   }
@@ -1002,6 +1017,7 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
+// LULUS LEVEL (TARGET SKOR & KILLS BERHASIL)
 function levelComplete() {
   isGameRunning = false;
   sounds.playWin();
@@ -1015,20 +1031,27 @@ function levelComplete() {
   document.getElementById('result-score').innerText = score;
   document.getElementById('result-level').innerText = levelConfig.level;
   document.getElementById('result-kills').innerText = `${levelKills} Target`;
+  
+  // MUNCULKAN TOMBOL LANJUT LEVEL
+  document.getElementById('btn-next-level').classList.remove('hidden');
   document.getElementById('modal-result').classList.remove('hidden');
 }
 
-function gameOver() {
+// GAGAL LEVEL (TARGET SKOR TIDAK TERCAPAI / GAME OVER)
+function levelFailed(reasonTitle = "MISI GAGAL!") {
   isGameRunning = false;
   triggerVibrate([200, 100, 200]);
   saveScoreToGlobalLeaderboard(playerName, score, currentLevelIndex + 1);
 
   const levelConfig = levelsData[currentLevelIndex];
-  document.getElementById('result-title').innerText = "GAME OVER";
+  document.getElementById('result-title').innerText = reasonTitle;
   document.getElementById('result-player-name').innerText = playerName;
   document.getElementById('result-score').innerText = score;
   document.getElementById('result-level').innerText = levelConfig.level;
   document.getElementById('result-kills').innerText = `${levelKills} Target`;
+  
+  // SEMBUNYIKAN TOMBOL LANJUT LEVEL (HANYA BISA ULANG / MENU UTAMA)
+  document.getElementById('btn-next-level').classList.add('hidden');
   document.getElementById('modal-result').classList.remove('hidden');
 }
 
