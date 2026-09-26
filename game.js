@@ -1,4 +1,23 @@
-// Global Config & State
+// Konfigurasi Firebase (Ganti dengan kunci Firebase milik Anda jika ingin membuat database sendiri)
+// Jika tidak diganti, sistem secara otomatis beralih ke Mode Lokal offline.
+const firebaseConfig = {
+  apiKey: "AIzaSyDummyKeyForGitHubPagesTesting123",
+  authDomain: "pahlawan-bintang.firebaseapp.com",
+  projectId: "pahlawan-bintang",
+  storageBucket: "pahlawan-bintang.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef123456"
+};
+
+let db = null;
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+} catch(e) {
+  console.log("Firebase berjalan dalam mode Offline/Lokal");
+}
+
+// Global Game States
 let levelsData = [];
 let stickersData = [];
 let currentLevelIndex = 0;
@@ -12,23 +31,18 @@ let playerName = localStorage.getItem('pahlawan_nama') || 'Pahlawan';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-
-// PWA Deferred Prompt
 let deferredPrompt;
 
 window.addEventListener('load', async () => {
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
-  
-  // Set nama di input
   document.getElementById('player-name-input').value = playerName;
 
-  // Load Data JSON dari Server
+  // Fetch file JSON terpisah di GitHub Pages
   await loadGameData();
   
-  // Register Service Worker PWA
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Fail:', err));
   }
 
   setupEventListeners();
@@ -46,17 +60,17 @@ function resizeCanvas() {
   canvas.height = window.innerHeight;
 }
 
-// Fetch JSON Data terpisah
+// Mengambil JSON Statis dari Repository GitHub Pages
 async function loadGameData() {
   try {
     const [resLevels, resStickers] = await Promise.all([
-      fetch('/data/levels.json'),
-      fetch('/data/stickers.json')
+      fetch('./levels.json'),
+      fetch('./stickers.json')
     ]);
     levelsData = await resLevels.json();
     stickersData = await resStickers.json();
   } catch (err) {
-    console.error('Gagal memuat file JSON data:', err);
+    console.error('Gagal mengambil data levels/stickers.json:', err);
   }
 }
 
@@ -66,7 +80,7 @@ function setupEventListeners() {
   document.getElementById('btn-close-leaderboard').onclick = () => document.getElementById('modal-leaderboard').classList.add('hidden');
   document.getElementById('btn-stickers').onclick = openStickerAlbum;
   document.getElementById('btn-close-stickers').onclick = () => document.getElementById('modal-stickers').classList.add('hidden');
-  
+
   document.getElementById('btn-next-level').onclick = () => {
     document.getElementById('modal-result').classList.add('hidden');
     currentLevelIndex++;
@@ -86,7 +100,6 @@ function setupEventListeners() {
     isGameRunning = false;
   };
 
-  // PWA Install Button
   document.getElementById('btn-pwa-install').onclick = () => {
     if (deferredPrompt) {
       deferredPrompt.prompt();
@@ -97,12 +110,15 @@ function setupEventListeners() {
     }
   };
 
-  // Touch/Click Canvas Handler
   canvas.addEventListener('pointerdown', handleCanvasTouch);
-
-  // Powerups
-  document.getElementById('btn-freeze').onclick = useFreezePowerup;
-  document.getElementById('btn-bomb').onclick = useBombPowerup;
+  document.getElementById('btn-freeze').onclick = () => { isFrozen = true; setTimeout(() => isFrozen = false, 3000); };
+  document.getElementById('btn-bomb').onclick = () => {
+    monsters.forEach(m => createBurstParticles(m.x, m.y, m.color));
+    score += monsters.length * 10;
+    monsters = [];
+    document.getElementById('hud-score').innerText = score;
+    if (score >= levelsData[currentLevelIndex].targetScore) levelComplete();
+  };
 }
 
 function startGame() {
@@ -117,7 +133,6 @@ function startGame() {
 
   document.getElementById('screen-main-menu').classList.add('hidden');
   document.getElementById('hud-overlay').classList.remove('hidden');
-  
   startCurrentLevel();
 }
 
@@ -143,7 +158,6 @@ function updateLivesDisplay() {
 
 function spawnMonsterLoop() {
   if (!isGameRunning) return;
-
   const levelConfig = levelsData[currentLevelIndex];
   if (!isFrozen) {
     monsters.push({
@@ -154,7 +168,6 @@ function spawnMonsterLoop() {
       color: ['#ff4757', '#2ed573', '#ffa502', '#1e90ff'][Math.floor(Math.random() * 4)]
     });
   }
-
   setTimeout(spawnMonsterLoop, levelConfig.spawnRate);
 }
 
@@ -168,13 +181,11 @@ function handleCanvasTouch(e) {
     const m = monsters[i];
     const dist = Math.hypot(m.x - touchX, m.y - touchY);
     if (dist < m.size + 15) {
-      // Pop Monster
       createBurstParticles(m.x, m.y, m.color);
       monsters.splice(i, 1);
       score += 10;
       document.getElementById('hud-score').innerText = score;
 
-      // Cek Target Level Complete
       if (score >= levelsData[currentLevelIndex].targetScore) {
         levelComplete();
       }
@@ -183,24 +194,8 @@ function handleCanvasTouch(e) {
   }
 }
 
-function useFreezePowerup() {
-  if (isFrozen) return;
-  isFrozen = true;
-  setTimeout(() => { isFrozen = false; }, 3000);
-}
-
-function useBombPowerup() {
-  monsters.forEach(m => createBurstParticles(m.x, m.y, m.color));
-  score += monsters.length * 10;
-  monsters = [];
-  document.getElementById('hud-score').innerText = score;
-  if (score >= levelsData[currentLevelIndex].targetScore) {
-    levelComplete();
-  }
-}
-
 function createBurstParticles(x, y, color) {
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 10; i++) {
     particles.push({
       x: x, y: y,
       vx: (Math.random() - 0.5) * 8,
@@ -213,15 +208,12 @@ function createBurstParticles(x, y, color) {
 
 function gameLoop() {
   if (!isGameRunning) return;
-
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Render & Move Monsters
   for (let i = monsters.length - 1; i >= 0; i--) {
     const m = monsters[i];
     if (!isFrozen) m.y += m.speed;
 
-    // Draw Monster Vector
     ctx.beginPath();
     ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2);
     ctx.fillStyle = m.color;
@@ -230,119 +222,113 @@ function gameLoop() {
     ctx.strokeStyle = '#fff';
     ctx.stroke();
 
-    // Eyes
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(m.x - 8, m.y - 5, 5, 0, Math.PI * 2);
-    ctx.arc(m.x + 8, m.y - 5, 5, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(m.x - 8, m.y - 5, 2, 0, Math.PI * 2);
-    ctx.arc(m.x + 8, m.y - 5, 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Bottom Wall Collision (Istana)
     if (m.y > canvas.height - 40) {
       monsters.splice(i, 1);
       lives--;
       updateLivesDisplay();
-      if (lives <= 0) {
-        gameOver();
-        return;
-      }
+      if (lives <= 0) { gameOver(); return; }
     }
   }
 
-  // Render Particles
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
-    p.x += p.vx;
-    p.y += p.vy;
-    p.life -= 0.03;
-
-    if (p.life <= 0) {
-      particles.splice(i, 1);
-      continue;
-    }
-
+    p.x += p.vx; p.y += p.vy; p.life -= 0.04;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
     ctx.globalAlpha = p.life;
     ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1.0;
   }
 
   requestAnimationFrame(gameLoop);
 }
 
-async function levelComplete() {
+function levelComplete() {
   isGameRunning = false;
   unlockSticker(currentLevelIndex + 1);
-
-  // Submit Skor ke Server Database
-  const rank = await submitScoreToServer(score, currentLevelIndex + 1);
+  saveScoreToGlobalLeaderboard(playerName, score, currentLevelIndex + 1);
 
   document.getElementById('result-title').innerText = "LEVEL SELESAI! 🎉";
   document.getElementById('result-player-name').innerText = playerName;
   document.getElementById('result-score').innerText = score;
   document.getElementById('result-level').innerText = levelsData[currentLevelIndex].level;
-  document.getElementById('result-rank').innerText = "#" + rank;
-
   document.getElementById('modal-result').classList.remove('hidden');
 }
 
-async function gameOver() {
+function gameOver() {
   isGameRunning = false;
-  const rank = await submitScoreToServer(score, currentLevelIndex + 1);
+  saveScoreToGlobalLeaderboard(playerName, score, currentLevelIndex + 1);
 
   document.getElementById('result-title').innerText = "GAME OVER 💔";
   document.getElementById('result-player-name').innerText = playerName;
   document.getElementById('result-score').innerText = score;
   document.getElementById('result-level').innerText = levelsData[currentLevelIndex].level;
-  document.getElementById('result-rank').innerText = "#" + rank;
-
   document.getElementById('modal-result').classList.remove('hidden');
 }
 
-// Realtime Sync dengan Backend API
-async function submitScoreToServer(currentScore, level) {
-  try {
-    const res = await fetch('/api/scores', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: playerName, score: currentScore, levelReached: level })
-    });
-    const data = await res.json();
-    const myRank = data.topScores.findIndex(s => s.name.toLowerCase() === playerName.toLowerCase()) + 1;
-    return myRank > 0 ? myRank : '10+';
-  } catch (err) {
-    console.error('Gagal sinkron skor ke server:', err);
-    return '-';
+// Simpan Skor ke Firebase Firestore Realtime (Aman untuk GitHub Pages)
+function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
+  // Simpan Lokal sebagai cadangan
+  let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
+  localScores.push({ name: name, score: scoreVal, level: levelVal, date: new Date().toLocaleDateString() });
+  localScores.sort((a,b) => b.score - a.score);
+  localStorage.setItem('pahlawan_scores', JSON.stringify(localScores.slice(0, 10)));
+
+  // Kirim ke Firebase Firestore
+  if (db) {
+    db.collection('leaderboard').add({
+      name: name,
+      score: scoreVal,
+      level: levelVal,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(err => console.log("Gagal mengirim skor ke Firebase:", err));
   }
 }
 
-async function openLeaderboard() {
+// Membaca Papan Peringkat Top 10 Realtime
+function openLeaderboard() {
   document.getElementById('modal-leaderboard').classList.remove('hidden');
   const tbody = document.getElementById('leaderboard-body');
-  tbody.innerHTML = '<tr><td colspan="4">Memuat data real-time...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="4">Memuat data Papan Peringkat...</td></tr>';
 
-  try {
-    const res = await fetch('/api/scores');
-    const topScores = await res.json();
+  if (db) {
+    db.collection('leaderboard').orderBy('score', 'desc').limit(10).get().then(snapshot => {
+      if (snapshot.empty) {
+        showLocalScores(tbody);
+      } else {
+        tbody.innerHTML = snapshot.docs.map((doc, index) => {
+          const s = doc.data();
+          return `
+            <tr>
+              <td>${index === 0 ? '🥇 1' : index === 1 ? '🥈 2' : index === 2 ? '🥉 3' : index + 1}</td>
+              <td><strong>${s.name}</strong></td>
+              <td>Lvl ${s.level || 1}</td>
+              <td><strong>${s.score}</strong></td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }).catch(err => {
+      showLocalScores(tbody);
+    });
+  } else {
+    showLocalScores(tbody);
+  }
+}
 
-    tbody.innerHTML = topScores.map((s, index) => `
+function showLocalScores(tbody) {
+  let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
+  if (localScores.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4">Belum ada skor tercatat.</td></tr>';
+  } else {
+    tbody.innerHTML = localScores.map((s, index) => `
       <tr>
         <td>${index === 0 ? '🥇 1' : index === 1 ? '🥈 2' : index === 2 ? '🥉 3' : index + 1}</td>
         <td><strong>${s.name}</strong></td>
-        <td>Lvl ${s.levelReached}</td>
+        <td>Lvl ${s.level}</td>
         <td><strong>${s.score}</strong></td>
       </tr>
     `).join('');
-  } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="4">Gagal memuat papan peringkat.</td></tr>';
   }
 }
 
