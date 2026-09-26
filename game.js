@@ -197,10 +197,9 @@ let playerX = 0;
 let playerSpeed = 9;
 let bullets = [];
 let bossBullets = [];
-let powerups = []; // Array Penyimpan Kapsul Bonus
+let powerups = [];
 let lastShotTime = 0;
 
-// Timer Effect Bonus
 let isSuperShot = false;
 let superShotTimer = 0;
 let isShieldActive = false;
@@ -241,7 +240,7 @@ window.addEventListener('load', async () => {
   await loadGameData();
   
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=2.0').catch(err => console.log('SW Fail:', err));
   }
 
   setupEventListeners();
@@ -263,8 +262,8 @@ function resizeCanvas() {
 async function loadGameData() {
   try {
     const [resLevels, resStickers] = await Promise.all([
-      fetch('./levels.json'),
-      fetch('./stickers.json')
+      fetch('./levels.json?v=2.0'),
+      fetch('./stickers.json?v=2.0')
     ]);
     levelsData = await resLevels.json();
     stickersData = await resStickers.json();
@@ -536,9 +535,8 @@ function spawnMonsterLoop() {
   setTimeout(spawnMonsterLoop, levelConfig.spawnRate);
 }
 
-// FUNGSI MEMBUAT DROP KAPSUL BONUS
 function trySpawnPowerup(x, y) {
-  if (Math.random() < 0.30) { // 30% peluang dapat bonus
+  if (Math.random() < 0.30) {
     const types = ['supershot', 'shield', 'bomb', 'freeze', 'heart'];
     const chosenType = types[Math.floor(Math.random() * types.length)];
     powerups.push({
@@ -583,7 +581,6 @@ function checkLevelObjectives() {
   }
 }
 
-// GAMBAR VECTOR HERO
 function drawHeroVector(ctx, x, y, type) {
   ctx.save();
   ctx.translate(x, y);
@@ -644,7 +641,6 @@ function drawHeroVector(ctx, x, y, type) {
     ctx.beginPath(); ctx.moveTo(0, -32); ctx.lineTo(5, -12); ctx.lineTo(-5, -12); ctx.closePath(); ctx.fill();
   }
 
-  // JIKA SHIELD AKTIF, GAMBAR AURA PERISAI LINGKARAN BERCAHAYA
   if (isShieldActive) {
     ctx.beginPath();
     ctx.arc(0, -2, 34, 0, Math.PI * 2);
@@ -668,25 +664,21 @@ function gameLoop() {
     if (screenShake < 0.5) screenShake = 0;
   }
 
-  // Background
   const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
   bgGrad.addColorStop(0, '#0a0d24');
   bgGrad.addColorStop(1, '#1a224d');
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Benteng Lantai
   ctx.fillStyle = '#2f3640';
   ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
   ctx.fillStyle = '#1e90ff';
   ctx.fillRect(0, canvas.height - 45, canvas.width, 5);
 
-  // Update Hero Position
   if (isMovingLeft) playerX -= playerSpeed;
   if (isMovingRight) playerX += playerSpeed;
   playerX = Math.max(40, Math.min(canvas.width - 40, playerX));
 
-  // TIMERS DURATION UPDATE
   if (isSuperShot) {
     superShotTimer--;
     if (superShotTimer <= 0) isSuperShot = false;
@@ -696,23 +688,19 @@ function gameLoop() {
     if (shieldTimer <= 0) isShieldActive = false;
   }
 
-  // Penembakan Peluru Laser Otomatis
   const now = Date.now();
   if (now - lastShotTime > 160) {
     if (isSuperShot) {
-      // 3-WAY TRIPLE SPREAD SHOT
       bullets.push({ x: playerX - 16, y: canvas.height - 65, vx: -2.5, vy: 12, color: '#00d2d3' });
       bullets.push({ x: playerX, y: canvas.height - 65, vx: 0, vy: 13, color: '#ffd700' });
       bullets.push({ x: playerX + 16, y: canvas.height - 65, vx: 2.5, vy: 12, color: '#00d2d3' });
     } else {
-      // STANDARD SINGLE LASER
       bullets.push({ x: playerX, y: canvas.height - 65, vx: 0, vy: 13, color: actorMap[currentActor].color });
     }
     sounds.playLaser();
     lastShotTime = now;
   }
 
-  // Render & Update Peluru Pemain
   for (let b = bullets.length - 1; b >= 0; b--) {
     const bullet = bullets[b];
     bullet.y -= bullet.vy;
@@ -731,7 +719,6 @@ function gameLoop() {
       continue;
     }
 
-    // Tabrakan Peluru dengan Musuh
     for (let i = monsters.length - 1; i >= 0; i--) {
       const m = monsters[i];
       const dist = Math.hypot(m.x - bullet.x, m.y - bullet.y);
@@ -743,7 +730,7 @@ function gameLoop() {
 
         if (m.hp <= 0) {
           createBurstParticles3D(m.x, m.y, m.color);
-          trySpawnPowerup(m.x, m.y); // Drop Kapsul Bonus
+          trySpawnPowerup(m.x, m.y);
 
           score += 150;
           levelKills++;
@@ -752,7 +739,7 @@ function gameLoop() {
           if (m.algorithm === 'splitter' && m.size > 22) {
             monsters.push(
               { x: m.x - 20, startX: m.x - 20, y: m.y, speed: m.speed * 1.25, size: 22, hp: 1, maxHp: 1, color: '#ff7f50', type: 'jelly', algorithm: 'linear', shootTimer: 0, timeAlive: 0, opacity: 1 },
-              { x: m.x + 20, startX: m.x + 20, y: m.y, speed: m.speed * 1.25, size: 22, hp: 1, maxHp: 1, color: '#ff7f50', type: 'jelly', algorithm: 'linear', timeAlive: 0, opacity: 1 }
+              { x: m.x + 20, startX: m.x + 20, y: m.y, speed: m.speed * 1.25, size: 22, hp: 1, maxHp: 1, color: '#ff7f50', type: 'jelly', algorithm: 'linear', shootTimer: 0, timeAlive: 0, opacity: 1 }
             );
           }
 
@@ -767,7 +754,6 @@ function gameLoop() {
     }
   }
 
-  // Render & Update Kapsul Powerup
   for (let p = powerups.length - 1; p >= 0; p--) {
     const pw = powerups[p];
     pw.y += pw.speed;
@@ -775,7 +761,6 @@ function gameLoop() {
     ctx.save();
     ctx.translate(pw.x, pw.y);
 
-    // Lingkaran Kapsul Berkilau 3D
     ctx.beginPath();
     ctx.arc(0, 0, pw.size, 0, Math.PI * 2);
     let pwColor = '#00d2d3';
@@ -801,7 +786,6 @@ function gameLoop() {
 
     ctx.restore();
 
-    // Cek Tabrakan Kapsul Bonus dengan Hero Pemain
     const distPlayer = Math.hypot(playerX - pw.x, (canvas.height - 45) - pw.y);
     if (distPlayer < pw.size + 25) {
       sounds.playPowerup();
@@ -809,12 +793,12 @@ function gameLoop() {
 
       if (pw.type === 'supershot') {
         isSuperShot = true;
-        superShotTimer = 450; // ~8 Detik
+        superShotTimer = 450;
         spawnFloatingText(playerX, canvas.height - 70, 'SUPER SHOT 3X!', '#2ed573');
       }
       else if (pw.type === 'shield') {
         isShieldActive = true;
-        shieldTimer = 550; // ~10 Detik
+        shieldTimer = 550;
         spawnFloatingText(playerX, canvas.height - 70, 'PERISAI AKTIF!', '#00d2d3');
       }
       else if (pw.type === 'bomb') {
@@ -840,7 +824,6 @@ function gameLoop() {
     if (pw.y > canvas.height) powerups.splice(p, 1);
   }
 
-  // Render & Update Peluru Boss
   for (let bb = bossBullets.length - 1; bb >= 0; bb--) {
     const bBullet = bossBullets[bb];
     bBullet.y += bBullet.vy;
@@ -854,13 +837,11 @@ function gameLoop() {
     ctx.strokeStyle = '#ffd700';
     ctx.stroke();
 
-    // Tabrakan Peluru Boss dengan Hero Pemain
     const distHero = Math.hypot(playerX - bBullet.x, (canvas.height - 45) - bBullet.y);
     if (distHero < 30) {
       bossBullets.splice(bb, 1);
 
       if (isShieldActive) {
-        // PERISAI MENAHAN SERANGAN
         spawnFloatingText(playerX, canvas.height - 60, 'PERISAI TAHAN!', '#00d2d3');
         sounds.playPop();
       } else {
@@ -877,10 +858,8 @@ function gameLoop() {
     if (bBullet.y > canvas.height) bossBullets.splice(bb, 1);
   }
 
-  // Render Hero Vector Canvas
   drawHeroVector(ctx, playerX, canvas.height - 45, currentActor);
 
-  // Render & Update Musuh / Boss
   for (let i = monsters.length - 1; i >= 0; i--) {
     const m = monsters[i];
     m.timeAlive += 0.05;
@@ -934,7 +913,6 @@ function gameLoop() {
     ctx.save();
     ctx.globalAlpha = m.opacity || 1.0;
 
-    // Bayangan
     ctx.beginPath();
     ctx.ellipse(m.x, canvas.height - 38, m.size * 0.7, m.size * 0.25, 0, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
@@ -1010,7 +988,6 @@ function gameLoop() {
     }
   }
 
-  // Partikel 3D
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.x += p.vx; p.y += p.vy; p.life -= 0.04;
