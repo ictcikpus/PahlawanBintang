@@ -14,11 +14,11 @@
   <meta name="theme-color" content="#0c102b">
   <meta name="apple-mobile-web-app-capable" content="yes">
   
-  <link rel="stylesheet" href="style.css?v=3.0">
+  <link rel="stylesheet" href="style.css?v=7.0">
 
- <!-- Firebase Client SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <!-- Firebase Client SDK (Realtime Database Version) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -26,7 +26,7 @@
     <canvas id="gameCanvas"></canvas>
     <div id="popup-container"></div>
 
-    <!-- HUD Game -->
+    <!-- HUD Overlay Game -->
     <div id="hud-overlay" class="hidden">
       <div class="hud-top">
         <div class="hud-pill profile-pill">
@@ -48,6 +48,12 @@
         <div class="hud-pill lives-pill">
           <div id="hud-lives" class="hud-lives-icons"></div>
         </div>
+        
+        <!-- Tombol Menu Jeda Saat Permainan Berjalan -->
+        <button id="btn-pause" class="hud-pill pause-pill" title="Menu Jeda / Kembali">
+          <svg class="ui-svg-icon" viewBox="0 0 24 24"><path fill="#ff4757" d="M14,19H18V5H14M6,19H10V5H6V19Z"/></svg>
+          <span class="hud-text">MENU</span>
+        </button>
       </div>
 
       <!-- Tombol Aksi Kontrol & Powerup -->
@@ -77,34 +83,22 @@
       </div>
     </div>
 
-    <!-- Screen Menu Utama dengan Grafik Profesional -->
+    <!-- Screen Menu Utama dengan Grafik Vektor Kapal 3D -->
     <div id="screen-main-menu" class="modal-screen">
       <div class="modal-card main-menu-card bounce-in">
-        
-        <!-- Ilustrasi Vektor Kapal/Hero Melayang -->
         <div class="hero-logo-wrapper">
           <div class="glow-aura"></div>
           <svg class="hero-ship-svg" viewBox="0 0 200 160">
-            <!-- Aura & Bintang Latar Belakang -->
             <polygon points="100,10 115,50 155,50 122,75 135,115 100,90 65,115 78,75 45,50 85,50" fill="url(#starGrad)" opacity="0.25"/>
             <circle cx="100" cy="75" r="60" fill="none" stroke="#00d2d3" stroke-width="2" stroke-dasharray="6,6" class="rotating-ring"/>
-            
-            <!-- Sayap Belakang & Thruster Fire -->
             <path d="M70 120 L100 150 L130 120 Z" fill="#ff4757" class="flame-pulse"/>
             <path d="M82 120 L100 142 L118 120 Z" fill="#ffd700" class="flame-pulse-inner"/>
-            
-            <!-- Body Kapal Perang Utama -->
             <path d="M100 20 L140 100 L115 115 L100 105 L85 115 L60 100 Z" fill="url(#shipBodyGrad)" stroke="#ffffff" stroke-width="3"/>
-            <!-- Wings & Armor Side -->
             <path d="M60 100 L25 110 L50 75 Z" fill="#1e90ff" stroke="#ffffff" stroke-width="2"/>
             <path d="M140 100 L175 110 L150 75 Z" fill="#1e90ff" stroke="#ffffff" stroke-width="2"/>
-            <!-- Cockpit Glowing Visor -->
             <polygon points="100,35 118,70 100,80 82,70" fill="url(#visorGrad)"/>
-            <!-- Meriam Lasers -->
             <rect x="22" y="90" width="6" height="25" rx="3" fill="#ff4757"/>
             <rect x="172" y="90" width="6" height="25" rx="3" fill="#ff4757"/>
-            
-            <!-- Gradient Definitions -->
             <defs>
               <linearGradient id="shipBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stop-color="#2ed573"/>
@@ -123,14 +117,12 @@
           </svg>
         </div>
 
-        <!-- Typography Branding Game -->
         <div class="logo-container">
           <div class="badge-header">GALACTIC DEFENDER</div>
           <h1 class="game-title-3d">PAHLAWAN BINTANG</h1>
           <div class="subtitle-badge">SPACE ARCADE 3D</div>
         </div>
 
-        <!-- Form Input Nama -->
         <div class="input-card">
           <label for="player-name-input">NAMA PAHLAWAN CILIK:</label>
           <div class="input-wrapper">
@@ -139,7 +131,6 @@
           </div>
         </div>
 
-        <!-- Tombol Menu Utama -->
         <div class="menu-stack">
           <button id="btn-prepare-play" class="btn-3d btn-green btn-hero-start">
             <span class="btn-content">
@@ -148,11 +139,10 @@
             </span>
           </button>
           <button id="btn-select-actor" class="btn-3d btn-pink"><span>PILIH HERO (<span id="selected-actor-name">Robot Cyber</span>)</span></button>
-          <button id="btn-leaderboard" class="btn-3d btn-yellow"><span>PAPAN PERINGKAT</span></button>
+          <button id="btn-leaderboard" class="btn-3d btn-yellow"><span>PAPAN PERINGKAT ONLINE</span></button>
           <button id="btn-stickers" class="btn-3d btn-blue"><span>ALBUM STIKER (<span id="unlocked-count">0</span>/30)</span></button>
           <button id="btn-pwa-install" class="btn-3d btn-orange hidden"><span>INSTALL APLIKASI DI HP</span></button>
         </div>
-
       </div>
     </div>
 
@@ -172,11 +162,36 @@
       </div>
     </div>
 
-    <!-- Modal Pilih Aktor Hero -->
+    <!-- Modal Jeda / Menu Saat Game Berjalan -->
+    <div id="modal-pause" class="modal-screen hidden">
+      <div class="modal-card bounce-in">
+        <div class="modal-header">
+          <h2>PERMAINAN DIJEDA ⏸️</h2>
+          <p class="modal-sub">Pilih aksi di bawah ini untuk melanjutkan:</p>
+        </div>
+        
+        <div class="menu-stack" style="margin-top: 15px;">
+          <button id="btn-resume-game" class="btn-3d btn-green">
+            <span>▶ LANJUTKAN GAME</span>
+          </button>
+          <button id="btn-pause-change-hero" class="btn-3d btn-pink">
+            <span>🎭 GANTI HERO (<span id="pause-hero-name">Robot Cyber</span>)</span>
+          </button>
+          <button id="btn-pause-leaderboard" class="btn-3d btn-yellow">
+            <span>🏆 PAPAN PERINGKAT ONLINE</span>
+          </button>
+          <button id="btn-pause-main-menu" class="btn-3d btn-purple">
+            <span>🏠 KELUAR KE MENU UTAMA</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Pilih Karakter Hero -->
     <div id="modal-actors" class="modal-screen hidden">
       <div class="modal-card bounce-in">
         <div class="modal-header">
-          <h2>PILIH AKTOR HERO 3D</h2>
+          <h2>PILIH HERO KAMU</h2>
           <p class="modal-sub">Karakter ini akan bergerak dan menembak di layar!</p>
         </div>
         
@@ -206,7 +221,7 @@
     <div id="modal-leaderboard" class="modal-screen hidden">
       <div class="modal-card bounce-in">
         <div class="modal-header">
-          <h2>PAPAN PERINGKAT</h2>
+          <h2>PAPAN PERINGKAT REALTIME</h2>
           <p class="modal-sub">10 Pahlawan Terhebat di Dunia</p>
         </div>
         
@@ -216,7 +231,7 @@
               <tr><th>POS</th><th>NAMA</th><th>LEVEL</th><th>SKOR</th></tr>
             </thead>
             <tbody id="leaderboard-body">
-              <tr><td colspan="4" class="loading-text">Memuat Papan Peringkat...</td></tr>
+              <tr><td colspan="4" class="loading-text">Memuat Papan Peringkat Realtime...</td></tr>
             </tbody>
           </table>
         </div>
@@ -239,8 +254,8 @@
 
         <div class="menu-stack">
           <button id="btn-next-level" class="btn-3d btn-green">LANJUT LEVEL ▶</button>
-          <button id="btn-restart" class="btn-3d btn-yellow">MAIN LAGI 🔄</button>
-          <button id="btn-menu" class="btn-3d btn-purple">MENU UTAMA 🏠</button>
+          <button id="btn-restart" class="btn-3d btn-yellow">ULANGI LEVEL 🔄</button>
+          <button id="btn-menu" class="btn-3d btn-purple">AKHIRI GAME 🏠</button>
         </div>
       </div>
     </div>
@@ -259,6 +274,6 @@
 
   </div>
 
-  <script src="game.js?v=3.0"></script>
+  <script src="game.js?v=7.0"></script>
 </body>
 </html>
