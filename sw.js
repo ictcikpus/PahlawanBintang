@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pahlawan-bintang-v4.0';
+const CACHE_NAME = 'pahlawan-bintang-v6.0';
 
 const ASSETS_TO_CACHE = [
   './',
