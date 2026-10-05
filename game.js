@@ -87,7 +87,7 @@ const ENEMY_SCORE_TABLE = {
 };
 
 // =============================================================
-// 2. SYNTHESIZER AUDIO
+// 2. SYNTHESIZER AUDIO (SFX + BGM CHIPTUNE UPBEAT)
 // =============================================================
 class SoundEngine {
   constructor() {
@@ -300,32 +300,160 @@ class SoundEngine {
     });
   }
 
+  // ============================================================
+  // HELPER SUARA UNTUK BGM CHIPTUNE
+  // ============================================================
+  _playTone(freq, duration, type = 'square', vol = 0.05, detune = 0) {
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+    if (detune) osc.detune.setValueAtTime(detune, this.ctx.currentTime);
+    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + duration);
+  }
+
+  _playKick() {
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.2);
+  }
+
+  _playSnare() {
+    if (!this.ctx) return;
+    const bufferSize = this.ctx.sampleRate * 0.12;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    const filt = this.ctx.createBiquadFilter();
+    filt.type = 'highpass';
+    filt.frequency.value = 1200;
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+
+    src.connect(filt); filt.connect(gain); gain.connect(this.ctx.destination);
+    src.start();
+  }
+
+  _playHiHat() {
+    if (!this.ctx) return;
+    const bufferSize = this.ctx.sampleRate * 0.05;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    const filt = this.ctx.createBiquadFilter();
+    filt.type = 'highpass';
+    filt.frequency.value = 7000;
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.07, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+
+    src.connect(filt); filt.connect(gain); gain.connect(this.ctx.destination);
+    src.start();
+  }
+
+  // ============================================================
+  // BGM CHIPTUNE UPBEAT — Bass + Arpeggio + Melodi + Drum
+  // Progresi akor heroik: C - G - Am - F, tempo 138 BPM
+  // ============================================================
   startBGM() {
     if (this.bgmTimer) return;
-    const notes = [130.81, 164.81, 196.00, 261.63, 196.00, 164.81];
+
+    const bpm = 138;
+    const stepMs = (60 / bpm / 4) * 1000; // 16th note
+
+    const bassNotes = [
+      65.41,  // C2
+      98.00,  // G2
+      110.00, // A2
+      87.31   // F2
+    ];
+    const chordNotes = [
+      [261.63, 329.63, 392.00, 523.25], // C major
+      [392.00, 493.88, 587.33, 783.99], // G major
+      [440.00, 523.25, 659.25, 880.00], // A minor
+      [349.23, 440.00, 523.25, 698.46]  // F major
+    ];
+
+    const melodyPattern = [
+      [523.25, null, 659.25, null, 783.99, null, 659.25, null,
+       523.25, null, 392.00, null, 523.25, null, 587.33, null],
+      [493.88, null, 587.33, null, 783.99, null, 587.33, null,
+       493.88, null, 392.00, null, 493.88, null, 587.33, null],
+      [440.00, null, 523.25, null, 659.25, null, 523.25, null,
+       440.00, null, 349.23, null, 440.00, null, 523.25, null],
+      [349.23, null, 440.00, null, 523.25, null, 698.46, null,
+       587.33, null, 523.25, null, 440.00, null, 523.25, 587.33]
+    ];
+
+    let step = 0;
     this.bgmStep = 0;
+
     this.bgmTimer = setInterval(() => {
-      if (this.isMuted || !isGameRunning || isGamePaused) return;
+      if (this.isMuted || !isGameRunning || isGamePaused) {
+        step = 0;
+        return;
+      }
       this.init();
       if (!this.ctx) return;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(notes[this.bgmStep % notes.length], this.ctx.currentTime);
-      gain.gain.setValueAtTime(0.03, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.18);
-      this.bgmStep++;
-    }, 220);
+
+      const bar = Math.floor(step / 16) % 4;
+      const beat = step % 16;
+
+      // BASS — tiap 4 step
+      if (beat % 4 === 0) {
+        this._playTone(bassNotes[bar], 0.22, 'triangle', 0.09);
+      }
+
+      // ARPEGGIO CHORD — tiap 2 step
+      if (beat % 2 === 0) {
+        const chord = chordNotes[bar];
+        const idx = (beat / 2) % chord.length;
+        this._playTone(chord[idx], 0.14, 'square', 0.028);
+      }
+
+      // MELODY
+      const melNote = melodyPattern[bar][beat];
+      if (melNote !== null && melNote !== undefined) {
+        this._playTone(melNote, 0.18, 'square', 0.035, 5);
+      }
+
+      // DRUM
+      if (beat === 0 || beat === 8)  this._playKick();
+      if (beat === 4 || beat === 12) this._playSnare();
+      if (beat % 2 === 1)            this._playHiHat();
+
+      step++;
+      this.bgmStep = step;
+    }, stepMs);
   }
 
   stopBGM() {
     if (this.bgmTimer) {
       clearInterval(this.bgmTimer);
       this.bgmTimer = null;
+      this.bgmStep = 0;
     }
   }
 }
@@ -382,10 +510,8 @@ let monsters = [];
 let particles = [];
 let stars = [];
 let isFrozen = false;
-let screenShake = 0;
-
-// [FIX #6] freeze timer berbasis frame agar patuh pause
 let freezeFramesRemaining = 0;
+let screenShake = 0;
 
 let isMovingLeft = false;
 let isMovingRight = false;
@@ -397,7 +523,7 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let deferredPrompt;
 
-// [FIX #5] Referensi listener leaderboard untuk mencegah stacking
+// Referensi listener leaderboard (agar tidak menumpuk)
 let leaderboardRef = null;
 let leaderboardHandler = null;
 
@@ -421,11 +547,20 @@ window.addEventListener('load', async () => {
   await loadGameData();
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=10.0').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=11.0').catch(err => console.log('SW Fail:', err));
   }
 
   setupEventListeners();
   updateStickerAlbumUI();
+
+  // Sembunyikan loading screen setelah semua siap
+  setTimeout(() => {
+    const loader = document.getElementById('loading-screen');
+    if (loader) {
+      loader.classList.add('fade-out');
+      setTimeout(() => loader.remove(), 600);
+    }
+  }, 900);
 });
 
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -449,7 +584,6 @@ function initStarfield() {
   }
 }
 
-// [FIX #7] resizeCanvas: playerX selalu di-init kalau belum ada
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -496,7 +630,6 @@ function setupEventListeners() {
   document.getElementById('btn-close-shop').onclick = () => document.getElementById('modal-shop').classList.add('hidden');
 
   document.getElementById('btn-leaderboard').onclick = openLeaderboard;
-  // [FIX #5] close leaderboard juga melepas listener Firebase
   document.getElementById('btn-close-leaderboard').onclick = () => {
     document.getElementById('modal-leaderboard').classList.add('hidden');
     if (leaderboardRef && leaderboardHandler) {
@@ -544,14 +677,12 @@ function setupEventListeners() {
     };
   });
 
-  // [FIX #4] Audio button dengan feedback visual
   document.getElementById('btn-audio').onclick = () => {
     sounds.isMuted = !sounds.isMuted;
     if (!sounds.isMuted) sounds.init();
     updateAudioButtonUI();
   };
 
-  // [FIX #1] Handler tombol install PWA
   const btnInstall = document.getElementById('btn-pwa-install');
   if (btnInstall) {
     btnInstall.onclick = async () => {
@@ -595,12 +726,10 @@ function setupEventListeners() {
     }
   });
 
-  // [FIX #2 & #3] Next Level -> reset nyawa, dan reset total jika sudah tamat 30 level
   document.getElementById('btn-next-level').onclick = () => {
     document.getElementById('modal-result').classList.add('hidden');
     currentLevelIndex++;
     if (currentLevelIndex >= levelsData.length) {
-      // Tamat semua level -> restart penuh
       restartGame();
       return;
     }
@@ -609,7 +738,6 @@ function setupEventListeners() {
     startCurrentLevel();
   };
 
-  // [FIX #2] Restart setelah game over -> reset total
   document.getElementById('btn-restart').onclick = () => {
     document.getElementById('modal-result').classList.add('hidden');
     restartGame();
@@ -624,16 +752,14 @@ function setupEventListeners() {
     isGamePaused = false;
   };
 
-  // [FIX #6] Freeze dengan timer berbasis frame (patuh pause)
   document.getElementById('btn-freeze').onclick = () => {
     if (freezeCharges <= 0 || isFrozen || isGamePaused) return;
     freezeCharges--;
     isFrozen = true;
-    freezeFramesRemaining = 210; // ~3.5 detik @60fps
+    freezeFramesRemaining = 210;
     sounds.playFreeze();
     triggerVibrate([50, 50, 50]);
     updateSkillButtonsUI();
-
     spawnFloatingText(canvas.width / 2, canvas.height / 2, 'BEKU! ❄️', '#1e90ff');
   };
 
@@ -686,16 +812,15 @@ function setupEventListeners() {
 
 function updateShopUI() {
   document.getElementById('shop-coin-count').innerText = coins;
-
   document.getElementById('shop-level-firerate').innerText = upgradeFireRate;
   document.getElementById('shop-level-shield').innerText = upgradeShield;
   document.getElementById('shop-level-bomb').innerText = upgradeBomb;
   document.getElementById('shop-level-freeze').innerText = upgradeFreeze;
 
-  document.getElementById('btn-buy-firerate').querySelector('span').innerText = upgradeFireRate >= 5 ? 'MAX' : `${upgradeFireRate * 50} 🪙`;
-  document.getElementById('btn-buy-shield').querySelector('span').innerText = upgradeShield >= 5 ? 'MAX' : `${upgradeShield * 60} 🪙`;
-  document.getElementById('btn-buy-bomb').querySelector('span').innerText = upgradeBomb >= 5 ? 'MAX' : `${upgradeBomb * 75} 🪙`;
-  document.getElementById('btn-buy-freeze').querySelector('span').innerText = upgradeFreeze >= 5 ? 'MAX' : `${upgradeFreeze * 75} 🪙`;
+  document.getElementById('btn-buy-firerate').querySelector('span').innerText = upgradeFireRate >= 5 ? 'MAX' : `${upgradeFireRate * 50}🪙`;
+  document.getElementById('btn-buy-shield').querySelector('span').innerText = upgradeShield >= 5 ? 'MAX' : `${upgradeShield * 60}🪙`;
+  document.getElementById('btn-buy-bomb').querySelector('span').innerText = upgradeBomb >= 5 ? 'MAX' : `${upgradeBomb * 75}🪙`;
+  document.getElementById('btn-buy-freeze').querySelector('span').innerText = upgradeFreeze >= 5 ? 'MAX' : `${upgradeFreeze * 75}🪙`;
 }
 
 function buyUpgrade(type) {
@@ -791,7 +916,6 @@ function startGame() {
   currentLevelIndex = 0;
   score = 0;
   lives = 3;
-  // sync coins dari localStorage (mungkin baru beli upgrade)
   coins = Number(localStorage.getItem('pahlawan_coins')) || 0;
 
   if (!levelsData || levelsData.length === 0) {
@@ -808,7 +932,6 @@ function startGame() {
   }, 60);
 }
 
-// [FIX #2] Fungsi restart menyeluruh
 function restartGame() {
   currentLevelIndex = 0;
   score = 0;
@@ -984,7 +1107,7 @@ function spawnFloatingText(x, y, text, color) {
   el.style.top = `${y}px`;
   el.style.color = color;
   container.appendChild(el);
-  setTimeout(() => el.remove(), 800);
+  setTimeout(() => el.remove(), 900);
 }
 
 function createBurstParticles3D(x, y, color) {
@@ -1027,7 +1150,6 @@ function drawHeroVector(ctx, x, y, type) {
     ctx.fillStyle = '#2f3542';
     ctx.fillRect(-24, -8, 6, 16);
     ctx.fillRect(18, -8, 6, 16);
-
     ctx.fillStyle = '#ff4757';
     ctx.beginPath();
     ctx.moveTo(-10, 18); ctx.lineTo(0, 30 + Math.random()*6); ctx.lineTo(10, 18);
@@ -1038,10 +1160,8 @@ function drawHeroVector(ctx, x, y, type) {
     ctx.beginPath();
     ctx.moveTo(0, -30); ctx.lineTo(24, 15); ctx.lineTo(-24, 15);
     ctx.closePath(); ctx.fill();
-
     ctx.fillStyle = '#2f3542';
     ctx.fillRect(-16, -18, 5, 20); ctx.fillRect(11, -18, 5, 20);
-
     ctx.fillStyle = '#ffd700';
     ctx.beginPath(); ctx.arc(0, -2, 6, 0, Math.PI*2); ctx.fill();
   }
@@ -1051,7 +1171,6 @@ function drawHeroVector(ctx, x, y, type) {
     ctx.moveTo(0, -28); ctx.lineTo(16, 10); ctx.lineTo(28, -5); ctx.lineTo(12, 18);
     ctx.lineTo(-12, 18); ctx.lineTo(-28, -5); ctx.lineTo(-16, 10);
     ctx.closePath(); ctx.fill();
-
     ctx.fillStyle = '#ff4757';
     ctx.fillRect(-7, -12, 4, 4); ctx.fillRect(3, -12, 4, 4);
   }
@@ -1060,7 +1179,6 @@ function drawHeroVector(ctx, x, y, type) {
     ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.moveTo(-14, -8); ctx.lineTo(-8, -24); ctx.lineTo(-2, -12); ctx.fill();
     ctx.beginPath(); ctx.moveTo(14, -8); ctx.lineTo(8, -24); ctx.lineTo(2, -12); ctx.fill();
-
     ctx.fillStyle = '#2f3542';
     ctx.fillRect(-12, -6, 24, 8);
     ctx.fillStyle = '#fff';
@@ -1107,8 +1225,8 @@ function gameLoop() {
   }
 
   const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  bgGrad.addColorStop(0, '#0a0d24');
-  bgGrad.addColorStop(1, '#1a224d');
+  bgGrad.addColorStop(0, '#05061a');
+  bgGrad.addColorStop(1, '#0e1035');
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -1123,7 +1241,7 @@ function gameLoop() {
 
   ctx.fillStyle = '#2f3640';
   ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
-  ctx.fillStyle = '#1e90ff';
+  ctx.fillStyle = '#00d2ff';
   ctx.fillRect(0, canvas.height - 45, canvas.width, 5);
 
   if (isMovingLeft) playerX -= playerSpeed;
@@ -1143,7 +1261,6 @@ function gameLoop() {
     if (magnetTimer <= 0) isMagnetActive = false;
   }
 
-  // [FIX #6] freeze timer berbasis frame
   if (isFrozen) {
     freezeFramesRemaining--;
     if (freezeFramesRemaining <= 0) {
@@ -1168,8 +1285,6 @@ function gameLoop() {
   const now = Date.now();
 
   if (now - lastShotTime > fireInterval) {
-    const activeColor = actorMap[currentActor] ? actorMap[currentActor].color : '#1e90ff';
-
     if (isSuperShot) {
       bullets.push({ x: playerX - 16, y: canvas.height - 65, vx: -2.5, vy: 12, color: '#00d2d3', heroType: currentActor, size: 7, pierce: 1 });
       bullets.push({ x: playerX, y: canvas.height - 65, vx: 0, vy: 13, color: '#ffd700', heroType: currentActor, size: 8, pierce: 1 });
@@ -1264,7 +1379,6 @@ function gameLoop() {
       const m = monsters[i];
       const dist = Math.hypot(m.x - bullet.x, m.y - bullet.y);
       if (dist < m.size + bullet.size + 4) {
-
         bullet.pierce--;
         if (bullet.pierce <= 0) {
           bullets.splice(b, 1);
@@ -1589,7 +1703,7 @@ function gameLoop() {
     else if (m.type === 'donut') {
       ctx.beginPath(); ctx.arc(0, 0, m.size, 0, Math.PI * 2); ctx.fillStyle = '#fa8231'; ctx.fill();
       ctx.beginPath(); ctx.arc(0, 0, m.size * 0.8, 0, Math.PI * 2); ctx.fillStyle = '#ff78ae'; ctx.fill();
-      ctx.beginPath(); ctx.arc(0, 0, m.size * 0.35, 0, Math.PI * 2); ctx.fillStyle = '#0a0d24'; ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, m.size * 0.35, 0, Math.PI * 2); ctx.fillStyle = '#05061a'; ctx.fill();
     }
     else if (m.type === 'cloud') {
       ctx.fillStyle = '#f1f2f6';
@@ -1656,7 +1770,7 @@ function gameLoop() {
 }
 
 // =============================================================
-// 4. LEVEL COMPLETE / FAILED & LEADERBOARD
+// 4. LEVEL COMPLETE / FAILED
 // =============================================================
 function levelComplete() {
   isGameRunning = false;
@@ -1669,7 +1783,7 @@ function levelComplete() {
   unlockSticker(levelConfig.level);
   saveScoreToGlobalLeaderboard(playerName, score, levelConfig.level);
 
-  document.getElementById('result-title').innerText = "MISI SELESAI!";
+  document.getElementById('result-title').innerText = "🏆 MISI SELESAI!";
   document.getElementById('result-player-name').innerText = playerName;
   document.getElementById('result-score').innerText = score;
   document.getElementById('result-coins').innerText = `+${levelCoinsEarned} 🪙`;
@@ -1689,7 +1803,7 @@ function levelFailed(reasonTitle = "MISI GAGAL!") {
   const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
   saveScoreToGlobalLeaderboard(playerName, score, levelConfig.level);
 
-  document.getElementById('result-title').innerText = reasonTitle;
+  document.getElementById('result-title').innerText = "💀 " + reasonTitle;
   document.getElementById('result-player-name').innerText = playerName;
   document.getElementById('result-score').innerText = score;
   document.getElementById('result-coins').innerText = `+${levelCoinsEarned} 🪙`;
@@ -1765,7 +1879,9 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   }
 }
 
-// [FIX #5] openLeaderboard dengan listener tunggal (tidak stacking)
+// =============================================================
+// 5. LEADERBOARD
+// =============================================================
 function openLeaderboard() {
   document.getElementById('modal-leaderboard').classList.remove('hidden');
   const tbody = document.getElementById('leaderboard-body');
@@ -1776,7 +1892,6 @@ function openLeaderboard() {
     return;
   }
 
-  // Lepas listener lama kalau ada
   if (leaderboardRef && leaderboardHandler) {
     try { leaderboardRef.off('value', leaderboardHandler); } catch(e) {}
   }
@@ -1900,6 +2015,9 @@ function escapeHtml(text) {
   });
 }
 
+// =============================================================
+// 6. STICKER ALBUM
+// =============================================================
 function unlockSticker(id) {
   let unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
   if (!unlocked.includes(id)) {
@@ -1911,17 +2029,19 @@ function unlockSticker(id) {
 
 function updateStickerAlbumUI() {
   const unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
-  document.getElementById('unlocked-count').innerText = unlocked.length;
+  const el = document.getElementById('unlocked-count');
+  if (el) el.innerText = unlocked.length;
 }
 
 function openStickerAlbum() {
   const unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
   const grid = document.getElementById('sticker-grid');
 
-  grid.innerHTML = (stickersData || DEFAULT_STICKERS).map(sticker => {
+  grid.innerHTML = (stickersData || DEFAULT_STICKERS).map((sticker, idx) => {
     const isUnlocked = unlocked.includes(sticker.id);
+    const delay = (idx * 0.03).toFixed(2);
     return `
-      <div class="sticker-card ${isUnlocked ? '' : 'locked'}">
+      <div class="sticker-card ${isUnlocked ? '' : 'locked'}" style="animation-delay:${delay}s">
         <div class="sticker-title">${isUnlocked ? sticker.title : 'Terkunci'}</div>
       </div>
     `;
