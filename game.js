@@ -201,6 +201,7 @@ let score = 0;
 let levelKills = 0;
 let lives = 3;
 let isGameRunning = false;
+let isGamePaused = false;
 
 let playerX = 0;
 let playerSpeed = 9;
@@ -249,7 +250,7 @@ window.addEventListener('load', async () => {
   await loadGameData();
   
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=5.0').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=7.0').catch(err => console.log('SW Fail:', err));
   }
 
   setupEventListeners();
@@ -309,6 +310,31 @@ function setupEventListeners() {
   document.getElementById('btn-stickers').onclick = openStickerAlbum;
   document.getElementById('btn-close-stickers').onclick = () => document.getElementById('modal-stickers').classList.add('hidden');
 
+  // Tombol Menu / Pause di HUD Game
+  document.getElementById('btn-pause').onclick = pauseGame;
+
+  // Tombol Lanjutkan Game dari Modal Pause
+  document.getElementById('btn-resume-game').onclick = resumeGame;
+
+  // Tombol Ganti Hero dari Modal Pause
+  document.getElementById('btn-pause-change-hero').onclick = () => {
+    document.getElementById('modal-actors').classList.remove('hidden');
+  };
+
+  // Tombol Lihat Papan Peringkat dari Modal Pause
+  document.getElementById('btn-pause-leaderboard').onclick = () => {
+    openLeaderboard();
+  };
+
+  // Tombol Keluar ke Menu Utama dari Modal Pause
+  document.getElementById('btn-pause-main-menu').onclick = () => {
+    document.getElementById('modal-pause').classList.add('hidden');
+    document.getElementById('hud-overlay').classList.add('hidden');
+    document.getElementById('screen-main-menu').classList.remove('hidden');
+    isGameRunning = false;
+    isGamePaused = false;
+  };
+
   document.querySelectorAll('.actor-card').forEach(card => {
     card.onclick = () => {
       document.querySelectorAll('.actor-card').forEach(c => c.classList.remove('selected'));
@@ -345,7 +371,7 @@ function setupEventListeners() {
   });
 
   canvas.addEventListener('pointermove', (e) => {
-    if (!isGameRunning) return;
+    if (!isGameRunning || isGamePaused) return;
     if (e.buttons > 0 || e.pointerType === 'touch') {
       const rect = canvas.getBoundingClientRect();
       playerX = e.clientX - rect.left;
@@ -369,10 +395,11 @@ function setupEventListeners() {
     document.getElementById('hud-overlay').classList.add('hidden');
     document.getElementById('screen-main-menu').classList.remove('hidden');
     isGameRunning = false;
+    isGamePaused = false;
   };
 
   document.getElementById('btn-freeze').onclick = () => {
-    if (freezeCharges <= 0 || isFrozen) return;
+    if (freezeCharges <= 0 || isFrozen || isGamePaused) return;
     freezeCharges--;
     isFrozen = true;
     sounds.playFreeze();
@@ -384,7 +411,7 @@ function setupEventListeners() {
   };
 
   document.getElementById('btn-bomb').onclick = () => {
-    if (bombCharges <= 0) return;
+    if (bombCharges <= 0 || isGamePaused) return;
     bombCharges--;
     screenShake = 18;
     sounds.playBomb();
@@ -404,6 +431,18 @@ function setupEventListeners() {
   };
 }
 
+function pauseGame() {
+  if (!isGameRunning) return;
+  isGamePaused = true;
+  document.getElementById('modal-pause').classList.remove('hidden');
+}
+
+function resumeGame() {
+  isGamePaused = false;
+  document.getElementById('modal-pause').classList.add('hidden');
+  requestAnimationFrame(gameLoop);
+}
+
 function requestFullscreenAndLandscape() {
   const doc = document.documentElement;
   if (doc.requestFullscreen) { doc.requestFullscreen().catch(() => {}); }
@@ -415,7 +454,10 @@ function requestFullscreenAndLandscape() {
 }
 
 function updateActorSelectionUI() {
-  document.getElementById('selected-actor-name').innerText = actorMap[currentActor].name;
+  const name = actorMap[currentActor].name;
+  document.getElementById('selected-actor-name').innerText = name;
+  const pauseHero = document.getElementById('pause-hero-name');
+  if (pauseHero) pauseHero.innerText = name;
 }
 
 function updateSkillButtonsUI() {
@@ -470,6 +512,7 @@ function startCurrentLevel() {
   monsters = [];
   particles = [];
   isGameRunning = true;
+  isGamePaused = false;
 
   spawnMonsterLoop();
   gameLoop();
@@ -493,57 +536,59 @@ function updateLivesDisplay() {
 
 function spawnMonsterLoop() {
   if (!isGameRunning) return;
-  const levelConfig = levelsData[currentLevelIndex];
+  
+  if (!isGamePaused && !isFrozen) {
+    const levelConfig = levelsData[currentLevelIndex];
+    if (levelConfig) {
+      const algo = levelConfig.algorithm;
+      const typeList = levelConfig.types || ['jelly'];
 
-  if (!isFrozen) {
-    const algo = levelConfig.algorithm;
-    const typeList = levelConfig.types || ['jelly'];
-
-    if (algo === 'boss_10' || algo === 'boss_20' || algo === 'boss_30') {
-      if (monsters.length === 0 && levelKills < levelConfig.targetKills) {
-        let hpVal = algo === 'boss_10' ? 25 : (algo === 'boss_20' ? 50 : 100);
-        let colorVal = algo === 'boss_10' ? '#e67e22' : (algo === 'boss_20' ? '#9b59b6' : '#e74c3c');
-        
-        monsters.push({
-          x: canvas.width / 2,
-          startX: canvas.width / 2,
-          y: -80,
-          speed: 1.2,
-          size: 70,
-          hp: hpVal,
-          maxHp: hpVal,
-          color: colorVal,
-          type: typeList[0],
-          algorithm: algo,
-          shootTimer: 0,
-          timeAlive: 0,
-          opacity: 1
-        });
-      }
-    } else {
-      let countToSpawn = (algo === 'swarm') ? 2 : 1;
-      for (let c = 0; c < countToSpawn; c++) {
-        const chosenType = typeList[Math.floor(Math.random() * typeList.length)];
-        monsters.push({
-          x: Math.random() * (canvas.width - 120) + 60,
-          startX: Math.random() * (canvas.width - 120) + 60,
-          y: -60,
-          speed: (1.2 + Math.random() * 1.2) * levelConfig.speed,
-          size: (chosenType === 'donut' ? 36 : 30),
-          hp: (chosenType === 'donut' ? 2 : 1),
-          maxHp: (chosenType === 'donut' ? 2 : 1),
-          color: ['#ff4757', '#2ed573', '#ffa502', '#1e90ff'][Math.floor(Math.random() * 4)],
-          type: chosenType,
-          algorithm: algo,
-          shootTimer: 0,
-          timeAlive: 0,
-          opacity: 1
-        });
+      if (algo === 'boss_10' || algo === 'boss_20' || algo === 'boss_30') {
+        if (monsters.length === 0 && levelKills < levelConfig.targetKills) {
+          let hpVal = algo === 'boss_10' ? 25 : (algo === 'boss_20' ? 50 : 100);
+          let colorVal = algo === 'boss_10' ? '#e67e22' : (algo === 'boss_20' ? '#9b59b6' : '#e74c3c');
+          
+          monsters.push({
+            x: canvas.width / 2,
+            startX: canvas.width / 2,
+            y: -80,
+            speed: 1.2,
+            size: 70,
+            hp: hpVal,
+            maxHp: hpVal,
+            color: colorVal,
+            type: typeList[0],
+            algorithm: algo,
+            shootTimer: 0,
+            timeAlive: 0,
+            opacity: 1
+          });
+        }
+      } else {
+        let countToSpawn = (algo === 'swarm') ? 2 : 1;
+        for (let c = 0; c < countToSpawn; c++) {
+          const chosenType = typeList[Math.floor(Math.random() * typeList.length)];
+          monsters.push({
+            x: Math.random() * (canvas.width - 120) + 60,
+            startX: Math.random() * (canvas.width - 120) + 60,
+            y: -60,
+            speed: (1.2 + Math.random() * 1.2) * levelConfig.speed,
+            size: (chosenType === 'donut' ? 36 : 30),
+            hp: (chosenType === 'donut' ? 2 : 1),
+            maxHp: (chosenType === 'donut' ? 2 : 1),
+            color: ['#ff4757', '#2ed573', '#ffa502', '#1e90ff'][Math.floor(Math.random() * 4)],
+            type: chosenType,
+            algorithm: algo,
+            shootTimer: 0,
+            timeAlive: 0,
+            opacity: 1
+          });
+        }
       }
     }
   }
 
-  setTimeout(spawnMonsterLoop, levelConfig.spawnRate);
+  setTimeout(spawnMonsterLoop, levelsData[currentLevelIndex]?.spawnRate || 1500);
 }
 
 function trySpawnPowerup(x, y) {
@@ -670,7 +715,7 @@ function drawHeroVector(ctx, x, y, type) {
 }
 
 function gameLoop() {
-  if (!isGameRunning) return;
+  if (!isGameRunning || isGamePaused) return;
 
   ctx.save();
   if (screenShake > 0) {
@@ -1030,6 +1075,7 @@ function gameLoop() {
 // =============================================================
 function levelComplete() {
   isGameRunning = false;
+  isGamePaused = false;
   sounds.playWin();
   triggerVibrate([50, 50, 50, 50, 100]);
   unlockSticker(currentLevelIndex + 1);
@@ -1048,6 +1094,7 @@ function levelComplete() {
 
 function levelFailed(reasonTitle = "MISI GAGAL!") {
   isGameRunning = false;
+  isGamePaused = false;
   triggerVibrate([200, 100, 200]);
   saveScoreToGlobalLeaderboard(playerName, score, currentLevelIndex + 1);
 
