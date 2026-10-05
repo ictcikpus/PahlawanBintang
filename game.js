@@ -113,8 +113,8 @@ class SoundEngine {
     const gain = this.ctx.createGain();
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(987.77, this.ctx.currentTime); // B5
-    osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.08); // E6
+    osc.frequency.setValueAtTime(987.77, this.ctx.currentTime);
+    osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.08);
 
     gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
@@ -510,7 +510,6 @@ function setupEventListeners() {
     isGamePaused = false;
   };
 
-  // Buy Upgrades Handler
   document.getElementById('btn-buy-firerate').onclick = () => buyUpgrade('firerate');
   document.getElementById('btn-buy-shield').onclick = () => buyUpgrade('shield');
   document.getElementById('btn-buy-bomb').onclick = () => buyUpgrade('bomb');
@@ -864,12 +863,10 @@ function spawnMonsterLoop() {
 }
 
 function trySpawnDrop(x, y) {
-  // Spawn Koin Bintang (Probabilitas 45%)
   if (Math.random() < 0.45) {
     coinsOnField.push({ x: x, y: y, vy: 1.8, size: 10, rot: 0 });
   }
 
-  // Spawn Powerup (Probabilitas 30%)
   if (Math.random() < 0.30) {
     const types = ['supershot', 'shield', 'bomb', 'freeze', 'heart'];
     const chosenType = types[Math.floor(Math.random() * types.length)];
@@ -997,7 +994,6 @@ function gameLoop() {
     if (screenShake < 0.5) screenShake = 0;
   }
 
-  // Parallax Starfield Background Render
   const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
   bgGrad.addColorStop(0, '#0a0d24');
   bgGrad.addColorStop(1, '#1a224d');
@@ -1031,7 +1027,6 @@ function gameLoop() {
     if (shieldTimer <= 0) isShieldActive = false;
   }
 
-  // Combo Timer Handling
   if (combo > 1) {
     comboTimer--;
     if (comboTimer <= 0) {
@@ -1040,7 +1035,6 @@ function gameLoop() {
     }
   }
 
-  // Fire Rate Upgrade modifier
   const fireInterval = Math.max(90, 160 - (upgradeFireRate - 1) * 15);
   const now = Date.now();
   if (now - lastShotTime > fireInterval) {
@@ -1058,7 +1052,6 @@ function gameLoop() {
     lastShotTime = now;
   }
 
-  // Muzzle Flash Effect Render
   for (let mf = muzzleFlashes.length - 1; mf >= 0; mf--) {
     const flash = muzzleFlashes[mf];
     ctx.beginPath();
@@ -1069,7 +1062,6 @@ function gameLoop() {
     if (flash.opacity <= 0) muzzleFlashes.splice(mf, 1);
   }
 
-  // Render Bullets dengan Laser Trail
   for (let b = bullets.length - 1; b >= 0; b--) {
     const bullet = bullets[b];
     bullet.y -= bullet.vy;
@@ -1105,13 +1097,12 @@ function gameLoop() {
           createBurstParticles3D(m.x, m.y, m.color);
           trySpawnDrop(m.x, m.y);
 
-          // Multiplier Combo Score
           let pointsGained = 150 * combo;
           score += pointsGained;
           levelKills++;
 
           combo = Math.min(MAX_COMBO, combo + 1);
-          comboTimer = 180; // 3 detik reset
+          comboTimer = 180;
           sounds.playCombo();
 
           spawnFloatingText(m.x, m.y, `+${pointsGained} (${combo}x)`, '#ffd700');
@@ -1134,7 +1125,6 @@ function gameLoop() {
     }
   }
 
-  // Render Koin Bintang Di Lapangan
   for (let c = coinsOnField.length - 1; c >= 0; c--) {
     const coin = coinsOnField[c];
     coin.y += coin.vy;
@@ -1170,7 +1160,6 @@ function gameLoop() {
     if (coin.y > canvas.height) coinsOnField.splice(c, 1);
   }
 
-  // Render Powerups
   for (let p = powerups.length - 1; p >= 0; p--) {
     const pw = powerups[p];
     pw.y += pw.speed;
@@ -1241,7 +1230,6 @@ function gameLoop() {
     if (pw.y > canvas.height) powerups.splice(p, 1);
   }
 
-  // Render Boss Bullets
   for (let bb = bossBullets.length - 1; bb >= 0; bb--) {
     const bBullet = bossBullets[bb];
     bBullet.y += bBullet.vy;
@@ -1285,7 +1273,6 @@ function gameLoop() {
 
   drawHeroVector(ctx, playerX, canvas.height - 45, currentActor);
 
-  // Render Monsters & AI Movement
   for (let i = monsters.length - 1; i >= 0; i--) {
     const m = monsters[i];
     m.timeAlive += 0.05;
@@ -1436,7 +1423,7 @@ function gameLoop() {
 }
 
 // =============================================================
-// 4. LOGIKA KELULUSAN & INTEGRASI FIREBASE REALTIME DATABASE
+// 4. LOGIKA PERBAIKAN TOTAL PAPAN PERINGKAT REALTIME GLOBAL
 // =============================================================
 function levelComplete() {
   isGameRunning = false;
@@ -1445,9 +1432,10 @@ function levelComplete() {
   sounds.playWin();
   triggerVibrate([50, 50, 50, 50, 100]);
   unlockSticker(currentLevelIndex + 1);
-  saveScoreToGlobalLeaderboard(playerName, score, currentLevelIndex + 1);
 
   const levelConfig = (levelsData && levelsData[currentLevelIndex]) ? levelsData[currentLevelIndex] : DEFAULT_LEVELS[0];
+  saveScoreToGlobalLeaderboard(playerName, score, levelConfig.level);
+
   document.getElementById('result-title').innerText = "MISI SELESAI!";
   document.getElementById('result-player-name').innerText = playerName;
   document.getElementById('result-score').innerText = score;
@@ -1464,9 +1452,10 @@ function levelFailed(reasonTitle = "MISI GAGAL!") {
   isGamePaused = false;
   sounds.stopBGM();
   triggerVibrate([200, 100, 200]);
-  saveScoreToGlobalLeaderboard(playerName, score, currentLevelIndex + 1);
 
   const levelConfig = (levelsData && levelsData[currentLevelIndex]) ? levelsData[currentLevelIndex] : DEFAULT_LEVELS[0];
+  saveScoreToGlobalLeaderboard(playerName, score, levelConfig.level);
+
   document.getElementById('result-title').innerText = reasonTitle;
   document.getElementById('result-player-name').innerText = playerName;
   document.getElementById('result-score').innerText = score;
@@ -1478,29 +1467,73 @@ function levelFailed(reasonTitle = "MISI GAGAL!") {
   document.getElementById('modal-result').classList.remove('hidden');
 }
 
+// FUNGSI SIMPAN HANYA JIKA REKOR PEMAIN MEMBAIK (1 NAMA = 1 REKOR TERBAIK GLOBAL)
 function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
-  let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
-  localScores.push({ name: name, score: scoreVal, level: levelVal });
-  localScores.sort((a,b) => b.score - a.score);
-  localStorage.setItem('pahlawan_scores', JSON.stringify(localScores.slice(0, 10)));
+  const cleanName = (name || 'Pahlawan').trim();
+  const playerKey = cleanName.toLowerCase().replace(/[^a-z0-9]/g, "_");
+  const numScore = Number(scoreVal) || 0;
+  const numLevel = Number(levelVal) || 1;
+  const sortValue = (numLevel * 100000000) + numScore;
 
-  if (db) {
-    db.ref('leaderboard').push({
-      name: name,
-      score: Number(scoreVal),
-      level: Number(levelVal),
-      timestamp: Date.now()
-    }).catch(err => console.error("Gagal mengirim ke Firebase:", err));
+  // 1. Simpan ke LocalStorage
+  let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
+  let existingIndex = localScores.findIndex(s => s.name.toLowerCase() === cleanName.toLowerCase());
+
+  let shouldUpdateLocal = false;
+  if (existingIndex === -1) {
+    shouldUpdateLocal = true;
+    localScores.push({ name: cleanName, score: numScore, level: numLevel, sortValue: sortValue });
+  } else {
+    let existing = localScores[existingIndex];
+    if (numLevel > existing.level || (numLevel === existing.level && numScore > existing.score)) {
+      shouldUpdateLocal = true;
+      localScores[existingIndex] = { name: cleanName, score: numScore, level: numLevel, sortValue: sortValue };
+    }
+  }
+
+  if (shouldUpdateLocal) {
+    localScores.sort((a, b) => (b.level !== a.level) ? (b.level - a.level) : (b.score - a.score));
+    localStorage.setItem('pahlawan_scores', JSON.stringify(localScores.slice(0, 10)));
+  }
+
+  // 2. Simpan ke Firebase Realtime Database
+  if (db && playerKey) {
+    const playerRef = db.ref('leaderboard/' + playerKey);
+    playerRef.once('value').then(snapshot => {
+      let existingData = snapshot.val();
+      let shouldUpdateDb = false;
+
+      if (!existingData) {
+        shouldUpdateDb = true;
+      } else {
+        let oldLevel = Number(existingData.level) || 0;
+        let oldScore = Number(existingData.score) || 0;
+        if (numLevel > oldLevel || (numLevel === oldLevel && numScore > oldScore)) {
+          shouldUpdateDb = true;
+        }
+      }
+
+      if (shouldUpdateDb) {
+        playerRef.set({
+          name: cleanName,
+          score: numScore,
+          level: numLevel,
+          sortValue: sortValue,
+          timestamp: Date.now()
+        }).catch(err => console.error("Gagal memperbarui rekor di Firebase:", err));
+      }
+    }).catch(err => console.error("Gagal membaca rekor Firebase:", err));
   }
 }
 
+// BUKA PAPAN PERINGKAT ONLINE DENGAN PENGURUTAN LEVEL & SKOR PRESISI
 function openLeaderboard() {
   document.getElementById('modal-leaderboard').classList.remove('hidden');
   const tbody = document.getElementById('leaderboard-body');
   tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Memuat Papan Peringkat Realtime...</td></tr>';
 
   if (db) {
-    db.ref('leaderboard').orderByChild('score').limitToLast(10).on('value', (snapshot) => {
+    db.ref('leaderboard').orderByChild('sortValue').limitToLast(15).on('value', (snapshot) => {
       if (!snapshot.exists()) {
         showLocalScores(tbody);
         return;
@@ -1511,14 +1544,22 @@ function openLeaderboard() {
         list.push(childSnapshot.val());
       });
 
-      list.sort((a, b) => b.score - a.score);
+      // Urutkan ulang secara ketat: Prioritas 1 = Level, Prioritas 2 = Skor
+      list.sort((a, b) => {
+        if ((b.level || 0) !== (a.level || 0)) {
+          return (b.level || 0) - (a.level || 0);
+        }
+        return (b.score || 0) - (a.score || 0);
+      });
 
-      tbody.innerHTML = list.map((s, index) => `
+      let top10 = list.slice(0, 10);
+
+      tbody.innerHTML = top10.map((s, index) => `
         <tr>
           <td>${index === 0 ? '🥇 1' : index === 1 ? '🥈 2' : index === 2 ? '🥉 3' : index + 1}</td>
           <td><strong>${escapeHtml(s.name)}</strong></td>
           <td>Lvl ${s.level || 1}</td>
-          <td><strong>${s.score}</strong></td>
+          <td><strong>${s.score || 0}</strong></td>
         </tr>
       `).join('');
     }, (error) => {
@@ -1535,12 +1576,19 @@ function showLocalScores(tbody) {
   if (localScores.length === 0) {
     tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Belum ada skor tercatat.</td></tr>';
   } else {
-    tbody.innerHTML = localScores.map((s, index) => `
+    localScores.sort((a, b) => {
+      if ((b.level || 0) !== (a.level || 0)) {
+        return (b.level || 0) - (a.level || 0);
+      }
+      return (b.score || 0) - (a.score || 0);
+    });
+
+    tbody.innerHTML = localScores.slice(0, 10).map((s, index) => `
       <tr>
-        <td>${index === 0 ? '1' : index === 1 ? '2' : index === 2 ? '3' : index + 1}</td>
+        <td>${index === 0 ? '🥇 1' : index === 1 ? '🥈 2' : index === 2 ? '🥉 3' : index + 1}</td>
         <td><strong>${escapeHtml(s.name)}</strong></td>
-        <td>Lvl ${s.level}</td>
-        <td><strong>${s.score}</strong></td>
+        <td>Lvl ${s.level || 1}</td>
+        <td><strong>${s.score || 0}</strong></td>
       </tr>
     `).join('');
   }
