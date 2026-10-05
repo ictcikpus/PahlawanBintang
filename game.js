@@ -18,8 +18,25 @@ try {
   db = firebase.database();
   console.log("🔥 Firebase Realtime Database Terhubung Berhasil!");
 } catch(e) {
-  console.log("⚠️️ Firebase Mode Offline / Config Belum Diisi");
+  console.log("⚠️ Firebase Mode Offline / Config Belum Diisi");
 }
+
+// =============================================================
+// DATA CADANGAN (DEFAULT FALLBACK LEVEL) JIKA FETCH JSON GAGAL
+// =============================================================
+const DEFAULT_LEVELS = [
+  { level: 1, targetKills: 10, targetScore: 1000, speed: 1.0, spawnRate: 1500, algorithm: "linear", types: ["jelly"] },
+  { level: 2, targetKills: 15, targetScore: 2000, speed: 1.2, spawnRate: 1300, algorithm: "zigzag", types: ["jelly", "donut"] },
+  { level: 3, targetKills: 20, targetScore: 3000, speed: 1.4, spawnRate: 1100, algorithm: "gravity", types: ["donut", "cloud"] },
+  { level: 4, targetKills: 25, targetScore: 4000, speed: 1.6, spawnRate: 1000, algorithm: "stealth", types: ["cloud", "crystal"] },
+  { level: 5, targetKills: 1,  targetScore: 5000, speed: 1.0, spawnRate: 2000, algorithm: "boss_10", types: ["boss10"] }
+];
+
+const DEFAULT_STICKERS = [
+  { id: 1, title: "Pahlawan Pemula" },
+  { id: 2, title: "Penembak Jitu" },
+  { id: 3, title: "Penjelajah Galaksi" }
+];
 
 // =============================================================
 // 2. SYNTHESIZER AUDIO (TANPA FILE SOUND EKSTERNAL)
@@ -31,18 +48,23 @@ class SoundEngine {
   }
 
   init() {
-    if (!this.ctx) {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      this.ctx = new AudioCtx();
-    }
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
+    try {
+      if (!this.ctx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioCtx();
+      }
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+    } catch(e) {
+      console.log("Audio Context Error / Not Allowed yet");
     }
   }
 
   playLaser() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
 
@@ -63,6 +85,7 @@ class SoundEngine {
   playPowerup() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
 
@@ -83,6 +106,7 @@ class SoundEngine {
   playBossShoot() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
 
@@ -103,6 +127,7 @@ class SoundEngine {
   playPop() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     
@@ -123,6 +148,7 @@ class SoundEngine {
   playFreeze() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
 
@@ -143,6 +169,7 @@ class SoundEngine {
   playBomb() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
 
@@ -163,6 +190,7 @@ class SoundEngine {
   playWin() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
     const notes = [261.63, 329.63, 392.00, 523.25, 659.25];
     notes.forEach((freq, idx) => {
       const osc = this.ctx.createOscillator();
@@ -194,8 +222,8 @@ function triggerVibrate(pattern) {
 // =============================================================
 // 3. GAME STATE & VARIABEL GLOBAL
 // =============================================================
-let levelsData = [];
-let stickersData = [];
+let levelsData = DEFAULT_LEVELS;
+let stickersData = DEFAULT_STICKERS;
 let currentLevelIndex = 0;
 let score = 0;
 let levelKills = 0;
@@ -250,7 +278,7 @@ window.addEventListener('load', async () => {
   await loadGameData();
   
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=7.0').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=8.0').catch(err => console.log('SW Fail:', err));
   }
 
   setupEventListeners();
@@ -272,18 +300,19 @@ function resizeCanvas() {
 async function loadGameData() {
   try {
     const [resLevels, resStickers] = await Promise.all([
-      fetch('./levels.json?v=5.0'),
-      fetch('./stickers.json?v=5.0')
+      fetch('./levels.json?v=8.0'),
+      fetch('./stickers.json?v=8.0')
     ]);
-    levelsData = await resLevels.json();
-    stickersData = await resStickers.json();
+    if (resLevels.ok) levelsData = await resLevels.json();
+    if (resStickers.ok) stickersData = await resStickers.json();
   } catch (err) {
-    console.error('Gagal mengambil file JSON:', err);
+    console.warn('Gagal memuat JSON eksternal, memakai data default cadangan:', err);
+    levelsData = DEFAULT_LEVELS;
+    stickersData = DEFAULT_STICKERS;
   }
 }
 
 function setupEventListeners() {
-  // OTOMATIS AKTIFKAN FULLSCREEN & LANGSUNG START GAME
   document.getElementById('btn-prepare-play').onclick = () => {
     requestFullscreenAndLandscape();
     startGame();
@@ -300,23 +329,17 @@ function setupEventListeners() {
   document.getElementById('btn-stickers').onclick = openStickerAlbum;
   document.getElementById('btn-close-stickers').onclick = () => document.getElementById('modal-stickers').classList.add('hidden');
 
-  // Tombol Menu / Pause di HUD Game
   document.getElementById('btn-pause').onclick = pauseGame;
-
-  // Tombol Lanjutkan Game dari Modal Pause
   document.getElementById('btn-resume-game').onclick = resumeGame;
 
-  // Tombol Ganti Hero dari Modal Pause
   document.getElementById('btn-pause-change-hero').onclick = () => {
     document.getElementById('modal-actors').classList.remove('hidden');
   };
 
-  // Tombol Lihat Papan Peringkat dari Modal Pause
   document.getElementById('btn-pause-leaderboard').onclick = () => {
     openLeaderboard();
   };
 
-  // Tombol Keluar ke Menu Utama dari Modal Pause
   document.getElementById('btn-pause-main-menu').onclick = () => {
     document.getElementById('modal-pause').classList.add('hidden');
     document.getElementById('hud-overlay').classList.add('hidden');
@@ -434,17 +457,21 @@ function resumeGame() {
 }
 
 function requestFullscreenAndLandscape() {
-  const doc = document.documentElement;
-  if (doc.requestFullscreen) { doc.requestFullscreen().catch(() => {}); }
-  else if (doc.webkitRequestFullscreen) { doc.webkitRequestFullscreen(); }
+  try {
+    const doc = document.documentElement;
+    if (doc.requestFullscreen) { doc.requestFullscreen().catch(() => {}); }
+    else if (doc.webkitRequestFullscreen) { doc.webkitRequestFullscreen(); }
 
-  if (screen.orientation && screen.orientation.lock) {
-    screen.orientation.lock('landscape').catch(() => {});
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(() => {});
+    }
+  } catch (e) {
+    console.log("Fullscreen / Orientation lock ditolak/tidak didukung.");
   }
 }
 
 function updateActorSelectionUI() {
-  const name = actorMap[currentActor].name;
+  const name = actorMap[currentActor] ? actorMap[currentActor].name : 'Robot Cyber';
   document.getElementById('selected-actor-name').innerText = name;
   const pauseHero = document.getElementById('pause-hero-name');
   if (pauseHero) pauseHero.innerText = name;
@@ -475,9 +502,18 @@ function startGame() {
   score = 0;
   lives = 3;
 
+  if (!levelsData || levelsData.length === 0) {
+    levelsData = DEFAULT_LEVELS;
+  }
+
   document.getElementById('screen-main-menu').classList.add('hidden');
   document.getElementById('hud-overlay').classList.remove('hidden');
-  startCurrentLevel();
+  
+  resizeCanvas();
+  setTimeout(() => {
+    resizeCanvas();
+    startCurrentLevel();
+  }, 60);
 }
 
 function startCurrentLevel() {
@@ -509,7 +545,7 @@ function startCurrentLevel() {
 }
 
 function updateHUDValues() {
-  const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
+  const levelConfig = (levelsData && levelsData[currentLevelIndex]) ? levelsData[currentLevelIndex] : DEFAULT_LEVELS[0];
   document.getElementById('hud-level').innerText = levelConfig.level;
   document.getElementById('hud-score').innerText = score;
   document.getElementById('hud-mission').innerText = `${levelKills}/${levelConfig.targetKills}`;
@@ -528,7 +564,7 @@ function spawnMonsterLoop() {
   if (!isGameRunning) return;
   
   if (!isGamePaused && !isFrozen) {
-    const levelConfig = levelsData[currentLevelIndex];
+    const levelConfig = (levelsData && levelsData[currentLevelIndex]) ? levelsData[currentLevelIndex] : DEFAULT_LEVELS[0];
     if (levelConfig) {
       const algo = levelConfig.algorithm;
       const typeList = levelConfig.types || ['jelly'];
@@ -562,7 +598,7 @@ function spawnMonsterLoop() {
             x: Math.random() * (canvas.width - 120) + 60,
             startX: Math.random() * (canvas.width - 120) + 60,
             y: -60,
-            speed: (1.2 + Math.random() * 1.2) * levelConfig.speed,
+            speed: (1.2 + Math.random() * 1.2) * (levelConfig.speed || 1),
             size: (chosenType === 'donut' ? 36 : 30),
             hp: (chosenType === 'donut' ? 2 : 1),
             maxHp: (chosenType === 'donut' ? 2 : 1),
@@ -578,7 +614,8 @@ function spawnMonsterLoop() {
     }
   }
 
-  setTimeout(spawnMonsterLoop, levelsData[currentLevelIndex]?.spawnRate || 1500);
+  const currentRate = (levelsData && levelsData[currentLevelIndex]) ? levelsData[currentLevelIndex].spawnRate : 1500;
+  setTimeout(spawnMonsterLoop, currentRate);
 }
 
 function trySpawnPowerup(x, y) {
@@ -597,6 +634,7 @@ function trySpawnPowerup(x, y) {
 
 function spawnFloatingText(x, y, text, color) {
   const container = document.getElementById('popup-container');
+  if (!container) return;
   const el = document.createElement('div');
   el.className = 'floating-text';
   el.innerText = text;
@@ -621,7 +659,7 @@ function createBurstParticles3D(x, y, color) {
 }
 
 function checkLevelObjectives() {
-  const levelConfig = levelsData[currentLevelIndex];
+  const levelConfig = (levelsData && levelsData[currentLevelIndex]) ? levelsData[currentLevelIndex] : DEFAULT_LEVELS[0];
   if (levelKills >= levelConfig.targetKills) {
     if (score >= levelConfig.targetScore) {
       levelComplete();
@@ -740,12 +778,13 @@ function gameLoop() {
 
   const now = Date.now();
   if (now - lastShotTime > 160) {
+    const activeColor = actorMap[currentActor] ? actorMap[currentActor].color : '#1e90ff';
     if (isSuperShot) {
       bullets.push({ x: playerX - 16, y: canvas.height - 65, vx: -2.5, vy: 12, color: '#00d2d3' });
       bullets.push({ x: playerX, y: canvas.height - 65, vx: 0, vy: 13, color: '#ffd700' });
       bullets.push({ x: playerX + 16, y: canvas.height - 65, vx: 2.5, vy: 12, color: '#00d2d3' });
     } else {
-      bullets.push({ x: playerX, y: canvas.height - 65, vx: 0, vy: 13, color: actorMap[currentActor].color });
+      bullets.push({ x: playerX, y: canvas.height - 65, vx: 0, vy: 13, color: activeColor });
     }
     sounds.playLaser();
     lastShotTime = now;
@@ -1071,7 +1110,7 @@ function levelComplete() {
   unlockSticker(currentLevelIndex + 1);
   saveScoreToGlobalLeaderboard(playerName, score, currentLevelIndex + 1);
 
-  const levelConfig = levelsData[currentLevelIndex];
+  const levelConfig = (levelsData && levelsData[currentLevelIndex]) ? levelsData[currentLevelIndex] : DEFAULT_LEVELS[0];
   document.getElementById('result-title').innerText = "MISI SELESAI!";
   document.getElementById('result-player-name').innerText = playerName;
   document.getElementById('result-score').innerText = score;
@@ -1088,7 +1127,7 @@ function levelFailed(reasonTitle = "MISI GAGAL!") {
   triggerVibrate([200, 100, 200]);
   saveScoreToGlobalLeaderboard(playerName, score, currentLevelIndex + 1);
 
-  const levelConfig = levelsData[currentLevelIndex];
+  const levelConfig = (levelsData && levelsData[currentLevelIndex]) ? levelsData[currentLevelIndex] : DEFAULT_LEVELS[0];
   document.getElementById('result-title').innerText = reasonTitle;
   document.getElementById('result-player-name').innerText = playerName;
   document.getElementById('result-score').innerText = score;
@@ -1191,7 +1230,7 @@ function openStickerAlbum() {
   const unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
   const grid = document.getElementById('sticker-grid');
 
-  grid.innerHTML = stickersData.map(sticker => {
+  grid.innerHTML = (stickersData || DEFAULT_STICKERS).map(sticker => {
     const isUnlocked = unlocked.includes(sticker.id);
     return `
       <div class="sticker-card ${isUnlocked ? '' : 'locked'}">
