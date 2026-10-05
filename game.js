@@ -1,5 +1,5 @@
 // =============================================================
-// 1. KONFIGURASI FIREBASE REALTIME DATABASE
+// 1. KONFIGURASI FIREBASE REALTIME DATABASE (COMPAT V9)
 // =============================================================
 const firebaseConfig = {
   apiKey: "AIzaSyAJmz9ElKNk5_VaH-R8vIEHSt2VL6wAdms",
@@ -14,80 +14,32 @@ const firebaseConfig = {
 
 let db = null;
 try {
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.database();
-  console.log("🔥 Firebase Realtime Database Terhubung Berhasil!");
-} catch(e) {
-  console.log("⚠️ Firebase Mode Offline / Config Belum Diisi");
-}
-
-// =============================================================
-// GENERATOR 30 LEVEL LENGKAP DENGAN 6 BOSS DAN VARIASI SKOR
-// =============================================================
-function generate30Levels() {
-  const levels = [];
-  const enemyTypesPool = ["jelly", "donut", "cloud", "crystal", "splitter"];
-  const algorithmsPool = ["linear", "zigzag", "gravity", "stealth", "swarm", "splitter"];
-
-  for (let i = 1; i <= 30; i++) {
-    if (i % 5 === 0) {
-      // LEVEL BOSS (5, 10, 15, 20, 25, 30)
-      const bossNum = i / 5;
-      const hpScale = [0, 150, 350, 600, 1000, 1500, 2500];
-      levels.push({
-        level: i,
-        targetKills: 1,
-        targetScore: i * 2000,
-        speed: 1.0,
-        spawnRate: 2000,
-        algorithm: `boss_${i}`,
-        types: [`boss${i}`],
-        bossHp: hpScale[bossNum] || 150
-      });
-    } else {
-      // LEVEL REGULER DENGAN VARIASI MUSUH & SKALASI KECEPATAN
-      const availableTypes = enemyTypesPool.slice(0, Math.min( enemyTypesPool.length, Math.floor(i / 3) + 1));
-      const chosenAlgo = algorithmsPool[(i - 1) % algorithmsPool.length];
-      levels.push({
-        level: i,
-        targetKills: 10 + (i * 3),
-        targetScore: i * 1500,
-        speed: 1.0 + (i * 0.08),
-        spawnRate: Math.max(500, 1500 - (i * 30)),
-        algorithm: chosenAlgo,
-        types: availableTypes
-      });
-    }
+  if (typeof firebase !== 'undefined') {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    console.log("🔥 Firebase Realtime Database Terhubung Berhasil!");
   }
-  return levels;
+} catch(e) {
+  console.log("⚠️ Firebase Mode Offline / Config Belum Diisi:", e);
 }
 
-let levelsData = generate30Levels();
+// =============================================================
+// DATA LEVEL & STIKER DEFAULT (FALLBACK)
+// =============================================================
+let levelsData = [];
+let stickersData = [];
 
-const DEFAULT_STICKERS = [
-  { id: 1, title: "Pahlawan Pemula" },
-  { id: 2, title: "Penembak Jitu" },
-  { id: 3, title: "Penjelajah Galaksi" },
-  { id: 4, title: "Penakluk Boss 1" },
-  { id: 5, title: "Master Kombinasi" },
-  { id: 6, title: "Pahlawan Legendaris" }
-];
+const DEFAULT_STICKERS = Array.from({ length: 30 }, (_, i) => ({
+  id: i + 1,
+  title: `Stiker Level ${i + 1}`,
+  desc: `Lulus Misi Level ${i + 1}`
+}));
 
-let stickersData = DEFAULT_STICKERS;
-
-// TABLE SKOR MUSUH
 const ENEMY_SCORE_TABLE = {
-  jelly: 100,
-  donut: 200,
-  cloud: 250,
-  crystal: 300,
-  splitter: 350,
-  boss5: 2500,
-  boss10: 5000,
-  boss15: 7500,
-  boss20: 10000,
-  boss25: 12500,
-  boss30: 20000
+  jelly: 100, donut: 200, cloud: 250, crystal: 300,
+  slime: 220, rocket: 350, star: 280,
+  boss5: 2500, boss10: 5000, boss15: 7500,
+  boss20: 10000, boss25: 12500, boss30: 20000
 };
 
 // =============================================================
@@ -111,7 +63,7 @@ class SoundEngine {
         this.ctx.resume();
       }
     } catch(e) {
-      console.log("Audio Context Error / Not Allowed yet");
+      console.log("Audio Context Error / Belum Diizinkan");
     }
   }
 
@@ -411,10 +363,14 @@ let upgradeShield = Number(localStorage.getItem('pahlawan_up_shield')) || 1;
 let upgradeBomb = Number(localStorage.getItem('pahlawan_up_bomb')) || 2;
 let upgradeFreeze = Number(localStorage.getItem('pahlawan_up_freeze')) || 2;
 
-// Combo Multiplier System
+// Combo Multiplier
 let combo = 1;
 let comboTimer = 0;
 const MAX_COMBO = 5;
+
+// Magnet System
+let isMagnetActive = false;
+let magnetTimer = 0;
 
 let playerX = 0;
 let playerSpeed = 9;
@@ -461,14 +417,17 @@ window.addEventListener('load', async () => {
   initStarfield();
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
-  document.getElementById('player-name-input').value = playerName;
+  
+  const nameInput = document.getElementById('player-name-input');
+  if (nameInput) nameInput.value = playerName;
+
   updateActorSelectionUI();
   updateShopUI();
 
   await loadGameData();
   
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=9.0').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=10.0').catch(err => console.log('SW Fail:', err));
   }
 
   setupEventListeners();
@@ -478,7 +437,8 @@ window.addEventListener('load', async () => {
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  document.getElementById('btn-pwa-install').classList.remove('hidden');
+  const btnPwa = document.getElementById('btn-pwa-install');
+  if (btnPwa) btnPwa.classList.remove('hidden');
 });
 
 function initStarfield() {
@@ -505,69 +465,99 @@ function resizeCanvas() {
 async function loadGameData() {
   try {
     const [resLevels, resStickers] = await Promise.all([
-      fetch('./levels.json?v=9.0'),
-      fetch('./stickers.json?v=9.0')
+      fetch('./levels.json?v=10.0'),
+      fetch('./stickers.json?v=8.0')
     ]);
     if (resLevels.ok) levelsData = await resLevels.json();
     if (resStickers.ok) stickersData = await resStickers.json();
   } catch (err) {
-    console.warn('Gagal memuat JSON eksternal, memakai 30 Level bawaan terintegrasi.');
-    levelsData = generate30Levels();
+    console.warn('Gagal memuat JSON eksternal, memakai fallback.');
     stickersData = DEFAULT_STICKERS;
   }
 }
 
 function setupEventListeners() {
-  document.getElementById('btn-prepare-play').onclick = () => {
-    requestFullscreenAndLandscape();
-    startGame();
-  };
+  const btnPlay = document.getElementById('btn-prepare-play');
+  if (btnPlay) {
+    btnPlay.onclick = () => {
+      requestFullscreenAndLandscape();
+      startGame();
+    };
+  }
 
-  document.getElementById('btn-select-actor').onclick = () => document.getElementById('modal-actors').classList.remove('hidden');
-  document.getElementById('btn-close-actors').onclick = () => document.getElementById('modal-actors').classList.add('hidden');
-  
-  document.getElementById('btn-shop').onclick = () => {
-    updateShopUI();
-    document.getElementById('modal-shop').classList.remove('hidden');
-  };
-  document.getElementById('btn-close-shop').onclick = () => document.getElementById('modal-shop').classList.add('hidden');
+  const btnSelectActor = document.getElementById('btn-select-actor');
+  if (btnSelectActor) btnSelectActor.onclick = () => document.getElementById('modal-actors').classList.remove('hidden');
 
-  document.getElementById('btn-leaderboard').onclick = openLeaderboard;
-  document.getElementById('btn-close-leaderboard').onclick = () => {
-    document.getElementById('modal-leaderboard').classList.add('hidden');
-  };
-  
-  document.getElementById('btn-stickers').onclick = openStickerAlbum;
-  document.getElementById('btn-close-stickers').onclick = () => document.getElementById('modal-stickers').classList.add('hidden');
+  const btnCloseActors = document.getElementById('btn-close-actors');
+  if (btnCloseActors) btnCloseActors.onclick = () => document.getElementById('modal-actors').classList.add('hidden');
 
-  document.getElementById('btn-pause').onclick = pauseGame;
-  document.getElementById('btn-resume-game').onclick = resumeGame;
+  const btnShop = document.getElementById('btn-shop');
+  if (btnShop) {
+    btnShop.onclick = () => {
+      updateShopUI();
+      document.getElementById('modal-shop').classList.remove('hidden');
+    };
+  }
 
-  document.getElementById('btn-pause-change-hero').onclick = () => {
-    document.getElementById('modal-actors').classList.remove('hidden');
-  };
+  const btnCloseShop = document.getElementById('btn-close-shop');
+  if (btnCloseShop) btnCloseShop.onclick = () => document.getElementById('modal-shop').classList.add('hidden');
 
-  document.getElementById('btn-pause-leaderboard').onclick = () => {
-    openLeaderboard();
-  };
+  const btnLeaderboard = document.getElementById('btn-leaderboard');
+  if (btnLeaderboard) btnLeaderboard.onclick = openLeaderboard;
 
-  document.getElementById('btn-pause-main-menu').onclick = () => {
-    document.getElementById('modal-pause').classList.add('hidden');
-    document.getElementById('hud-overlay').classList.add('hidden');
-    document.getElementById('screen-main-menu').classList.remove('hidden');
-    sounds.stopBGM();
-    isGameRunning = false;
-    isGamePaused = false;
-  };
+  const btnCloseLeaderboard = document.getElementById('btn-close-leaderboard');
+  if (btnCloseLeaderboard) {
+    btnCloseLeaderboard.onclick = () => document.getElementById('modal-leaderboard').classList.add('hidden');
+  }
 
-  document.getElementById('btn-buy-firerate').onclick = () => buyUpgrade('firerate');
-  document.getElementById('btn-buy-shield').onclick = () => buyUpgrade('shield');
-  document.getElementById('btn-buy-bomb').onclick = () => buyUpgrade('bomb');
-  document.getElementById('btn-buy-freeze').onclick = () => buyUpgrade('freeze');
+  const btnStickers = document.getElementById('btn-stickers');
+  if (btnStickers) btnStickers.onclick = openStickerAlbum;
 
-  document.querySelectorAll('.actor-card').forEach(card => {
+  const btnCloseStickers = document.getElementById('btn-close-stickers');
+  if (btnCloseStickers) {
+    btnCloseStickers.onclick = () => document.getElementById('modal-stickers').classList.add('hidden');
+  }
+
+  const btnPause = document.getElementById('btn-pause');
+  if (btnPause) btnPause.onclick = pauseGame;
+
+  const btnResume = document.getElementById('btn-resume-game');
+  if (btnResume) btnResume.onclick = resumeGame;
+
+  const btnPauseHero = document.getElementById('btn-pause-change-hero');
+  if (btnPauseHero) btnPauseHero.onclick = () => document.getElementById('modal-actors').classList.remove('hidden');
+
+  const btnPauseLb = document.getElementById('btn-pause-leaderboard');
+  if (btnPauseLb) btnPauseLb.onclick = openLeaderboard;
+
+  const btnPauseMenu = document.getElementById('btn-pause-main-menu');
+  if (btnPauseMenu) {
+    btnPauseMenu.onclick = () => {
+      document.getElementById('modal-pause').classList.add('hidden');
+      document.getElementById('hud-overlay').classList.add('hidden');
+      document.getElementById('screen-main-menu').classList.remove('hidden');
+      sounds.stopBGM();
+      isGameRunning = false;
+      isGamePaused = false;
+    };
+  }
+
+  const btnBuyFirerate = document.getElementById('btn-buy-firerate');
+  if (btnBuyFirerate) btnBuyFirerate.onclick = () => buyUpgrade('firerate');
+
+  const btnBuyShield = document.getElementById('btn-buy-shield');
+  if (btnBuyShield) btnBuyShield.onclick = () => buyUpgrade('shield');
+
+  const btnBuyBomb = document.getElementById('btn-buy-bomb');
+  if (btnBuyBomb) btnBuyBomb.onclick = () => buyUpgrade('bomb');
+
+  const btnBuyFreeze = document.getElementById('btn-buy-freeze');
+  if (btnBuyFreeze) btnBuyFreeze.onclick = () => buyUpgrade('freeze');
+
+  const actorCards = document.querySelectorAll('.actor-card');
+  actorCards.forEach(card => {
     card.onclick = () => {
-      document.querySelectorAll('.actor-card').forEach(c => c.classList.remove('selected'));
+      actorCards.forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
       currentActor = card.dataset.actor;
       localStorage.setItem('pahlawan_actor', currentActor);
@@ -575,20 +565,28 @@ function setupEventListeners() {
     };
   });
 
-  document.getElementById('btn-audio').onclick = () => {
-    sounds.isMuted = !sounds.isMuted;
-  };
+  const btnAudio = document.getElementById('btn-audio');
+  if (btnAudio) {
+    btnAudio.onclick = () => {
+      sounds.isMuted = !sounds.isMuted;
+      btnAudio.style.opacity = sounds.isMuted ? '0.5' : '1.0';
+    };
+  }
 
   const btnLeft = document.getElementById('btn-move-left');
   const btnRight = document.getElementById('btn-move-right');
 
-  btnLeft.addEventListener('pointerdown', (e) => { e.preventDefault(); isMovingLeft = true; });
-  btnLeft.addEventListener('pointerup', () => isMovingLeft = false);
-  btnLeft.addEventListener('pointerleave', () => isMovingLeft = false);
+  if (btnLeft) {
+    btnLeft.addEventListener('pointerdown', (e) => { e.preventDefault(); isMovingLeft = true; });
+    btnLeft.addEventListener('pointerup', () => isMovingLeft = false);
+    btnLeft.addEventListener('pointerleave', () => isMovingLeft = false);
+  }
 
-  btnRight.addEventListener('pointerdown', (e) => { e.preventDefault(); isMovingRight = true; });
-  btnRight.addEventListener('pointerup', () => isMovingRight = false);
-  btnRight.addEventListener('pointerleave', () => isMovingRight = false);
+  if (btnRight) {
+    btnRight.addEventListener('pointerdown', (e) => { e.preventDefault(); isMovingRight = true; });
+    btnRight.addEventListener('pointerup', () => isMovingRight = false);
+    btnRight.addEventListener('pointerleave', () => isMovingRight = false);
+  }
 
   window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isMovingLeft = true;
@@ -608,77 +606,107 @@ function setupEventListeners() {
     }
   });
 
-  document.getElementById('btn-next-level').onclick = () => {
-    document.getElementById('modal-result').classList.add('hidden');
-    currentLevelIndex++;
-    if (currentLevelIndex >= levelsData.length) currentLevelIndex = 0;
-    startCurrentLevel();
-  };
+  const btnNextLevel = document.getElementById('btn-next-level');
+  if (btnNextLevel) {
+    btnNextLevel.onclick = () => {
+      document.getElementById('modal-result').classList.add('hidden');
+      currentLevelIndex++;
+      if (currentLevelIndex >= levelsData.length) currentLevelIndex = 0;
+      startCurrentLevel();
+    };
+  }
 
-  document.getElementById('btn-restart').onclick = () => {
-    document.getElementById('modal-result').classList.add('hidden');
-    startCurrentLevel();
-  };
+  const btnRestart = document.getElementById('btn-restart');
+  if (btnRestart) {
+    btnRestart.onclick = () => {
+      document.getElementById('modal-result').classList.add('hidden');
+      startCurrentLevel();
+    };
+  }
 
-  document.getElementById('btn-menu').onclick = () => {
-    document.getElementById('modal-result').classList.add('hidden');
-    document.getElementById('hud-overlay').classList.add('hidden');
-    document.getElementById('screen-main-menu').classList.remove('hidden');
-    sounds.stopBGM();
-    isGameRunning = false;
-    isGamePaused = false;
-  };
+  const btnMenu = document.getElementById('btn-menu');
+  if (btnMenu) {
+    btnMenu.onclick = () => {
+      document.getElementById('modal-result').classList.add('hidden');
+      document.getElementById('hud-overlay').classList.add('hidden');
+      document.getElementById('screen-main-menu').classList.remove('hidden');
+      sounds.stopBGM();
+      isGameRunning = false;
+      isGamePaused = false;
+    };
+  }
 
-  document.getElementById('btn-freeze').onclick = () => {
-    if (freezeCharges <= 0 || isFrozen || isGamePaused) return;
-    freezeCharges--;
-    isFrozen = true;
-    sounds.playFreeze();
-    triggerVibrate([50, 50, 50]);
-    updateSkillButtonsUI();
+  const btnFreeze = document.getElementById('btn-freeze');
+  if (btnFreeze) {
+    btnFreeze.onclick = () => {
+      if (freezeCharges <= 0 || isFrozen || isGamePaused) return;
+      freezeCharges--;
+      isFrozen = true;
+      sounds.playFreeze();
+      triggerVibrate([50, 50, 50]);
+      updateSkillButtonsUI();
 
-    spawnFloatingText(canvas.width / 2, canvas.height / 2, 'BEKU! ❄️', '#1e90ff');
-    setTimeout(() => isFrozen = false, 3500);
-  };
+      spawnFloatingText(canvas.width / 2, canvas.height / 2, 'BEKU! ❄️', '#1e90ff');
+      setTimeout(() => isFrozen = false, 3500);
+    };
+  }
 
-  document.getElementById('btn-bomb').onclick = () => {
-    if (bombCharges <= 0 || isGamePaused) return;
-    bombCharges--;
-    screenShake = 18;
-    sounds.playBomb();
-    triggerVibrate([100, 50, 100]);
-    updateSkillButtonsUI();
+  const btnBomb = document.getElementById('btn-bomb');
+  if (btnBomb) {
+    btnBomb.onclick = () => {
+      if (bombCharges <= 0 || isGamePaused) return;
+      bombCharges--;
+      screenShake = 18;
+      sounds.playBomb();
+      triggerVibrate([100, 50, 100]);
+      updateSkillButtonsUI();
 
-    monsters.forEach(m => createBurstParticles3D(m.x, m.y, m.color));
-    let totalScoreFromBomb = 0;
-    monsters.forEach(m => {
-      let baseVal = ENEMY_SCORE_TABLE[m.type] || 150;
-      totalScoreFromBomb += baseVal * combo;
-    });
+      monsters.forEach(m => createBurstParticles3D(m.x, m.y, m.color));
+      let totalScoreFromBomb = 0;
+      monsters.forEach(m => {
+        let baseVal = ENEMY_SCORE_TABLE[m.type] || 150;
+        totalScoreFromBomb += baseVal * combo;
+      });
 
-    score += totalScoreFromBomb;
-    levelKills += monsters.length;
-    
-    spawnFloatingText(canvas.width / 2, canvas.height / 2, `BOOM! +${totalScoreFromBomb}`, '#ff4757');
-    monsters = [];
-    
-    updateHUDValues();
-    checkLevelObjectives();
-  };
+      score += totalScoreFromBomb;
+      levelKills += monsters.length;
+      
+      spawnFloatingText(canvas.width / 2, canvas.height / 2, `BOOM! +${totalScoreFromBomb}`, '#ff4757');
+      monsters = [];
+      
+      updateHUDValues();
+      checkLevelObjectives();
+    };
+  }
 }
 
 function updateShopUI() {
-  document.getElementById('shop-coin-count').innerText = coins;
+  const coinEl = document.getElementById('shop-coin-count');
+  if (coinEl) coinEl.innerText = coins;
 
-  document.getElementById('shop-level-firerate').innerText = upgradeFireRate;
-  document.getElementById('shop-level-shield').innerText = upgradeShield;
-  document.getElementById('shop-level-bomb').innerText = upgradeBomb;
-  document.getElementById('shop-level-freeze').innerText = upgradeFreeze;
+  const firerateLvl = document.getElementById('shop-level-firerate');
+  if (firerateLvl) firerateLvl.innerText = upgradeFireRate;
 
-  document.getElementById('btn-buy-firerate').querySelector('span').innerText = upgradeFireRate >= 5 ? 'MAX' : `${upgradeFireRate * 50} 🪙`;
-  document.getElementById('btn-buy-shield').querySelector('span').innerText = upgradeShield >= 5 ? 'MAX' : `${upgradeShield * 60} 🪙`;
-  document.getElementById('btn-buy-bomb').querySelector('span').innerText = upgradeBomb >= 5 ? 'MAX' : `${upgradeBomb * 75} 🪙`;
-  document.getElementById('btn-buy-freeze').querySelector('span').innerText = upgradeFreeze >= 5 ? 'MAX' : `${upgradeFreeze * 75} 🪙`;
+  const shieldLvl = document.getElementById('shop-level-shield');
+  if (shieldLvl) shieldLvl.innerText = upgradeShield;
+
+  const bombLvl = document.getElementById('shop-level-bomb');
+  if (bombLvl) bombLvl.innerText = upgradeBomb;
+
+  const freezeLvl = document.getElementById('shop-level-freeze');
+  if (freezeLvl) freezeLvl.innerText = upgradeFreeze;
+
+  const btnFirerate = document.getElementById('btn-buy-firerate');
+  if (btnFirerate) btnFirerate.querySelector('span').innerText = upgradeFireRate >= 5 ? 'MAX' : `${upgradeFireRate * 50} 🪙`;
+
+  const btnShield = document.getElementById('btn-buy-shield');
+  if (btnShield) btnShield.querySelector('span').innerText = upgradeShield >= 5 ? 'MAX' : `${upgradeShield * 60} 🪙`;
+
+  const btnBomb = document.getElementById('btn-buy-bomb');
+  if (btnBomb) btnBomb.querySelector('span').innerText = upgradeBomb >= 5 ? 'MAX' : `${upgradeBomb * 75} 🪙`;
+
+  const btnFreeze = document.getElementById('btn-buy-freeze');
+  if (btnFreeze) btnFreeze.querySelector('span').innerText = upgradeFreeze >= 5 ? 'MAX' : `${upgradeFreeze * 75} 🪙`;
 }
 
 function buyUpgrade(type) {
@@ -745,7 +773,9 @@ function requestFullscreenAndLandscape() {
 
 function updateActorSelectionUI() {
   const name = actorMap[currentActor] ? actorMap[currentActor].name : 'Robot Cyber';
-  document.getElementById('selected-actor-name').innerText = name;
+  const selActor = document.getElementById('selected-actor-name');
+  if (selActor) selActor.innerText = name;
+
   const pauseHero = document.getElementById('pause-hero-name');
   if (pauseHero) pauseHero.innerText = name;
 }
@@ -754,30 +784,36 @@ function updateSkillButtonsUI() {
   const btnFreeze = document.getElementById('btn-freeze');
   const btnBomb = document.getElementById('btn-bomb');
   
-  document.getElementById('freeze-count').innerText = freezeCharges;
-  document.getElementById('bomb-count').innerText = bombCharges;
+  const freezeCount = document.getElementById('freeze-count');
+  if (freezeCount) freezeCount.innerText = freezeCharges;
 
-  if (freezeCharges <= 0) btnFreeze.classList.add('disabled');
-  else btnFreeze.classList.remove('disabled');
+  const bombCount = document.getElementById('bomb-count');
+  if (bombCount) bombCount.innerText = bombCharges;
 
-  if (bombCharges <= 0) btnBomb.classList.add('disabled');
-  else btnBomb.classList.remove('disabled');
+  if (btnFreeze) {
+    if (freezeCharges <= 0) btnFreeze.classList.add('disabled');
+    else btnFreeze.classList.remove('disabled');
+  }
+
+  if (btnBomb) {
+    if (bombCharges <= 0) btnBomb.classList.add('disabled');
+    else btnBomb.classList.remove('disabled');
+  }
 }
 
 function startGame() {
   sounds.init();
-  const inputName = document.getElementById('player-name-input').value.trim();
+  const inputEl = document.getElementById('player-name-input');
+  const inputName = inputEl ? inputEl.value.trim() : '';
   playerName = inputName || 'Pahlawan';
   localStorage.setItem('pahlawan_nama', playerName);
-  document.getElementById('player-name-display').innerText = playerName;
+
+  const nameDisplay = document.getElementById('player-name-display');
+  if (nameDisplay) nameDisplay.innerText = playerName;
 
   currentLevelIndex = 0;
   score = 0;
   lives = 3;
-
-  if (!levelsData || levelsData.length === 0) {
-    levelsData = generate30Levels();
-  }
 
   document.getElementById('screen-main-menu').classList.add('hidden');
   document.getElementById('hud-overlay').classList.remove('hidden');
@@ -802,6 +838,9 @@ function startCurrentLevel() {
   combo = 1;
   comboTimer = 0;
 
+  isMagnetActive = false;
+  magnetTimer = 0;
+
   isSuperShot = false;
   superShotTimer = 0;
   isShieldActive = false;
@@ -825,23 +864,35 @@ function startCurrentLevel() {
 }
 
 function updateHUDValues() {
-  const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
-  document.getElementById('hud-level').innerText = levelConfig.level;
-  document.getElementById('hud-score').innerText = score;
-  document.getElementById('hud-coins').innerText = coins;
-  document.getElementById('hud-mission').innerText = `${levelKills}/${levelConfig.targetKills}`;
+  const levelConfig = levelsData[currentLevelIndex] || { level: 1, targetKills: 10, targetScore: 1000 };
+  
+  const lvlEl = document.getElementById('hud-level');
+  if (lvlEl) lvlEl.innerText = levelConfig.level;
+
+  const scoreEl = document.getElementById('hud-score');
+  if (scoreEl) scoreEl.innerText = score;
+
+  const coinsEl = document.getElementById('hud-coins');
+  if (coinsEl) coinsEl.innerText = coins;
+
+  const missionEl = document.getElementById('hud-mission');
+  if (missionEl) missionEl.innerText = `${levelKills}/${levelConfig.targetKills}`;
 
   const comboPill = document.getElementById('hud-combo-pill');
-  if (combo > 1) {
-    comboPill.classList.remove('hidden');
-    document.getElementById('hud-combo-text').innerText = `${combo}x COMBO`;
-  } else {
-    comboPill.classList.add('hidden');
+  if (comboPill) {
+    if (combo > 1) {
+      comboPill.classList.remove('hidden');
+      const comboText = document.getElementById('hud-combo-text');
+      if (comboText) comboText.innerText = `${combo}x COMBO`;
+    } else {
+      comboPill.classList.add('hidden');
+    }
   }
 }
 
 function updateLivesDisplay() {
   const container = document.getElementById('hud-lives');
+  if (!container) return;
   let html = '';
   for(let i=0; i<lives; i++) {
     html += `<svg class="heart-icon" viewBox="0 0 24 24"><path d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z"/></svg>`;
@@ -863,7 +914,7 @@ function spawnMonsterLoop() {
   if (!isGameRunning) return;
   
   if (!isGamePaused && !isFrozen) {
-    const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
+    const levelConfig = levelsData[currentLevelIndex] || { algorithm: 'linear', types: ['jelly'], spawnRate: 1500, speed: 1.0 };
     if (levelConfig) {
       const algo = levelConfig.algorithm;
       const typeList = levelConfig.types || ['jelly'];
@@ -928,12 +979,12 @@ function spawnMonsterLoop() {
 }
 
 function trySpawnDrop(x, y) {
-  if (Math.random() < 0.45) {
+  if (Math.random() < 0.50) {
     coinsOnField.push({ x: x, y: y, vy: 1.8, size: 10, rot: 0 });
   }
 
-  if (Math.random() < 0.30) {
-    const types = ['supershot', 'shield', 'bomb', 'freeze', 'heart'];
+  if (Math.random() < 0.35) {
+    const types = ['supershot', 'shield', 'bomb', 'freeze', 'heart', 'magnet'];
     const chosenType = types[Math.floor(Math.random() * types.length)];
     powerups.push({ x: x, y: y, type: chosenType, speed: 2.2, size: 16 });
   }
@@ -965,8 +1016,26 @@ function createBurstParticles3D(x, y, color) {
   }
 }
 
+function triggerBossDeathExplosions(x, y, onComplete) {
+  let explosionsCount = 0;
+  const interval = setInterval(() => {
+    const offsetX = (Math.random() - 0.5) * 120;
+    const offsetY = (Math.random() - 0.5) * 120;
+    createBurstParticles3D(x + offsetX, y + offsetY, ['#ff4757', '#ffd700', '#2ed573', '#ff78ae'][explosionsCount % 4]);
+    sounds.playBomb();
+    screenShake = 12;
+    triggerVibrate(40);
+    explosionsCount++;
+
+    if (explosionsCount >= 8) {
+      clearInterval(interval);
+      if (onComplete) onComplete();
+    }
+  }, 180);
+}
+
 function checkLevelObjectives() {
-  const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
+  const levelConfig = levelsData[currentLevelIndex] || { targetKills: 10, targetScore: 1000 };
   if (levelKills >= levelConfig.targetKills) {
     if (score >= levelConfig.targetScore) {
       levelComplete();
@@ -1046,6 +1115,16 @@ function drawHeroVector(ctx, x, y, type) {
     ctx.stroke();
   }
 
+  if (isMagnetActive || currentActor === 'cat') {
+    ctx.beginPath();
+    ctx.arc(0, 0, 48, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.35)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 6]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
   ctx.restore();
 }
 
@@ -1091,6 +1170,10 @@ function gameLoop() {
     shieldTimer--;
     if (shieldTimer <= 0) isShieldActive = false;
   }
+  if (isMagnetActive) {
+    magnetTimer--;
+    if (magnetTimer <= 0) isMagnetActive = false;
+  }
 
   if (combo > 1) {
     comboTimer--;
@@ -1100,16 +1183,44 @@ function gameLoop() {
     }
   }
 
-  const fireInterval = Math.max(90, 160 - (upgradeFireRate - 1) * 15);
+  let baseInterval = Math.max(80, 150 - (upgradeFireRate - 1) * 15);
+  if (currentActor === 'cat') baseInterval *= 0.65;
+
   const now = Date.now();
-  if (now - lastShotTime > fireInterval) {
-    const activeColor = actorMap[currentActor] ? actorMap[currentActor].color : '#1e90ff';
+  if (now - lastShotTime > baseInterval) {
     if (isSuperShot) {
-      bullets.push({ x: playerX - 16, y: canvas.height - 65, vx: -2.5, vy: 12, color: '#00d2d3' });
-      bullets.push({ x: playerX, y: canvas.height - 65, vx: 0, vy: 13, color: '#ffd700' });
-      bullets.push({ x: playerX + 16, y: canvas.height - 65, vx: 2.5, vy: 12, color: '#00d2d3' });
+      bullets.push({ x: playerX - 16, y: canvas.height - 65, vx: -2.5, vy: 12, color: '#00d2d3', heroType: currentActor });
+      bullets.push({ x: playerX, y: canvas.height - 65, vx: 0, vy: 13, color: '#ffd700', heroType: currentActor });
+      bullets.push({ x: playerX + 16, y: canvas.height - 65, vx: 2.5, vy: 12, color: '#00d2d3', heroType: currentActor });
     } else {
-      bullets.push({ x: playerX, y: canvas.height - 65, vx: 0, vy: 13, color: activeColor });
+      switch (currentActor) {
+        case 'robot':
+          bullets.push({ x: playerX - 10, y: canvas.height - 65, vx: 0, vy: 14, color: '#1e90ff', heroType: 'robot' });
+          bullets.push({ x: playerX + 10, y: canvas.height - 65, vx: 0, vy: 14, color: '#1e90ff', heroType: 'robot' });
+          break;
+
+        case 'cannon':
+          bullets.push({ x: playerX, y: canvas.height - 65, vx: 0, vy: 11, color: '#ff4757', heroType: 'cannon', radius: 12, damage: 2 });
+          break;
+
+        case 'dragon':
+          bullets.push({ x: playerX - 8, y: canvas.height - 65, vx: -2.2, vy: 12, color: '#2ed573', heroType: 'dragon' });
+          bullets.push({ x: playerX, y: canvas.height - 65, vx: 0, vy: 13, color: '#2ed573', heroType: 'dragon' });
+          bullets.push({ x: playerX + 8, y: canvas.height - 65, vx: 2.2, vy: 12, color: '#2ed573', heroType: 'dragon' });
+          break;
+
+        case 'cat':
+          bullets.push({ x: playerX, y: canvas.height - 65, vx: (Math.random() - 0.5) * 1.5, vy: 15, color: '#ffa502', heroType: 'cat', rot: 0 });
+          break;
+
+        case 'unicorn':
+          bullets.push({ x: playerX, y: canvas.height - 65, vx: 0, vy: 13, color: '#a55eea', heroType: 'unicorn', pierce: 3 });
+          break;
+
+        default:
+          bullets.push({ x: playerX, y: canvas.height - 65, vx: 0, vy: 13, color: '#1e90ff', heroType: 'robot' });
+          break;
+      }
     }
 
     muzzleFlashes.push({ x: playerX, y: canvas.height - 65, radius: 14, opacity: 1.0 });
@@ -1132,19 +1243,37 @@ function gameLoop() {
     bullet.y -= bullet.vy;
     bullet.x += bullet.vx;
 
-    ctx.beginPath();
-    ctx.moveTo(bullet.x, bullet.y + 12);
-    ctx.lineTo(bullet.x, bullet.y);
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = bullet.color;
-    ctx.stroke();
+    if (bullet.heroType === 'cannon') {
+      ctx.beginPath();
+      ctx.arc(bullet.x, bullet.y, bullet.radius || 10, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffd700';
+      ctx.fill();
+      ctx.strokeStyle = '#ff4757';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    } else if (bullet.heroType === 'cat') {
+      bullet.rot = (bullet.rot || 0) + 0.3;
+      ctx.save();
+      ctx.translate(bullet.x, bullet.y);
+      ctx.rotate(bullet.rot);
+      ctx.fillStyle = bullet.color;
+      ctx.fillRect(-6, -6, 12, 12);
+      ctx.restore();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(bullet.x, bullet.y + 12);
+      ctx.lineTo(bullet.x, bullet.y);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = bullet.color;
+      ctx.stroke();
 
-    ctx.beginPath();
-    ctx.arc(bullet.x, bullet.y, 6, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
+      ctx.beginPath();
+      ctx.arc(bullet.x, bullet.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    }
 
-    if (bullet.y < -10) {
+    if (bullet.y < -10 || bullet.x < -10 || bullet.x > canvas.width + 10) {
       bullets.splice(b, 1);
       continue;
     }
@@ -1152,11 +1281,19 @@ function gameLoop() {
     for (let i = monsters.length - 1; i >= 0; i--) {
       const m = monsters[i];
       const dist = Math.hypot(m.x - bullet.x, m.y - bullet.y);
-      if (dist < m.size + 8) {
-        bullets.splice(b, 1);
-        m.hp--;
+      const hitRadius = (bullet.radius || 6) + m.size;
+
+      if (dist < hitRadius) {
+        let dmg = bullet.damage || 1;
+        m.hp -= dmg;
         sounds.playPop();
         triggerVibrate(20);
+
+        if (bullet.heroType === 'unicorn' && bullet.pierce > 1) {
+          bullet.pierce--;
+        } else {
+          bullets.splice(b, 1);
+        }
 
         if (m.hp <= 0) {
           createBurstParticles3D(m.x, m.y, m.color);
@@ -1180,9 +1317,20 @@ function gameLoop() {
             );
           }
 
-          monsters.splice(i, 1);
-          updateHUDValues();
-          checkLevelObjectives();
+          if (m.type.startsWith('boss')) {
+            const bossX = m.x;
+            const bossY = m.y;
+            monsters.splice(i, 1);
+            triggerBossDeathExplosions(bossX, bossY, () => {
+              updateHUDValues();
+              checkLevelObjectives();
+            });
+            break;
+          } else {
+            monsters.splice(i, 1);
+            updateHUDValues();
+            checkLevelObjectives();
+          }
         } else {
           spawnFloatingText(m.x, m.y, 'HIT!', '#ff4757');
         }
@@ -1193,7 +1341,18 @@ function gameLoop() {
 
   for (let c = coinsOnField.length - 1; c >= 0; c--) {
     const coin = coinsOnField[c];
-    coin.y += coin.vy;
+    const magnetActiveNow = isMagnetActive || (currentActor === 'cat');
+    const playerY = canvas.height - 45;
+    const distToPlayer = Math.hypot(playerX - coin.x, playerY - coin.y);
+
+    if (magnetActiveNow && (isMagnetActive || distToPlayer < 220)) {
+      const angle = Math.atan2(playerY - coin.y, playerX - coin.x);
+      coin.x += Math.cos(angle) * 8.5;
+      coin.y += Math.sin(angle) * 8.5;
+    } else {
+      coin.y += coin.vy;
+    }
+
     coin.rot += 0.1;
 
     ctx.save();
@@ -1210,8 +1369,7 @@ function gameLoop() {
 
     ctx.restore();
 
-    const distPlayer = Math.hypot(playerX - coin.x, (canvas.height - 45) - coin.y);
-    if (distPlayer < coin.size + 25) {
+    if (distToPlayer < coin.size + 25) {
       coins++;
       levelCoinsEarned++;
       localStorage.setItem('pahlawan_coins', coins);
@@ -1242,6 +1400,7 @@ function gameLoop() {
     else if (pw.type === 'bomb') { pwColor = '#ff4757'; pwLabel = '💣'; }
     else if (pw.type === 'freeze') { pwColor = '#70a1ff'; pwLabel = '❄️'; }
     else if (pw.type === 'heart') { pwColor = '#ff78ae'; pwLabel = '❤️'; }
+    else if (pw.type === 'magnet') { pwColor = '#ffd700'; pwLabel = '🧲'; }
     else { pwColor = '#2ed573'; pwLabel = '⚡'; }
 
     ctx.fillStyle = pwColor;
@@ -1287,6 +1446,11 @@ function gameLoop() {
         lives = Math.min(5, lives + 1);
         updateLivesDisplay();
         spawnFloatingText(playerX, canvas.height - 70, '+1 EKSTRA NYAWA!', '#ff78ae');
+      }
+      else if (pw.type === 'magnet') {
+        isMagnetActive = true;
+        magnetTimer = 420;
+        spawnFloatingText(playerX, canvas.height - 70, 'MAGNET KOIN 7s! 🧲', '#ffd700');
       }
 
       powerups.splice(p, 1);
@@ -1339,7 +1503,6 @@ function gameLoop() {
 
   drawHeroVector(ctx, playerX, canvas.height - 45, currentActor);
 
-  // LOGIKA MOVEMENT & ENRAGE BOSS
   for (let i = monsters.length - 1; i >= 0; i--) {
     const m = monsters[i];
     m.timeAlive += 0.05;
@@ -1352,7 +1515,6 @@ function gameLoop() {
         m.y = Math.min(100, m.y + m.speed);
         m.x = canvas.width / 2 + Math.sin(m.timeAlive * 2) * 140;
 
-        // Tembakan Peluru Boss
         if (m.shootTimer > 60) {
           bossBullets.push({ x: m.x - 20, y: m.y + m.size, vx: -1.5, vy: 6 });
           bossBullets.push({ x: m.x + 20, y: m.y + m.size, vx: 1.5, vy: 6 });
@@ -1360,7 +1522,6 @@ function gameLoop() {
           m.shootTimer = 0;
         }
 
-        // Panggil Pasukan Minion Setiap 5-6 Detik
         if (m.minionTimer > 300) {
           m.minionTimer = 0;
           monsters.push(
@@ -1370,7 +1531,6 @@ function gameLoop() {
           spawnFloatingText(m.x, m.y + 60, 'PANGGIL PASUKAN!', '#ff4757');
         }
 
-        // Mekanisme ENRAGE / REGEN untuk Boss Level 30 Setiap 15 Detik
         if (m.type === 'boss30' && m.enrageTimer > 900) {
           m.enrageTimer = 0;
           let healVal = Math.floor(m.maxHp * 0.10);
@@ -1380,7 +1540,6 @@ function gameLoop() {
           spawnFloatingText(m.x, m.y - 20, `ENRAGE! REGEN +${healVal} HP`, '#2ed573');
         }
 
-        // DRAW TOP BOSS HP BAR
         ctx.save();
         let barWidth = Math.min(400, canvas.width * 0.6);
         let barX = (canvas.width - barWidth) / 2;
@@ -1518,7 +1677,7 @@ function levelComplete() {
   sounds.playWin();
   triggerVibrate([50, 50, 50, 50, 100]);
 
-  const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
+  const levelConfig = levelsData[currentLevelIndex] || { level: 1 };
   unlockSticker(levelConfig.level);
   saveScoreToGlobalLeaderboard(playerName, score, levelConfig.level);
 
@@ -1529,7 +1688,9 @@ function levelComplete() {
   document.getElementById('result-level').innerText = levelConfig.level;
   document.getElementById('result-kills').innerText = `${levelKills} Target`;
   
-  document.getElementById('btn-next-level').classList.remove('hidden');
+  const btnNext = document.getElementById('btn-next-level');
+  if (btnNext) btnNext.classList.remove('hidden');
+
   document.getElementById('modal-result').classList.remove('hidden');
 }
 
@@ -1539,7 +1700,7 @@ function levelFailed(reasonTitle = "MISI GAGAL!") {
   sounds.stopBGM();
   triggerVibrate([200, 100, 200]);
 
-  const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
+  const levelConfig = levelsData[currentLevelIndex] || { level: 1 };
   saveScoreToGlobalLeaderboard(playerName, score, levelConfig.level);
 
   document.getElementById('result-title').innerText = reasonTitle;
@@ -1549,11 +1710,12 @@ function levelFailed(reasonTitle = "MISI GAGAL!") {
   document.getElementById('result-level').innerText = levelConfig.level;
   document.getElementById('result-kills').innerText = `${levelKills} Target`;
   
-  document.getElementById('btn-next-level').classList.add('hidden');
+  const btnNext = document.getElementById('btn-next-level');
+  if (btnNext) btnNext.classList.add('hidden');
+
   document.getElementById('modal-result').classList.remove('hidden');
 }
 
-// FUNGSI SIMPAN DENGAN DEDUPLIKASI NAMA & COMPARISON REKOR TERBAIK
 function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   const cleanName = (name || 'Pahlawan').trim();
   if (!cleanName) return;
@@ -1563,7 +1725,6 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   const numLevel = Number(levelVal) || 1;
   const sortValue = (numLevel * 100000000) + numScore;
 
-  // 1. Simpan ke LocalStorage dengan deduplikasi
   let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
   let existingIndex = localScores.findIndex(s => (s.name || '').trim().toLowerCase() === cleanName.toLowerCase());
 
@@ -1591,7 +1752,6 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
     localStorage.setItem('pahlawan_scores', JSON.stringify(localScores.slice(0, 20)));
   }
 
-  // 2. Simpan ke Firebase Realtime Database
   if (db && playerKey) {
     const playerRef = db.ref('leaderboard/' + playerKey);
     playerRef.once('value').then(snapshot => {
@@ -1615,16 +1775,16 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
           level: numLevel,
           sortValue: sortValue,
           timestamp: Date.now()
-        }).catch(err => console.error("Gagal memperbarui rekor di Firebase:", err));
+        }).catch(err => console.error("Gagal simpan Firebase:", err));
       }
-    }).catch(err => console.error("Gagal membaca rekor Firebase:", err));
+    }).catch(err => console.error("Gagal baca Firebase:", err));
   }
 }
 
-// BUKA PAPAN PERINGKAT ONLINE DENGAN DEDUPLIKASI NAMA KETAT
 function openLeaderboard() {
   document.getElementById('modal-leaderboard').classList.remove('hidden');
   const tbody = document.getElementById('leaderboard-body');
+  if (!tbody) return;
   tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Memuat Papan Peringkat Realtime...</td></tr>';
 
   if (db) {
@@ -1659,18 +1819,14 @@ function openLeaderboard() {
       });
 
       let uniqueList = Array.from(bestMap.values());
-
       uniqueList.sort((a, b) => {
         let lvlA = Number(a.level) || 1;
         let lvlB = Number(b.level) || 1;
-        if (lvlB !== lvlA) {
-          return lvlB - lvlA;
-        }
+        if (lvlB !== lvlA) return lvlB - lvlA;
         return (Number(b.score) || 0) - (Number(a.score) || 0);
       });
 
       let top10 = uniqueList.slice(0, 10);
-
       if (top10.length === 0) {
         showLocalScores(tbody);
         return;
@@ -1685,7 +1841,6 @@ function openLeaderboard() {
         </tr>
       `).join('');
     }, (error) => {
-      console.error("Firebase Listener Error:", error);
       showLocalScores(tbody);
     });
   } else {
@@ -1695,8 +1850,8 @@ function openLeaderboard() {
 
 function showLocalScores(tbody) {
   let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
-  
   let bestMap = new Map();
+
   localScores.forEach(s => {
     if (!s || !s.name) return;
     let cleanName = s.name.trim();
@@ -1721,9 +1876,7 @@ function showLocalScores(tbody) {
   uniqueList.sort((a, b) => {
     let lvlA = Number(a.level) || 1;
     let lvlB = Number(b.level) || 1;
-    if (lvlB !== lvlA) {
-      return lvlB - lvlA;
-    }
+    if (lvlB !== lvlA) return lvlB - lvlA;
     return (Number(b.score) || 0) - (Number(a.score) || 0);
   });
 
@@ -1758,18 +1911,22 @@ function unlockSticker(id) {
 
 function updateStickerAlbumUI() {
   const unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
-  document.getElementById('unlocked-count').innerText = unlocked.length;
+  const countEl = document.getElementById('unlocked-count');
+  if (countEl) countEl.innerText = unlocked.length;
 }
 
 function openStickerAlbum() {
   const unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
   const grid = document.getElementById('sticker-grid');
+  if (!grid) return;
 
-  grid.innerHTML = (stickersData || DEFAULT_STICKERS).map(sticker => {
+  const list = (stickersData && stickersData.length > 0) ? stickersData : DEFAULT_STICKERS;
+
+  grid.innerHTML = list.map(sticker => {
     const isUnlocked = unlocked.includes(sticker.id);
     return `
       <div class="sticker-card ${isUnlocked ? '' : 'locked'}">
-        <div class="sticker-title">${isUnlocked ? sticker.title : 'Terkunci'}</div>
+        <div class="sticker-title">${isUnlocked ? sticker.title : '🔒'}</div>
       </div>
     `;
   }).join('');
