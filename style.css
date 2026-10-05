@@ -288,3 +288,21 @@ canvas {
 .sticker-card.locked { opacity: 0.35; filter: grayscale(100%); background: #e1e2e6; }
 
 .hidden { display: none !important; }
+
+.pause-pill {
+  cursor: pointer;
+  background: #ffffff;
+  border: 3px solid #ff4757;
+  transition: transform 0.1s ease, background 0.1s ease;
+  pointer-events: auto;
+}
+
+.pause-pill:active {
+  transform: scale(0.92);
+  background: #ffeaa7;
+}
+
+.pause-pill .hud-text {
+  color: #ff4757;
+  font-weight: 800;
+}
