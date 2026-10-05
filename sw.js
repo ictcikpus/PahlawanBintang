@@ -1,12 +1,12 @@
-const CACHE_NAME = 'pahlawan-bintang-v7.1';
+const CACHE_NAME = 'pahlawan-bintang-v9.0';
 
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './style.css?v=7.0',
-  './game.js?v=7.0',
-  './levels.json?v=5.0',
-  './stickers.json?v=5.0'
+  './style.css?v=9.0',
+  './game.js?v=9.0',
+  './levels.json?v=8.0',
+  './stickers.json?v=8.0'
 ];
 
 self.addEventListener('install', (event) => {
