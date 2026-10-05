@@ -1423,7 +1423,7 @@ function gameLoop() {
 }
 
 // =============================================================
-// 4. LOGIKA PERBAIKAN TOTAL PAPAN PERINGKAT REALTIME GLOBAL
+// 4. LOGIKA PERBAIKAN DEDUPLIKASI PAPAN PERINGKAT
 // =============================================================
 function levelComplete() {
   isGameRunning = false;
@@ -1470,14 +1470,16 @@ function levelFailed(reasonTitle = "MISI GAGAL!") {
 // FUNGSI SIMPAN HANYA JIKA REKOR PEMAIN MEMBAIK (1 NAMA = 1 REKOR TERBAIK GLOBAL)
 function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   const cleanName = (name || 'Pahlawan').trim();
+  if (!cleanName) return;
+
   const playerKey = cleanName.toLowerCase().replace(/[^a-z0-9]/g, "_");
   const numScore = Number(scoreVal) || 0;
   const numLevel = Number(levelVal) || 1;
   const sortValue = (numLevel * 100000000) + numScore;
 
-  // 1. Simpan ke LocalStorage
+  // 1. Simpan ke LocalStorage dengan deduplikasi
   let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
-  let existingIndex = localScores.findIndex(s => s.name.toLowerCase() === cleanName.toLowerCase());
+  let existingIndex = localScores.findIndex(s => (s.name || '').trim().toLowerCase() === cleanName.toLowerCase());
 
   let shouldUpdateLocal = false;
   if (existingIndex === -1) {
@@ -1485,15 +1487,22 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
     localScores.push({ name: cleanName, score: numScore, level: numLevel, sortValue: sortValue });
   } else {
     let existing = localScores[existingIndex];
-    if (numLevel > existing.level || (numLevel === existing.level && numScore > existing.score)) {
+    let oldLevel = Number(existing.level) || 1;
+    let oldScore = Number(existing.score) || 0;
+    if (numLevel > oldLevel || (numLevel === oldLevel && numScore > oldScore)) {
       shouldUpdateLocal = true;
       localScores[existingIndex] = { name: cleanName, score: numScore, level: numLevel, sortValue: sortValue };
     }
   }
 
   if (shouldUpdateLocal) {
-    localScores.sort((a, b) => (b.level !== a.level) ? (b.level - a.level) : (b.score - a.score));
-    localStorage.setItem('pahlawan_scores', JSON.stringify(localScores.slice(0, 10)));
+    localScores.sort((a, b) => {
+      let lvlA = Number(a.level) || 1;
+      let lvlB = Number(b.level) || 1;
+      if (lvlB !== lvlA) return lvlB - lvlA;
+      return (Number(b.score) || 0) - (Number(a.score) || 0);
+    });
+    localStorage.setItem('pahlawan_scores', JSON.stringify(localScores.slice(0, 20)));
   }
 
   // 2. Simpan ke Firebase Realtime Database
@@ -1526,33 +1535,62 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   }
 }
 
-// BUKA PAPAN PERINGKAT ONLINE DENGAN PENGURUTAN LEVEL & SKOR PRESISI
+// BUKA PAPAN PERINGKAT ONLINE DENGAN DEDUPLIKASI KETAT
 function openLeaderboard() {
   document.getElementById('modal-leaderboard').classList.remove('hidden');
   const tbody = document.getElementById('leaderboard-body');
   tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Memuat Papan Peringkat Realtime...</td></tr>';
 
   if (db) {
-    db.ref('leaderboard').orderByChild('sortValue').limitToLast(15).on('value', (snapshot) => {
+    db.ref('leaderboard').on('value', (snapshot) => {
       if (!snapshot.exists()) {
         showLocalScores(tbody);
         return;
       }
 
-      let list = [];
+      // Group & Deduplikasi berdasarkan Nama Pemain (Ambil HANYA yang terbaik)
+      let bestMap = new Map();
+
       snapshot.forEach((childSnapshot) => {
-        list.push(childSnapshot.val());
-      });
+        let val = childSnapshot.val();
+        if (!val || !val.name) return;
 
-      // Urutkan ulang secara ketat: Prioritas 1 = Level, Prioritas 2 = Skor
-      list.sort((a, b) => {
-        if ((b.level || 0) !== (a.level || 0)) {
-          return (b.level || 0) - (a.level || 0);
+        let cleanName = val.name.trim();
+        let key = cleanName.toLowerCase();
+        let currentLevel = Number(val.level) || 1;
+        let currentScore = Number(val.score) || 0;
+
+        if (!bestMap.has(key)) {
+          bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
+        } else {
+          let existing = bestMap.get(key);
+          let existingLevel = Number(existing.level) || 1;
+          let existingScore = Number(existing.score) || 0;
+
+          if (currentLevel > existingLevel || (currentLevel === existingLevel && currentScore > existingScore)) {
+            bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
+          }
         }
-        return (b.score || 0) - (a.score || 0);
       });
 
-      let top10 = list.slice(0, 10);
+      let uniqueList = Array.from(bestMap.values());
+
+      // Urutkan secara ketat: Level Tertinggi -> Skor Tertinggi
+      uniqueList.sort((a, b) => {
+        let lvlA = Number(a.level) || 1;
+        let lvlB = Number(b.level) || 1;
+        if (lvlB !== lvlA) {
+          return lvlB - lvlA;
+        }
+        return (Number(b.score) || 0) - (Number(a.score) || 0);
+      });
+
+      let top10 = uniqueList.slice(0, 10);
+
+      if (top10.length === 0) {
+        showLocalScores(tbody);
+        return;
+      }
 
       tbody.innerHTML = top10.map((s, index) => `
         <tr>
@@ -1573,17 +1611,42 @@ function openLeaderboard() {
 
 function showLocalScores(tbody) {
   let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
-  if (localScores.length === 0) {
+  
+  let bestMap = new Map();
+  localScores.forEach(s => {
+    if (!s || !s.name) return;
+    let cleanName = s.name.trim();
+    let key = cleanName.toLowerCase();
+    let currentLevel = Number(s.level) || 1;
+    let currentScore = Number(s.score) || 0;
+
+    if (!bestMap.has(key)) {
+      bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
+    } else {
+      let existing = bestMap.get(key);
+      let existingLevel = Number(existing.level) || 1;
+      let existingScore = Number(existing.score) || 0;
+
+      if (currentLevel > existingLevel || (currentLevel === existingLevel && currentScore > existingScore)) {
+        bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
+      }
+    }
+  });
+
+  let uniqueList = Array.from(bestMap.values());
+  uniqueList.sort((a, b) => {
+    let lvlA = Number(a.level) || 1;
+    let lvlB = Number(b.level) || 1;
+    if (lvlB !== lvlA) {
+      return lvlB - lvlA;
+    }
+    return (Number(b.score) || 0) - (Number(a.score) || 0);
+  });
+
+  if (uniqueList.length === 0) {
     tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Belum ada skor tercatat.</td></tr>';
   } else {
-    localScores.sort((a, b) => {
-      if ((b.level || 0) !== (a.level || 0)) {
-        return (b.level || 0) - (a.level || 0);
-      }
-      return (b.score || 0) - (a.score || 0);
-    });
-
-    tbody.innerHTML = localScores.slice(0, 10).map((s, index) => `
+    tbody.innerHTML = uniqueList.slice(0, 10).map((s, index) => `
       <tr>
         <td>${index === 0 ? '🥇 1' : index === 1 ? '🥈 2' : index === 2 ? '🥉 3' : index + 1}</td>
         <td><strong>${escapeHtml(s.name)}</strong></td>
