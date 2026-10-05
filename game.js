@@ -1,4 +1,4 @@
-game_js_content = """// =============================================================
+// =============================================================
 // 1. KONFIGURASI FIREBASE REALTIME DATABASE
 // =============================================================
 const firebaseConfig = {
@@ -31,7 +31,6 @@ function generate30Levels() {
 
   for (let i = 1; i <= 30; i++) {
     if (i % 5 === 0) {
-      // LEVEL BOSS (5, 10, 15, 20, 25, 30)
       const hpScale = { 5: 150, 10: 350, 15: 600, 20: 1000, 25: 1500, 30: 2500 };
       levels.push({
         level: i,
@@ -44,7 +43,6 @@ function generate30Levels() {
         bossHp: hpScale[i] || 150
       });
     } else {
-      // LEVEL REGULER DENGAN VARIASI MUSUH & SKALASI KECEPATAN
       const availableTypes = enemyTypesPool.slice(0, Math.min(enemyTypesPool.length, Math.floor(i / 3) + 1));
       const chosenAlgo = algorithmsPool[(i - 1) % algorithmsPool.length];
       levels.push({
@@ -74,7 +72,6 @@ const DEFAULT_STICKERS = [
 
 let stickersData = DEFAULT_STICKERS;
 
-// TABLE SKOR MUSUH
 const ENEMY_SCORE_TABLE = {
   jelly: 100,
   donut: 200,
@@ -90,7 +87,7 @@ const ENEMY_SCORE_TABLE = {
 };
 
 // =============================================================
-// 2. SYNTHESIZER AUDIO (AUDIO FX & BGM RETRO ARCADE)
+// 2. SYNTHESIZER AUDIO
 // =============================================================
 class SoundEngine {
   constructor() {
@@ -120,17 +117,13 @@ class SoundEngine {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(850, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.05);
-
     gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
-
     osc.connect(gain);
     gain.connect(this.ctx.destination);
-
     osc.start();
     osc.stop(this.ctx.currentTime + 0.05);
   }
@@ -141,17 +134,13 @@ class SoundEngine {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-
     osc.type = 'sine';
     osc.frequency.setValueAtTime(300, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.2);
-
     gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
     gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
-
     osc.connect(gain);
     gain.connect(this.ctx.destination);
-
     osc.start();
     osc.stop(this.ctx.currentTime + 0.2);
   }
@@ -162,17 +151,13 @@ class SoundEngine {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-
     osc.type = 'sine';
     osc.frequency.setValueAtTime(987.77, this.ctx.currentTime);
     osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.08);
-
     gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
-
     osc.connect(gain);
     gain.connect(this.ctx.destination);
-
     osc.start();
     osc.stop(this.ctx.currentTime + 0.2);
   }
@@ -183,17 +168,13 @@ class SoundEngine {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(180, this.ctx.currentTime);
     osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.2);
-
     gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
-
     osc.connect(gain);
     gain.connect(this.ctx.destination);
-
     osc.start();
     osc.stop(this.ctx.currentTime + 0.2);
   }
@@ -204,17 +185,13 @@ class SoundEngine {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(523.25, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(1046.50, this.ctx.currentTime + 0.15);
-
     gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
-
     osc.connect(gain);
     gain.connect(this.ctx.destination);
-
     osc.start();
     osc.stop(this.ctx.currentTime + 0.15);
   }
@@ -225,17 +202,13 @@ class SoundEngine {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-
     osc.type = 'square';
     osc.frequency.setValueAtTime(440, this.ctx.currentTime);
     osc.frequency.setValueAtTime(880, this.ctx.currentTime + 0.15);
-
     gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
-
     osc.connect(gain);
     gain.connect(this.ctx.destination);
-
     osc.start();
     osc.stop(this.ctx.currentTime + 0.3);
   }
@@ -246,17 +219,13 @@ class SoundEngine {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-
     osc.type = 'square';
     osc.frequency.setValueAtTime(300, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.12);
-
     gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
-
     osc.connect(gain);
     gain.connect(this.ctx.destination);
-
     osc.start();
     osc.stop(this.ctx.currentTime + 0.12);
   }
@@ -267,17 +236,13 @@ class SoundEngine {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-    
     osc.type = 'sine';
     osc.frequency.setValueAtTime(450, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(900, this.ctx.currentTime + 0.08);
-
     gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
-
     osc.connect(gain);
     gain.connect(this.ctx.destination);
-
     osc.start();
     osc.stop(this.ctx.currentTime + 0.08);
   }
@@ -288,17 +253,13 @@ class SoundEngine {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(950, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(320, this.ctx.currentTime + 0.3);
-
     gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
     gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
-
     osc.connect(gain);
     gain.connect(this.ctx.destination);
-
     osc.start();
     osc.stop(this.ctx.currentTime + 0.3);
   }
@@ -309,17 +270,13 @@ class SoundEngine {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(220, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(35, this.ctx.currentTime + 0.4);
-
     gain.gain.setValueAtTime(0.45, this.ctx.currentTime);
     gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
-
     osc.connect(gain);
     gain.connect(this.ctx.destination);
-
     osc.start();
     osc.stop(this.ctx.currentTime + 0.4);
   }
@@ -332,16 +289,12 @@ class SoundEngine {
     notes.forEach((freq, idx) => {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.09);
-
       gain.gain.setValueAtTime(0.25, this.ctx.currentTime + idx * 0.09);
       gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.09 + 0.22);
-
       osc.connect(gain);
       gain.connect(this.ctx.destination);
-
       osc.start(this.ctx.currentTime + idx * 0.09);
       osc.stop(this.ctx.currentTime + idx * 0.09 + 0.22);
     });
@@ -351,27 +304,20 @@ class SoundEngine {
     if (this.bgmTimer) return;
     const notes = [130.81, 164.81, 196.00, 261.63, 196.00, 164.81];
     this.bgmStep = 0;
-
     this.bgmTimer = setInterval(() => {
       if (this.isMuted || !isGameRunning || isGamePaused) return;
       this.init();
       if (!this.ctx) return;
-
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-
       osc.type = 'sine';
       osc.frequency.setValueAtTime(notes[this.bgmStep % notes.length], this.ctx.currentTime);
-
       gain.gain.setValueAtTime(0.03, this.ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
-
       osc.connect(gain);
       gain.connect(this.ctx.destination);
-
       osc.start();
       osc.stop(this.ctx.currentTime + 0.18);
-
       this.bgmStep++;
     }, 220);
   }
@@ -403,14 +349,12 @@ let lives = 3;
 let isGameRunning = false;
 let isGamePaused = false;
 
-// Koin & Upgrade System
 let coins = Number(localStorage.getItem('pahlawan_coins')) || 0;
 let upgradeFireRate = Number(localStorage.getItem('pahlawan_up_firerate')) || 1;
 let upgradeShield = Number(localStorage.getItem('pahlawan_up_shield')) || 1;
 let upgradeBomb = Number(localStorage.getItem('pahlawan_up_bomb')) || 2;
 let upgradeFreeze = Number(localStorage.getItem('pahlawan_up_freeze')) || 2;
 
-// Combo Multiplier System
 let combo = 1;
 let comboTimer = 0;
 const MAX_COMBO = 5;
@@ -440,6 +384,9 @@ let stars = [];
 let isFrozen = false;
 let screenShake = 0;
 
+// [FIX #6] freeze timer berbasis frame agar patuh pause
+let freezeFramesRemaining = 0;
+
 let isMovingLeft = false;
 let isMovingRight = false;
 
@@ -449,6 +396,10 @@ let playerName = localStorage.getItem('pahlawan_nama') || 'Pahlawan';
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let deferredPrompt;
+
+// [FIX #5] Referensi listener leaderboard untuk mencegah stacking
+let leaderboardRef = null;
+let leaderboardHandler = null;
 
 const actorMap = {
   robot: { name: 'Robot Cyber', color: '#1e90ff' },
@@ -465,9 +416,10 @@ window.addEventListener('load', async () => {
   document.getElementById('player-name-input').value = playerName;
   updateActorSelectionUI();
   updateShopUI();
+  updateAudioButtonUI();
 
   await loadGameData();
-  
+
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js?v=10.0').catch(err => console.log('SW Fail:', err));
   }
@@ -497,10 +449,13 @@ function initStarfield() {
   }
 }
 
+// [FIX #7] resizeCanvas: playerX selalu di-init kalau belum ada
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  if (!isGameRunning) playerX = canvas.width / 2;
+  if (playerX === 0 || playerX > canvas.width) {
+    playerX = canvas.width / 2;
+  }
 }
 
 async function loadGameData() {
@@ -518,6 +473,13 @@ async function loadGameData() {
   }
 }
 
+function updateAudioButtonUI() {
+  const btn = document.getElementById('btn-audio');
+  if (!btn) return;
+  btn.innerText = sounds.isMuted ? '🔇' : '🔊';
+  btn.classList.toggle('muted', sounds.isMuted);
+}
+
 function setupEventListeners() {
   document.getElementById('btn-prepare-play').onclick = () => {
     requestFullscreenAndLandscape();
@@ -526,7 +488,7 @@ function setupEventListeners() {
 
   document.getElementById('btn-select-actor').onclick = () => document.getElementById('modal-actors').classList.remove('hidden');
   document.getElementById('btn-close-actors').onclick = () => document.getElementById('modal-actors').classList.add('hidden');
-  
+
   document.getElementById('btn-shop').onclick = () => {
     updateShopUI();
     document.getElementById('modal-shop').classList.remove('hidden');
@@ -534,10 +496,16 @@ function setupEventListeners() {
   document.getElementById('btn-close-shop').onclick = () => document.getElementById('modal-shop').classList.add('hidden');
 
   document.getElementById('btn-leaderboard').onclick = openLeaderboard;
+  // [FIX #5] close leaderboard juga melepas listener Firebase
   document.getElementById('btn-close-leaderboard').onclick = () => {
     document.getElementById('modal-leaderboard').classList.add('hidden');
+    if (leaderboardRef && leaderboardHandler) {
+      try { leaderboardRef.off('value', leaderboardHandler); } catch(e) {}
+      leaderboardRef = null;
+      leaderboardHandler = null;
+    }
   };
-  
+
   document.getElementById('btn-stickers').onclick = openStickerAlbum;
   document.getElementById('btn-close-stickers').onclick = () => document.getElementById('modal-stickers').classList.add('hidden');
 
@@ -576,9 +544,27 @@ function setupEventListeners() {
     };
   });
 
+  // [FIX #4] Audio button dengan feedback visual
   document.getElementById('btn-audio').onclick = () => {
     sounds.isMuted = !sounds.isMuted;
+    if (!sounds.isMuted) sounds.init();
+    updateAudioButtonUI();
   };
+
+  // [FIX #1] Handler tombol install PWA
+  const btnInstall = document.getElementById('btn-pwa-install');
+  if (btnInstall) {
+    btnInstall.onclick = async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      try {
+        const choice = await deferredPrompt.userChoice;
+        console.log('PWA install outcome:', choice && choice.outcome);
+      } catch (e) {}
+      deferredPrompt = null;
+      btnInstall.classList.add('hidden');
+    };
+  }
 
   const btnLeft = document.getElementById('btn-move-left');
   const btnRight = document.getElementById('btn-move-right');
@@ -609,16 +595,24 @@ function setupEventListeners() {
     }
   });
 
+  // [FIX #2 & #3] Next Level -> reset nyawa, dan reset total jika sudah tamat 30 level
   document.getElementById('btn-next-level').onclick = () => {
     document.getElementById('modal-result').classList.add('hidden');
     currentLevelIndex++;
-    if (currentLevelIndex >= levelsData.length) currentLevelIndex = 0;
+    if (currentLevelIndex >= levelsData.length) {
+      // Tamat semua level -> restart penuh
+      restartGame();
+      return;
+    }
+    lives = 3;
+    updateLivesDisplay();
     startCurrentLevel();
   };
 
+  // [FIX #2] Restart setelah game over -> reset total
   document.getElementById('btn-restart').onclick = () => {
     document.getElementById('modal-result').classList.add('hidden');
-    startCurrentLevel();
+    restartGame();
   };
 
   document.getElementById('btn-menu').onclick = () => {
@@ -630,16 +624,17 @@ function setupEventListeners() {
     isGamePaused = false;
   };
 
+  // [FIX #6] Freeze dengan timer berbasis frame (patuh pause)
   document.getElementById('btn-freeze').onclick = () => {
     if (freezeCharges <= 0 || isFrozen || isGamePaused) return;
     freezeCharges--;
     isFrozen = true;
+    freezeFramesRemaining = 210; // ~3.5 detik @60fps
     sounds.playFreeze();
     triggerVibrate([50, 50, 50]);
     updateSkillButtonsUI();
 
     spawnFloatingText(canvas.width / 2, canvas.height / 2, 'BEKU! ❄️', '#1e90ff');
-    setTimeout(() => isFrozen = false, 3500);
   };
 
   document.getElementById('btn-bomb').onclick = () => {
@@ -656,7 +651,7 @@ function setupEventListeners() {
 
     for (let i = monsters.length - 1; i >= 0; i--) {
       let m = monsters[i];
-      
+
       if (m.type.startsWith('boss')) {
         m.hp -= 50;
         spawnFloatingText(m.x, m.y, 'BOM! -50 HP', '#ff4757');
@@ -665,7 +660,7 @@ function setupEventListeners() {
           totalScoreFromBomb += (ENEMY_SCORE_TABLE[m.type] || 150) * combo;
           levelKills++;
           monsters.splice(i, 1);
-          
+
           monsters.forEach(minion => createBurstParticles3D(minion.x, minion.y, minion.color));
           monsters = [];
           setTimeout(() => levelComplete(), 1500);
@@ -683,7 +678,7 @@ function setupEventListeners() {
     if (totalScoreFromBomb > 0) {
       spawnFloatingText(canvas.width / 2, canvas.height / 2, `BOOM! +${totalScoreFromBomb}`, '#ff4757');
     }
-    
+
     updateHUDValues();
     checkLevelObjectives();
   };
@@ -775,7 +770,7 @@ function updateActorSelectionUI() {
 function updateSkillButtonsUI() {
   const btnFreeze = document.getElementById('btn-freeze');
   const btnBomb = document.getElementById('btn-bomb');
-  
+
   document.getElementById('freeze-count').innerText = freezeCharges;
   document.getElementById('bomb-count').innerText = bombCharges;
 
@@ -796,6 +791,8 @@ function startGame() {
   currentLevelIndex = 0;
   score = 0;
   lives = 3;
+  // sync coins dari localStorage (mungkin baru beli upgrade)
+  coins = Number(localStorage.getItem('pahlawan_coins')) || 0;
 
   if (!levelsData || levelsData.length === 0) {
     levelsData = generate30Levels();
@@ -803,12 +800,23 @@ function startGame() {
 
   document.getElementById('screen-main-menu').classList.add('hidden');
   document.getElementById('hud-overlay').classList.remove('hidden');
-  
+
   resizeCanvas();
   setTimeout(() => {
     resizeCanvas();
     startCurrentLevel();
   }, 60);
+}
+
+// [FIX #2] Fungsi restart menyeluruh
+function restartGame() {
+  currentLevelIndex = 0;
+  score = 0;
+  lives = 3;
+  coins = Number(localStorage.getItem('pahlawan_coins')) || 0;
+  updateHUDValues();
+  updateLivesDisplay();
+  startCurrentLevel();
 }
 
 function startCurrentLevel() {
@@ -830,6 +838,9 @@ function startCurrentLevel() {
   shieldTimer = 0;
   isMagnetActive = false;
   magnetTimer = 0;
+
+  isFrozen = false;
+  freezeFramesRemaining = 0;
 
   freezeCharges = upgradeFreeze;
   bombCharges = upgradeBomb;
@@ -885,7 +896,7 @@ function triggerBossSiren() {
 
 function spawnMonsterLoop() {
   if (!isGameRunning) return;
-  
+
   if (!isGamePaused && !isFrozen) {
     const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
     if (levelConfig) {
@@ -992,7 +1003,7 @@ function createBurstParticles3D(x, y, color) {
 function checkLevelObjectives() {
   const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
   if (levelConfig.algorithm.startsWith('boss_')) return;
-  
+
   if (levelKills >= levelConfig.targetKills) {
     if (score >= levelConfig.targetScore) {
       levelComplete();
@@ -1021,7 +1032,7 @@ function drawHeroVector(ctx, x, y, type) {
     ctx.beginPath();
     ctx.moveTo(-10, 18); ctx.lineTo(0, 30 + Math.random()*6); ctx.lineTo(10, 18);
     ctx.fill();
-  } 
+  }
   else if (type === 'cannon') {
     ctx.fillStyle = '#ff4757';
     ctx.beginPath();
@@ -1132,6 +1143,15 @@ function gameLoop() {
     if (magnetTimer <= 0) isMagnetActive = false;
   }
 
+  // [FIX #6] freeze timer berbasis frame
+  if (isFrozen) {
+    freezeFramesRemaining--;
+    if (freezeFramesRemaining <= 0) {
+      isFrozen = false;
+      freezeFramesRemaining = 0;
+    }
+  }
+
   if (combo > 1) {
     comboTimer--;
     if (comboTimer <= 0) {
@@ -1140,7 +1160,6 @@ function gameLoop() {
     }
   }
 
-  // MODIFIKASI FIRE RATE PER HERO
   let baseInterval = 160;
   if (currentActor === 'cat') baseInterval = 110;
   else if (currentActor === 'cannon') baseInterval = 210;
@@ -1205,7 +1224,7 @@ function gameLoop() {
       ctx.fillStyle = bullet.color;
       ctx.fillRect(-6, -2, 12, 4);
       ctx.fillRect(-2, -6, 4, 12);
-    } 
+    }
     else if (bullet.heroType === 'cannon') {
       ctx.beginPath();
       ctx.arc(0, 0, bullet.size, 0, Math.PI * 2);
@@ -1245,7 +1264,7 @@ function gameLoop() {
       const m = monsters[i];
       const dist = Math.hypot(m.x - bullet.x, m.y - bullet.y);
       if (dist < m.size + bullet.size + 4) {
-        
+
         bullet.pierce--;
         if (bullet.pierce <= 0) {
           bullets.splice(b, 1);
@@ -1263,7 +1282,7 @@ function gameLoop() {
           let basePoints = ENEMY_SCORE_TABLE[m.type] || 150;
           let pointsGained = basePoints * combo;
           score += pointsGained;
-          
+
           const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
           if (!levelConfig.algorithm.startsWith('boss_') || isBoss) {
             levelKills++;
@@ -1284,7 +1303,7 @@ function gameLoop() {
 
           monsters.splice(i, 1);
           updateHUDValues();
-          
+
           if (isBoss) {
             monsters.forEach(minion => createBurstParticles3D(minion.x, minion.y, minion.color));
             monsters = [];
@@ -1300,7 +1319,6 @@ function gameLoop() {
     }
   }
 
-  // MAGNET KOIN ATTRACTION LOGIC
   const heroPlayerY = canvas.height - 45;
   const isMagnetPulling = isMagnetActive || (currentActor === 'cat');
 
@@ -1459,10 +1477,10 @@ function gameLoop() {
         triggerVibrate([100, 50, 100]);
         updateLivesDisplay();
         spawnFloatingText(playerX, canvas.height - 60, '-1 NYAWA!', '#ff4757');
-        if (lives <= 0) { 
-          levelFailed("GAME OVER! NYAWA HABIS"); 
-          ctx.restore(); 
-          return; 
+        if (lives <= 0) {
+          levelFailed("GAME OVER! NYAWA HABIS");
+          ctx.restore();
+          return;
         }
       }
       continue;
@@ -1473,7 +1491,6 @@ function gameLoop() {
 
   drawHeroVector(ctx, playerX, heroPlayerY, currentActor);
 
-  // LOGIKA MOVEMENT & ENRAGE BOSS
   for (let i = monsters.length - 1; i >= 0; i--) {
     const m = monsters[i];
     m.timeAlive += 0.05;
@@ -1573,18 +1590,18 @@ function gameLoop() {
       ctx.beginPath(); ctx.arc(0, 0, m.size, 0, Math.PI * 2); ctx.fillStyle = '#fa8231'; ctx.fill();
       ctx.beginPath(); ctx.arc(0, 0, m.size * 0.8, 0, Math.PI * 2); ctx.fillStyle = '#ff78ae'; ctx.fill();
       ctx.beginPath(); ctx.arc(0, 0, m.size * 0.35, 0, Math.PI * 2); ctx.fillStyle = '#0a0d24'; ctx.fill();
-    } 
+    }
     else if (m.type === 'cloud') {
       ctx.fillStyle = '#f1f2f6';
       ctx.beginPath();
       ctx.arc(-12, 0, m.size * 0.6, 0, Math.PI * 2); ctx.arc(12, 0, m.size * 0.6, 0, Math.PI * 2);
       ctx.arc(0, -10, m.size * 0.7, 0, Math.PI * 2); ctx.fill();
-    } 
+    }
     else if (m.type === 'crystal') {
       ctx.beginPath();
       ctx.moveTo(0, -m.size); ctx.lineTo(m.size, 0); ctx.lineTo(0, m.size); ctx.lineTo(-m.size, 0);
       ctx.closePath(); ctx.fillStyle = '#00d2d3'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.stroke();
-    } 
+    }
     else {
       const radGrad = ctx.createRadialGradient(-m.size * 0.3, -m.size * 0.3, m.size * 0.1, 0, 0, m.size);
       radGrad.addColorStop(0, '#ffffff'); radGrad.addColorStop(0.3, m.color); radGrad.addColorStop(1, '#000000');
@@ -1604,7 +1621,7 @@ function gameLoop() {
 
     if (m.y > canvas.height - 55 && !m.type.startsWith('boss')) {
       monsters.splice(i, 1);
-      
+
       if (isShieldActive) {
         spawnFloatingText(playerX, canvas.height - 60, 'PERISAI TAHAN!', '#00d2d3');
       } else {
@@ -1615,10 +1632,10 @@ function gameLoop() {
         screenShake = 14;
         triggerVibrate([100, 50, 100]);
         updateLivesDisplay();
-        if (lives <= 0) { 
-          levelFailed("GAME OVER! NYAWA HABIS"); 
-          ctx.restore(); 
-          return; 
+        if (lives <= 0) {
+          levelFailed("GAME OVER! NYAWA HABIS");
+          ctx.restore();
+          return;
         }
       }
     }
@@ -1639,7 +1656,7 @@ function gameLoop() {
 }
 
 // =============================================================
-// 4. LOGIKA PERBAIKAN DEDUPLIKASI PAPAN PERINGKAT
+// 4. LEVEL COMPLETE / FAILED & LEADERBOARD
 // =============================================================
 function levelComplete() {
   isGameRunning = false;
@@ -1658,7 +1675,7 @@ function levelComplete() {
   document.getElementById('result-coins').innerText = `+${levelCoinsEarned} 🪙`;
   document.getElementById('result-level').innerText = levelConfig.level;
   document.getElementById('result-kills').innerText = `${levelKills} Target`;
-  
+
   document.getElementById('btn-next-level').classList.remove('hidden');
   document.getElementById('modal-result').classList.remove('hidden');
 }
@@ -1678,12 +1695,11 @@ function levelFailed(reasonTitle = "MISI GAGAL!") {
   document.getElementById('result-coins').innerText = `+${levelCoinsEarned} 🪙`;
   document.getElementById('result-level').innerText = levelConfig.level;
   document.getElementById('result-kills').innerText = `${levelKills} Target`;
-  
+
   document.getElementById('btn-next-level').classList.add('hidden');
   document.getElementById('modal-result').classList.remove('hidden');
 }
 
-// FUNGSI SIMPAN DENGAN DEDUPLIKASI NAMA & COMPARISON REKOR TERBAIK
 function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   const cleanName = (name || 'Pahlawan').trim();
   if (!cleanName) return;
@@ -1693,7 +1709,6 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   const numLevel = Number(levelVal) || 1;
   const sortValue = (numLevel * 100000000) + numScore;
 
-  // 1. Simpan ke LocalStorage dengan deduplikasi
   let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
   let existingIndex = localScores.findIndex(s => (s.name || '').trim().toLowerCase() === cleanName.toLowerCase());
 
@@ -1721,7 +1736,6 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
     localStorage.setItem('pahlawan_scores', JSON.stringify(localScores.slice(0, 20)));
   }
 
-  // 2. Simpan ke Firebase Realtime Database
   if (db && playerKey) {
     const playerRef = db.ref('leaderboard/' + playerKey);
     playerRef.once('value').then(snapshot => {
@@ -1751,81 +1765,90 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   }
 }
 
-// BUKA PAPAN PERINGKAT ONLINE DENGAN DEDUPLIKASI NAMA KETAT
+// [FIX #5] openLeaderboard dengan listener tunggal (tidak stacking)
 function openLeaderboard() {
   document.getElementById('modal-leaderboard').classList.remove('hidden');
   const tbody = document.getElementById('leaderboard-body');
   tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Memuat Papan Peringkat Realtime...</td></tr>';
 
-  if (db) {
-    db.ref('leaderboard').on('value', (snapshot) => {
-      if (!snapshot.exists()) {
-        showLocalScores(tbody);
-        return;
-      }
-
-      let bestMap = new Map();
-
-      snapshot.forEach((childSnapshot) => {
-        let val = childSnapshot.val();
-        if (!val || !val.name) return;
-
-        let cleanName = val.name.trim();
-        let key = cleanName.toLowerCase();
-        let currentLevel = Number(val.level) || 1;
-        let currentScore = Number(val.score) || 0;
-
-        if (!bestMap.has(key)) {
-          bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
-        } else {
-          let existing = bestMap.get(key);
-          let existingLevel = Number(existing.level) || 1;
-          let existingScore = Number(existing.score) || 0;
-
-          if (currentLevel > existingLevel || (currentLevel === existingLevel && currentScore > existingScore)) {
-            bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
-          }
-        }
-      });
-
-      let uniqueList = Array.from(bestMap.values());
-
-      uniqueList.sort((a, b) => {
-        let lvlA = Number(a.level) || 1;
-        let lvlB = Number(b.level) || 1;
-        if (lvlB !== lvlA) {
-          return lvlB - lvlA;
-        }
-        return (Number(b.score) || 0) - (Number(a.score) || 0);
-      });
-
-      let top10 = uniqueList.slice(0, 10);
-
-      if (top10.length === 0) {
-        showLocalScores(tbody);
-        return;
-      }
-
-      tbody.innerHTML = top10.map((s, index) => `
-        <tr>
-          <td>${index === 0 ? '🥇 1' : index === 1 ? '🥈 2' : index === 2 ? '🥉 3' : index + 1}</td>
-          <td><strong>${escapeHtml(s.name)}</strong></td>
-          <td>Lvl ${s.level || 1}</td>
-          <td><strong>${s.score || 0}</strong></td>
-        </tr>
-      `).join('');
-    }, (error) => {
-      console.error("Firebase Listener Error:", error);
-      showLocalScores(tbody);
-    });
-  } else {
+  if (!db) {
     showLocalScores(tbody);
+    return;
   }
+
+  // Lepas listener lama kalau ada
+  if (leaderboardRef && leaderboardHandler) {
+    try { leaderboardRef.off('value', leaderboardHandler); } catch(e) {}
+  }
+
+  leaderboardRef = db.ref('leaderboard');
+  leaderboardHandler = (snapshot) => {
+    if (!snapshot.exists()) {
+      showLocalScores(tbody);
+      return;
+    }
+
+    let bestMap = new Map();
+
+    snapshot.forEach((childSnapshot) => {
+      let val = childSnapshot.val();
+      if (!val || !val.name) return;
+
+      let cleanName = val.name.trim();
+      let key = cleanName.toLowerCase();
+      let currentLevel = Number(val.level) || 1;
+      let currentScore = Number(val.score) || 0;
+
+      if (!bestMap.has(key)) {
+        bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
+      } else {
+        let existing = bestMap.get(key);
+        let existingLevel = Number(existing.level) || 1;
+        let existingScore = Number(existing.score) || 0;
+
+        if (currentLevel > existingLevel || (currentLevel === existingLevel && currentScore > existingScore)) {
+          bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
+        }
+      }
+    });
+
+    let uniqueList = Array.from(bestMap.values());
+
+    uniqueList.sort((a, b) => {
+      let lvlA = Number(a.level) || 1;
+      let lvlB = Number(b.level) || 1;
+      if (lvlB !== lvlA) {
+        return lvlB - lvlA;
+      }
+      return (Number(b.score) || 0) - (Number(a.score) || 0);
+    });
+
+    let top10 = uniqueList.slice(0, 10);
+
+    if (top10.length === 0) {
+      showLocalScores(tbody);
+      return;
+    }
+
+    tbody.innerHTML = top10.map((s, index) => `
+      <tr>
+        <td>${index === 0 ? '🥇 1' : index === 1 ? '🥈 2' : index === 2 ? '🥉 3' : index + 1}</td>
+        <td><strong>${escapeHtml(s.name)}</strong></td>
+        <td>Lvl ${s.level || 1}</td>
+        <td><strong>${s.score || 0}</strong></td>
+      </tr>
+    `).join('');
+  };
+
+  leaderboardRef.on('value', leaderboardHandler, (error) => {
+    console.error("Firebase Listener Error:", error);
+    showLocalScores(tbody);
+  });
 }
 
 function showLocalScores(tbody) {
   let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
-  
+
   let bestMap = new Map();
   localScores.forEach(s => {
     if (!s || !s.name) return;
@@ -1906,9 +1929,3 @@ function openStickerAlbum() {
 
   document.getElementById('modal-stickers').classList.remove('hidden');
 }
-"""
-
-with open("game.js", "w", encoding="utf-8") as f:
-    f.write(game_js_content)
-
-print("game.js generated successfully.")
