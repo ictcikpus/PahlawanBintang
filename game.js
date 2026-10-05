@@ -39,12 +39,14 @@ const DEFAULT_STICKERS = [
 ];
 
 // =============================================================
-// 2. SYNTHESIZER AUDIO (TANPA FILE SOUND EKSTERNAL)
+// 2. SYNTHESIZER AUDIO (AUDIO FX & BGM RETRO ARCADE)
 // =============================================================
 class SoundEngine {
   constructor() {
     this.ctx = null;
     this.isMuted = false;
+    this.bgmTimer = null;
+    this.bgmStep = 0;
   }
 
   init() {
@@ -101,6 +103,90 @@ class SoundEngine {
 
     osc.start();
     osc.stop(this.ctx.currentTime + 0.2);
+  }
+
+  playCoin() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(987.77, this.ctx.currentTime); // B5
+    osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.08); // E6
+
+    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.2);
+  }
+
+  playHit() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.2);
+
+    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.2);
+  }
+
+  playCombo() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(523.25, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1046.50, this.ctx.currentTime + 0.15);
+
+    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.15);
+  }
+
+  playBossWarning() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(440, this.ctx.currentTime);
+    osc.frequency.setValueAtTime(880, this.ctx.currentTime + 0.15);
+
+    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.3);
   }
 
   playBossShoot() {
@@ -209,6 +295,42 @@ class SoundEngine {
       osc.stop(this.ctx.currentTime + idx * 0.09 + 0.22);
     });
   }
+
+  startBGM() {
+    if (this.bgmTimer) return;
+    const notes = [130.81, 164.81, 196.00, 261.63, 196.00, 164.81];
+    this.bgmStep = 0;
+
+    this.bgmTimer = setInterval(() => {
+      if (this.isMuted || !isGameRunning || isGamePaused) return;
+      this.init();
+      if (!this.ctx) return;
+
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(notes[this.bgmStep % notes.length], this.ctx.currentTime);
+
+      gain.gain.setValueAtTime(0.03, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.18);
+
+      this.bgmStep++;
+    }, 220);
+  }
+
+  stopBGM() {
+    if (this.bgmTimer) {
+      clearInterval(this.bgmTimer);
+      this.bgmTimer = null;
+    }
+  }
 }
 
 const sounds = new SoundEngine();
@@ -227,15 +349,30 @@ let stickersData = DEFAULT_STICKERS;
 let currentLevelIndex = 0;
 let score = 0;
 let levelKills = 0;
+let levelCoinsEarned = 0;
 let lives = 3;
 let isGameRunning = false;
 let isGamePaused = false;
+
+// Koin & Upgrade System
+let coins = Number(localStorage.getItem('pahlawan_coins')) || 0;
+let upgradeFireRate = Number(localStorage.getItem('pahlawan_up_firerate')) || 1;
+let upgradeShield = Number(localStorage.getItem('pahlawan_up_shield')) || 1;
+let upgradeBomb = Number(localStorage.getItem('pahlawan_up_bomb')) || 2;
+let upgradeFreeze = Number(localStorage.getItem('pahlawan_up_freeze')) || 2;
+
+// Combo Multiplier System
+let combo = 1;
+let comboTimer = 0;
+const MAX_COMBO = 5;
 
 let playerX = 0;
 let playerSpeed = 9;
 let bullets = [];
 let bossBullets = [];
 let powerups = [];
+let coinsOnField = [];
+let muzzleFlashes = [];
 let lastShotTime = 0;
 
 let isSuperShot = false;
@@ -243,11 +380,12 @@ let superShotTimer = 0;
 let isShieldActive = false;
 let shieldTimer = 0;
 
-let freezeCharges = 2;
-let bombCharges = 2;
+let freezeCharges = upgradeFreeze;
+let bombCharges = upgradeBomb;
 
 let monsters = [];
 let particles = [];
+let stars = [];
 let isFrozen = false;
 let screenShake = 0;
 
@@ -270,15 +408,17 @@ const actorMap = {
 };
 
 window.addEventListener('load', async () => {
+  initStarfield();
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
   document.getElementById('player-name-input').value = playerName;
   updateActorSelectionUI();
+  updateShopUI();
 
   await loadGameData();
   
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=8.0').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=9.0').catch(err => console.log('SW Fail:', err));
   }
 
   setupEventListeners();
@@ -290,6 +430,21 @@ window.addEventListener('beforeinstallprompt', (e) => {
   deferredPrompt = e;
   document.getElementById('btn-pwa-install').classList.remove('hidden');
 });
+
+function initStarfield() {
+  stars = [];
+  const starCount = 80;
+  for (let i = 0; i < starCount; i++) {
+    stars.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      size: Math.random() * 2.2 + 0.8,
+      speed: Math.random() * 1.5 + 0.3,
+      opacity: Math.random() * 0.7 + 0.3,
+      color: ['#ffffff', '#70a1ff', '#ffd700', '#00d2d3'][Math.floor(Math.random() * 4)]
+    });
+  }
+}
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -321,6 +476,12 @@ function setupEventListeners() {
   document.getElementById('btn-select-actor').onclick = () => document.getElementById('modal-actors').classList.remove('hidden');
   document.getElementById('btn-close-actors').onclick = () => document.getElementById('modal-actors').classList.add('hidden');
   
+  document.getElementById('btn-shop').onclick = () => {
+    updateShopUI();
+    document.getElementById('modal-shop').classList.remove('hidden');
+  };
+  document.getElementById('btn-close-shop').onclick = () => document.getElementById('modal-shop').classList.add('hidden');
+
   document.getElementById('btn-leaderboard').onclick = openLeaderboard;
   document.getElementById('btn-close-leaderboard').onclick = () => {
     document.getElementById('modal-leaderboard').classList.add('hidden');
@@ -344,9 +505,16 @@ function setupEventListeners() {
     document.getElementById('modal-pause').classList.add('hidden');
     document.getElementById('hud-overlay').classList.add('hidden');
     document.getElementById('screen-main-menu').classList.remove('hidden');
+    sounds.stopBGM();
     isGameRunning = false;
     isGamePaused = false;
   };
+
+  // Buy Upgrades Handler
+  document.getElementById('btn-buy-firerate').onclick = () => buyUpgrade('firerate');
+  document.getElementById('btn-buy-shield').onclick = () => buyUpgrade('shield');
+  document.getElementById('btn-buy-bomb').onclick = () => buyUpgrade('bomb');
+  document.getElementById('btn-buy-freeze').onclick = () => buyUpgrade('freeze');
 
   document.querySelectorAll('.actor-card').forEach(card => {
     card.onclick = () => {
@@ -407,6 +575,7 @@ function setupEventListeners() {
     document.getElementById('modal-result').classList.add('hidden');
     document.getElementById('hud-overlay').classList.add('hidden');
     document.getElementById('screen-main-menu').classList.remove('hidden');
+    sounds.stopBGM();
     isGameRunning = false;
     isGamePaused = false;
   };
@@ -432,7 +601,7 @@ function setupEventListeners() {
     updateSkillButtonsUI();
 
     monsters.forEach(m => createBurstParticles3D(m.x, m.y, m.color));
-    let pointsGained = monsters.length * 100;
+    let pointsGained = monsters.length * 100 * combo;
     score += pointsGained;
     levelKills += monsters.length;
     
@@ -444,14 +613,64 @@ function setupEventListeners() {
   };
 }
 
+function updateShopUI() {
+  document.getElementById('shop-coin-count').innerText = coins;
+
+  document.getElementById('shop-level-firerate').innerText = upgradeFireRate;
+  document.getElementById('shop-level-shield').innerText = upgradeShield;
+  document.getElementById('shop-level-bomb').innerText = upgradeBomb;
+  document.getElementById('shop-level-freeze').innerText = upgradeFreeze;
+
+  document.getElementById('btn-buy-firerate').querySelector('span').innerText = upgradeFireRate >= 5 ? 'MAX' : `${upgradeFireRate * 50} 🪙`;
+  document.getElementById('btn-buy-shield').querySelector('span').innerText = upgradeShield >= 5 ? 'MAX' : `${upgradeShield * 60} 🪙`;
+  document.getElementById('btn-buy-bomb').querySelector('span').innerText = upgradeBomb >= 5 ? 'MAX' : `${upgradeBomb * 75} 🪙`;
+  document.getElementById('btn-buy-freeze').querySelector('span').innerText = upgradeFreeze >= 5 ? 'MAX' : `${upgradeFreeze * 75} 🪙`;
+}
+
+function buyUpgrade(type) {
+  if (type === 'firerate' && upgradeFireRate < 5) {
+    let cost = upgradeFireRate * 50;
+    if (coins >= cost) {
+      coins -= cost; upgradeFireRate++;
+      localStorage.setItem('pahlawan_up_firerate', upgradeFireRate);
+    }
+  }
+  else if (type === 'shield' && upgradeShield < 5) {
+    let cost = upgradeShield * 60;
+    if (coins >= cost) {
+      coins -= cost; upgradeShield++;
+      localStorage.setItem('pahlawan_up_shield', upgradeShield);
+    }
+  }
+  else if (type === 'bomb' && upgradeBomb < 5) {
+    let cost = upgradeBomb * 75;
+    if (coins >= cost) {
+      coins -= cost; upgradeBomb++;
+      localStorage.setItem('pahlawan_up_bomb', upgradeBomb);
+    }
+  }
+  else if (type === 'freeze' && upgradeFreeze < 5) {
+    let cost = upgradeFreeze * 75;
+    if (coins >= cost) {
+      coins -= cost; upgradeFreeze++;
+      localStorage.setItem('pahlawan_up_freeze', upgradeFreeze);
+    }
+  }
+  localStorage.setItem('pahlawan_coins', coins);
+  sounds.playCoin();
+  updateShopUI();
+}
+
 function pauseGame() {
   if (!isGameRunning) return;
   isGamePaused = true;
+  sounds.stopBGM();
   document.getElementById('modal-pause').classList.remove('hidden');
 }
 
 function resumeGame() {
   isGamePaused = false;
+  sounds.startBGM();
   document.getElementById('modal-pause').classList.add('hidden');
   requestAnimationFrame(gameLoop);
 }
@@ -518,18 +737,24 @@ function startGame() {
 
 function startCurrentLevel() {
   levelKills = 0;
+  levelCoinsEarned = 0;
   playerX = canvas.width / 2;
   bullets = [];
   bossBullets = [];
   powerups = [];
+  coinsOnField = [];
+  muzzleFlashes = [];
+
+  combo = 1;
+  comboTimer = 0;
 
   isSuperShot = false;
   superShotTimer = 0;
   isShieldActive = false;
   shieldTimer = 0;
 
-  freezeCharges = 2;
-  bombCharges = 2;
+  freezeCharges = upgradeFreeze;
+  bombCharges = upgradeBomb;
   updateSkillButtonsUI();
 
   updateHUDValues();
@@ -540,6 +765,7 @@ function startCurrentLevel() {
   isGameRunning = true;
   isGamePaused = false;
 
+  sounds.startBGM();
   spawnMonsterLoop();
   gameLoop();
 }
@@ -548,7 +774,16 @@ function updateHUDValues() {
   const levelConfig = (levelsData && levelsData[currentLevelIndex]) ? levelsData[currentLevelIndex] : DEFAULT_LEVELS[0];
   document.getElementById('hud-level').innerText = levelConfig.level;
   document.getElementById('hud-score').innerText = score;
+  document.getElementById('hud-coins').innerText = coins;
   document.getElementById('hud-mission').innerText = `${levelKills}/${levelConfig.targetKills}`;
+
+  const comboPill = document.getElementById('hud-combo-pill');
+  if (combo > 1) {
+    comboPill.classList.remove('hidden');
+    document.getElementById('hud-combo-text').innerText = `${combo}x COMBO`;
+  } else {
+    comboPill.classList.add('hidden');
+  }
 }
 
 function updateLivesDisplay() {
@@ -558,6 +793,14 @@ function updateLivesDisplay() {
     html += `<svg class="heart-icon" viewBox="0 0 24 24"><path d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z"/></svg>`;
   }
   container.innerHTML = html;
+}
+
+function triggerBossSiren() {
+  const overlay = document.getElementById('boss-warning-overlay');
+  overlay.classList.remove('hidden');
+  sounds.playBossWarning();
+  triggerVibrate([100, 50, 100, 50, 200]);
+  setTimeout(() => overlay.classList.add('hidden'), 2200);
 }
 
 function spawnMonsterLoop() {
@@ -571,6 +814,8 @@ function spawnMonsterLoop() {
 
       if (algo === 'boss_10' || algo === 'boss_20' || algo === 'boss_30') {
         if (monsters.length === 0 && levelKills < levelConfig.targetKills) {
+          triggerBossSiren();
+
           let hpVal = algo === 'boss_10' ? 25 : (algo === 'boss_20' ? 50 : 100);
           let colorVal = algo === 'boss_10' ? '#e67e22' : (algo === 'boss_20' ? '#9b59b6' : '#e74c3c');
           
@@ -618,17 +863,17 @@ function spawnMonsterLoop() {
   setTimeout(spawnMonsterLoop, currentRate);
 }
 
-function trySpawnPowerup(x, y) {
+function trySpawnDrop(x, y) {
+  // Spawn Koin Bintang (Probabilitas 45%)
+  if (Math.random() < 0.45) {
+    coinsOnField.push({ x: x, y: y, vy: 1.8, size: 10, rot: 0 });
+  }
+
+  // Spawn Powerup (Probabilitas 30%)
   if (Math.random() < 0.30) {
     const types = ['supershot', 'shield', 'bomb', 'freeze', 'heart'];
     const chosenType = types[Math.floor(Math.random() * types.length)];
-    powerups.push({
-      x: x,
-      y: y,
-      type: chosenType,
-      speed: 2.2,
-      size: 16
-    });
+    powerups.push({ x: x, y: y, type: chosenType, speed: 2.2, size: 16 });
   }
 }
 
@@ -646,7 +891,7 @@ function spawnFloatingText(x, y, text, color) {
 }
 
 function createBurstParticles3D(x, y, color) {
-  for (let i = 0; i < 18; i++) {
+  for (let i = 0; i < 20; i++) {
     particles.push({
       x: x, y: y,
       vx: (Math.random() - 0.5) * 14,
@@ -752,11 +997,21 @@ function gameLoop() {
     if (screenShake < 0.5) screenShake = 0;
   }
 
+  // Parallax Starfield Background Render
   const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
   bgGrad.addColorStop(0, '#0a0d24');
   bgGrad.addColorStop(1, '#1a224d');
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  stars.forEach(s => {
+    s.y += s.speed;
+    if (s.y > canvas.height) { s.y = 0; s.x = Math.random() * canvas.width; }
+    ctx.fillStyle = s.color;
+    ctx.globalAlpha = s.opacity;
+    ctx.fillRect(s.x, s.y, s.size, s.size);
+  });
+  ctx.globalAlpha = 1.0;
 
   ctx.fillStyle = '#2f3640';
   ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
@@ -776,8 +1031,19 @@ function gameLoop() {
     if (shieldTimer <= 0) isShieldActive = false;
   }
 
+  // Combo Timer Handling
+  if (combo > 1) {
+    comboTimer--;
+    if (comboTimer <= 0) {
+      combo = 1;
+      updateHUDValues();
+    }
+  }
+
+  // Fire Rate Upgrade modifier
+  const fireInterval = Math.max(90, 160 - (upgradeFireRate - 1) * 15);
   const now = Date.now();
-  if (now - lastShotTime > 160) {
+  if (now - lastShotTime > fireInterval) {
     const activeColor = actorMap[currentActor] ? actorMap[currentActor].color : '#1e90ff';
     if (isSuperShot) {
       bullets.push({ x: playerX - 16, y: canvas.height - 65, vx: -2.5, vy: 12, color: '#00d2d3' });
@@ -786,22 +1052,40 @@ function gameLoop() {
     } else {
       bullets.push({ x: playerX, y: canvas.height - 65, vx: 0, vy: 13, color: activeColor });
     }
+
+    muzzleFlashes.push({ x: playerX, y: canvas.height - 65, radius: 14, opacity: 1.0 });
     sounds.playLaser();
     lastShotTime = now;
   }
 
+  // Muzzle Flash Effect Render
+  for (let mf = muzzleFlashes.length - 1; mf >= 0; mf--) {
+    const flash = muzzleFlashes[mf];
+    ctx.beginPath();
+    ctx.arc(flash.x, flash.y, flash.radius, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 215, 0, ${flash.opacity})`;
+    ctx.fill();
+    flash.opacity -= 0.25;
+    if (flash.opacity <= 0) muzzleFlashes.splice(mf, 1);
+  }
+
+  // Render Bullets dengan Laser Trail
   for (let b = bullets.length - 1; b >= 0; b--) {
     const bullet = bullets[b];
     bullet.y -= bullet.vy;
     bullet.x += bullet.vx;
 
     ctx.beginPath();
-    ctx.arc(bullet.x, bullet.y, 6, 0, Math.PI * 2);
-    ctx.fillStyle = bullet.color;
-    ctx.fill();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#ffffff';
+    ctx.moveTo(bullet.x, bullet.y + 12);
+    ctx.lineTo(bullet.x, bullet.y);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = bullet.color;
     ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(bullet.x, bullet.y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
 
     if (bullet.y < -10) {
       bullets.splice(b, 1);
@@ -819,11 +1103,18 @@ function gameLoop() {
 
         if (m.hp <= 0) {
           createBurstParticles3D(m.x, m.y, m.color);
-          trySpawnPowerup(m.x, m.y);
+          trySpawnDrop(m.x, m.y);
 
-          score += 150;
+          // Multiplier Combo Score
+          let pointsGained = 150 * combo;
+          score += pointsGained;
           levelKills++;
-          spawnFloatingText(m.x, m.y, '+150', '#ffd700');
+
+          combo = Math.min(MAX_COMBO, combo + 1);
+          comboTimer = 180; // 3 detik reset
+          sounds.playCombo();
+
+          spawnFloatingText(m.x, m.y, `+${pointsGained} (${combo}x)`, '#ffd700');
 
           if (m.algorithm === 'splitter' && m.size > 22) {
             monsters.push(
@@ -843,6 +1134,43 @@ function gameLoop() {
     }
   }
 
+  // Render Koin Bintang Di Lapangan
+  for (let c = coinsOnField.length - 1; c >= 0; c--) {
+    const coin = coinsOnField[c];
+    coin.y += coin.vy;
+    coin.rot += 0.1;
+
+    ctx.save();
+    ctx.translate(coin.x, coin.y);
+    ctx.rotate(coin.rot);
+
+    ctx.beginPath();
+    ctx.arc(0, 0, coin.size, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffd700';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+
+    ctx.restore();
+
+    const distPlayer = Math.hypot(playerX - coin.x, (canvas.height - 45) - coin.y);
+    if (distPlayer < coin.size + 25) {
+      coins++;
+      levelCoinsEarned++;
+      localStorage.setItem('pahlawan_coins', coins);
+      sounds.playCoin();
+      triggerVibrate(30);
+      spawnFloatingText(coin.x, coin.y, '+1 🪙', '#ffd700');
+      coinsOnField.splice(c, 1);
+      updateHUDValues();
+      continue;
+    }
+
+    if (coin.y > canvas.height) coinsOnField.splice(c, 1);
+  }
+
+  // Render Powerups
   for (let p = powerups.length - 1; p >= 0; p--) {
     const pw = powerups[p];
     pw.y += pw.speed;
@@ -887,16 +1215,16 @@ function gameLoop() {
       }
       else if (pw.type === 'shield') {
         isShieldActive = true;
-        shieldTimer = 550;
+        shieldTimer = 450 + (upgradeShield - 1) * 80;
         spawnFloatingText(playerX, canvas.height - 70, 'PERISAI AKTIF!', '#00d2d3');
       }
       else if (pw.type === 'bomb') {
-        bombCharges = Math.min(5, bombCharges + 1);
+        bombCharges = Math.min(upgradeBomb, bombCharges + 1);
         updateSkillButtonsUI();
         spawnFloatingText(playerX, canvas.height - 70, '+1 EXTRA BOMB!', '#ff4757');
       }
       else if (pw.type === 'freeze') {
-        freezeCharges = Math.min(5, freezeCharges + 1);
+        freezeCharges = Math.min(upgradeFreeze, freezeCharges + 1);
         updateSkillButtonsUI();
         spawnFloatingText(playerX, canvas.height - 70, '+1 EXTRA BEKU!', '#1e90ff');
       }
@@ -913,6 +1241,7 @@ function gameLoop() {
     if (pw.y > canvas.height) powerups.splice(p, 1);
   }
 
+  // Render Boss Bullets
   for (let bb = bossBullets.length - 1; bb >= 0; bb--) {
     const bBullet = bossBullets[bb];
     bBullet.y += bBullet.vy;
@@ -935,6 +1264,9 @@ function gameLoop() {
         sounds.playPop();
       } else {
         lives--;
+        combo = 1;
+        updateHUDValues();
+        sounds.playHit();
         screenShake = 16;
         triggerVibrate([100, 50, 100]);
         updateLivesDisplay();
@@ -953,6 +1285,7 @@ function gameLoop() {
 
   drawHeroVector(ctx, playerX, canvas.height - 45, currentActor);
 
+  // Render Monsters & AI Movement
   for (let i = monsters.length - 1; i >= 0; i--) {
     const m = monsters[i];
     m.timeAlive += 0.05;
@@ -1073,6 +1406,9 @@ function gameLoop() {
         spawnFloatingText(playerX, canvas.height - 60, 'PERISAI TAHAN!', '#00d2d3');
       } else {
         lives--;
+        combo = 1;
+        updateHUDValues();
+        sounds.playHit();
         screenShake = 14;
         triggerVibrate([100, 50, 100]);
         updateLivesDisplay();
@@ -1105,6 +1441,7 @@ function gameLoop() {
 function levelComplete() {
   isGameRunning = false;
   isGamePaused = false;
+  sounds.stopBGM();
   sounds.playWin();
   triggerVibrate([50, 50, 50, 50, 100]);
   unlockSticker(currentLevelIndex + 1);
@@ -1114,6 +1451,7 @@ function levelComplete() {
   document.getElementById('result-title').innerText = "MISI SELESAI!";
   document.getElementById('result-player-name').innerText = playerName;
   document.getElementById('result-score').innerText = score;
+  document.getElementById('result-coins').innerText = `+${levelCoinsEarned} 🪙`;
   document.getElementById('result-level').innerText = levelConfig.level;
   document.getElementById('result-kills').innerText = `${levelKills} Target`;
   
@@ -1124,6 +1462,7 @@ function levelComplete() {
 function levelFailed(reasonTitle = "MISI GAGAL!") {
   isGameRunning = false;
   isGamePaused = false;
+  sounds.stopBGM();
   triggerVibrate([200, 100, 200]);
   saveScoreToGlobalLeaderboard(playerName, score, currentLevelIndex + 1);
 
@@ -1131,6 +1470,7 @@ function levelFailed(reasonTitle = "MISI GAGAL!") {
   document.getElementById('result-title').innerText = reasonTitle;
   document.getElementById('result-player-name').innerText = playerName;
   document.getElementById('result-score').innerText = score;
+  document.getElementById('result-coins').innerText = `+${levelCoinsEarned} 🪙`;
   document.getElementById('result-level').innerText = levelConfig.level;
   document.getElementById('result-kills').innerText = `${levelKills} Target`;
   
