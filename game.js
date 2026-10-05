@@ -18,7 +18,7 @@ try {
   db = firebase.database();
   console.log("🔥 Firebase Realtime Database Terhubung Berhasil!");
 } catch(e) {
-  console.log("⚠️ Firebase Mode Offline / Config Belum Diisi");
+  console.log("⚠️️ Firebase Mode Offline / Config Belum Diisi");
 }
 
 // =============================================================
@@ -283,19 +283,9 @@ async function loadGameData() {
 }
 
 function setupEventListeners() {
+  // OTOMATIS AKTIFKAN FULLSCREEN & LANGSUNG START GAME
   document.getElementById('btn-prepare-play').onclick = () => {
-    document.getElementById('screen-main-menu').classList.add('hidden');
-    document.getElementById('modal-fullscreen-prompt').classList.remove('hidden');
-  };
-
-  document.getElementById('btn-start-fullscreen').onclick = () => {
     requestFullscreenAndLandscape();
-    document.getElementById('modal-fullscreen-prompt').classList.add('hidden');
-    startGame();
-  };
-
-  document.getElementById('btn-skip-fullscreen').onclick = () => {
-    document.getElementById('modal-fullscreen-prompt').classList.add('hidden');
     startGame();
   };
 
@@ -1109,7 +1099,6 @@ function levelFailed(reasonTitle = "MISI GAGAL!") {
   document.getElementById('modal-result').classList.remove('hidden');
 }
 
-// SIMPAN SKOR KE REALTIME DATABASE
 function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
   localScores.push({ name: name, score: scoreVal, level: levelVal });
@@ -1126,7 +1115,6 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   }
 }
 
-// MEMBACA PERINGKAT REALTIME STREAMING DARI REALTIME DATABASE
 function openLeaderboard() {
   document.getElementById('modal-leaderboard').classList.remove('hidden');
   const tbody = document.getElementById('leaderboard-body');
