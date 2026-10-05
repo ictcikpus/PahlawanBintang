@@ -14,7 +14,7 @@
   <meta name="theme-color" content="#0c102b">
   <meta name="apple-mobile-web-app-capable" content="yes">
   
-  <link rel="stylesheet" href="style.css?v=8.0">
+  <link rel="stylesheet" href="style.css?v=9.0">
 
   <!-- Firebase Client SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -26,7 +26,16 @@
     <canvas id="gameCanvas"></canvas>
     <div id="popup-container"></div>
 
-    <!-- HUD Overlay Game (Ringkas & Luas) -->
+    <!-- Boss Warning Overlay Siren -->
+    <div id="boss-warning-overlay" class="boss-warning-screen hidden">
+      <div class="boss-warning-banner">
+        <div class="siren-light"></div>
+        <h1>⚠️ WARNING ⚠️</h1>
+        <h2>BOSS APPROACHING!</h2>
+      </div>
+    </div>
+
+    <!-- HUD Overlay Game -->
     <div id="hud-overlay" class="hidden">
       <div class="hud-top">
         <div class="hud-pill profile-pill">
@@ -40,6 +49,13 @@
         <div class="hud-pill score-pill">
           <svg class="ui-svg-icon" viewBox="0 0 24 24"><path fill="#ffa502" d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z"/></svg>
           <span id="hud-score" class="hud-text">0</span>
+        </div>
+        <div class="hud-pill coin-pill">
+          <span class="hud-badge coin-badge">🪙</span>
+          <span id="hud-coins" class="hud-text">0</span>
+        </div>
+        <div class="hud-pill combo-pill" id="hud-combo-pill">
+          <span id="hud-combo-text" class="combo-text">1x COMBO</span>
         </div>
         <div class="hud-pill mission-pill">
           <span class="hud-badge">TARGET</span>
@@ -55,7 +71,7 @@
         </button>
       </div>
 
-      <!-- Tombol Aksi Kontrol & Powerup (Ukuran Ringkas) -->
+      <!-- Tombol Aksi Kontrol & Powerup -->
       <div class="hud-bottom">
         <div class="movement-controls">
           <button id="btn-move-left" class="btn-touch-move">
@@ -138,10 +154,70 @@
             </span>
           </button>
           <button id="btn-select-actor" class="btn-3d btn-pink"><span>PILIH HERO (<span id="selected-actor-name">Robot Cyber</span>)</span></button>
+          <button id="btn-shop" class="btn-3d btn-orange"><span>🛒 TOKO UPGRADE & KOIN</span></button>
           <button id="btn-leaderboard" class="btn-3d btn-yellow"><span>PAPAN PERINGKAT ONLINE</span></button>
           <button id="btn-stickers" class="btn-3d btn-blue"><span>ALBUM STIKER (<span id="unlocked-count">0</span>/30)</span></button>
           <button id="btn-pwa-install" class="btn-3d btn-orange hidden"><span>INSTALL APLIKASI DI HP</span></button>
         </div>
+      </div>
+    </div>
+
+    <!-- Modal Toko Upgrade -->
+    <div id="modal-shop" class="modal-screen hidden">
+      <div class="modal-card bounce-in">
+        <div class="modal-header">
+          <h2>🛒 TOKO UPGRADE HERO</h2>
+          <p class="modal-sub">Gunakan Koin Bintang 🪙 untuk memperkuat Senjata & Perisai!</p>
+          <div class="shop-coin-balance">KOIN ANDA: <strong id="shop-coin-count">0</strong> 🪙</div>
+        </div>
+
+        <div class="shop-items-container">
+          <div class="shop-item-card">
+            <div class="shop-item-info">
+              <div class="shop-item-title">⚡ Kecepatan Tembak</div>
+              <div class="shop-item-desc">Menembak lebih cepat & beruntun</div>
+              <div class="shop-item-level">Lvl: <span id="shop-level-firerate">1</span>/5</div>
+            </div>
+            <button id="btn-buy-firerate" class="btn-3d btn-green btn-shop-buy">
+              <span>50 🪙</span>
+            </button>
+          </div>
+
+          <div class="shop-item-card">
+            <div class="shop-item-info">
+              <div class="shop-item-title">🛡️ Durasi Perisai</div>
+              <div class="shop-item-desc">Perisai bertahan lebih lama saat aktif</div>
+              <div class="shop-item-level">Lvl: <span id="shop-level-shield">1</span>/5</div>
+            </div>
+            <button id="btn-buy-shield" class="btn-3d btn-green btn-shop-buy">
+              <span>60 🪙</span>
+            </button>
+          </div>
+
+          <div class="shop-item-card">
+            <div class="shop-item-info">
+              <div class="shop-item-title">💣 Ekstra Max Bom</div>
+              <div class="shop-item-desc">Meningkatkan kapasitas maksimal Bom Pelangi</div>
+              <div class="shop-item-level">Lvl: <span id="shop-level-bomb">2</span>/5</div>
+            </div>
+            <button id="btn-buy-bomb" class="btn-3d btn-green btn-shop-buy">
+              <span>75 🪙</span>
+            </button>
+          </div>
+
+          <div class="shop-item-card">
+            <div class="shop-item-info">
+              <div class="shop-item-title">❄️ Ekstra Max Beku</div>
+              <div class="shop-item-desc">Meningkatkan kapasitas maksimal Skill Beku</div>
+              <div class="shop-item-level">Lvl: <span id="shop-level-freeze">2</span>/5</div>
+            </div>
+            <button id="btn-buy-freeze" class="btn-3d btn-green btn-shop-buy">
+              <span>75 🪙</span>
+            </button>
+          </div>
+        </div>
+
+        <button id="btn-close-shop" class="btn-3d btn-purple" style="margin-top: 12px;">SIMPAN & KEMBALI</button>
       </div>
     </div>
 
@@ -231,6 +307,7 @@
         <div class="result-stats-card">
           <div class="stat-row"><span>PAHLAWAN</span><strong id="result-player-name">Pahlawan</strong></div>
           <div class="stat-row"><span>TOTAL SKOR</span><strong id="result-score" class="highlight-yellow">0</strong></div>
+          <div class="stat-row"><span>KOIN DIDAPAT</span><strong id="result-coins" class="highlight-yellow">+0 🪙</strong></div>
           <div class="stat-row"><span>LEVEL DICAPAI</span><strong id="result-level" class="highlight-green">1</strong></div>
           <div class="stat-row"><span>ELIMINASI</span><strong id="result-kills" class="highlight-pink">0 Kills</strong></div>
         </div>
@@ -257,6 +334,6 @@
 
   </div>
 
-  <script src="game.js?v=8.0"></script>
+  <script src="game.js?v=9.0"></script>
 </body>
 </html>
