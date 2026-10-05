@@ -1,4 +1,29 @@
-// Web Audio API Synthesizer
+// =============================================================
+// 1. KONFIGURASI FIREBASE (GANTI ISI DI BAWAH DENGAN MILIK ANDA)
+// =============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyAJMz9ElKNk5_VaH-R8vIEHSt2VL6wAdms",
+  authDomain: "pahlawan-bintang.firebaseapp.com",
+  databaseURL: "https://pahlawan-bintang-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "pahlawan-bintang",
+  storageBucket: "pahlawan-bintang.firebasestorage.app",
+  messagingSenderId: "419778211274",
+  appId: "1:419778211274:web:552e733aec09076e57f333",
+  measurementId: "G-464JNFFTTZ"
+};
+
+let db = null;
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  console.log("🔥 Firebase Firestore Terhubung Berhasil!");
+} catch(e) {
+  console.log("⚠️ Firebase Mode Offline / Config Belum Diisi");
+}
+
+// =============================================================
+// 2. SYNTHESIZER AUDIO (TANPA FILE SOUND EKSTERNAL)
+// =============================================================
 class SoundEngine {
   constructor() {
     this.ctx = null;
@@ -166,25 +191,9 @@ function triggerVibrate(pattern) {
   }
 }
 
-// Firebase Config
-const firebaseConfig = {
-  apiKey: "AIzaSyDummyKeyForGitHubPagesTesting123",
-  authDomain: "pahlawan-bintang.firebaseapp.com",
-  projectId: "pahlawan-bintang",
-  storageBucket: "pahlawan-bintang.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
-};
-
-let db = null;
-try {
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-} catch(e) {
-  console.log("Firebase Mode Offline");
-}
-
-// Global Game States
+// =============================================================
+// 3. GAME STATE & VARIABEL GLOBAL
+// =============================================================
 let levelsData = [];
 let stickersData = [];
 let currentLevelIndex = 0;
@@ -216,6 +225,8 @@ let screenShake = 0;
 let isMovingLeft = false;
 let isMovingRight = false;
 
+let unsubscribeLeaderboard = null;
+
 let currentActor = localStorage.getItem('pahlawan_actor') || 'robot';
 let playerName = localStorage.getItem('pahlawan_nama') || 'Pahlawan';
 
@@ -240,7 +251,7 @@ window.addEventListener('load', async () => {
   await loadGameData();
   
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=4.0').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=5.0').catch(err => console.log('SW Fail:', err));
   }
 
   setupEventListeners();
@@ -262,8 +273,8 @@ function resizeCanvas() {
 async function loadGameData() {
   try {
     const [resLevels, resStickers] = await Promise.all([
-      fetch('./levels.json?v=4.0'),
-      fetch('./stickers.json?v=4.0')
+      fetch('./levels.json?v=5.0'),
+      fetch('./stickers.json?v=5.0')
     ]);
     levelsData = await resLevels.json();
     stickersData = await resStickers.json();
@@ -293,7 +304,10 @@ function setupEventListeners() {
   document.getElementById('btn-close-actors').onclick = () => document.getElementById('modal-actors').classList.add('hidden');
   
   document.getElementById('btn-leaderboard').onclick = openLeaderboard;
-  document.getElementById('btn-close-leaderboard').onclick = () => document.getElementById('modal-leaderboard').classList.add('hidden');
+  document.getElementById('btn-close-leaderboard').onclick = () => {
+    if (unsubscribeLeaderboard) unsubscribeLeaderboard();
+    document.getElementById('modal-leaderboard').classList.add('hidden');
+  };
   
   document.getElementById('btn-stickers').onclick = openStickerAlbum;
   document.getElementById('btn-close-stickers').onclick = () => document.getElementById('modal-stickers').classList.add('hidden');
@@ -574,16 +588,13 @@ function createBurstParticles3D(x, y, color) {
   }
 }
 
-// -------------------------------------------------------------
-// EVALUASI KELULUSAN LEVEL (SKOR & TARGET KILLS)
-// -------------------------------------------------------------
 function checkLevelObjectives() {
   const levelConfig = levelsData[currentLevelIndex];
   if (levelKills >= levelConfig.targetKills) {
     if (score >= levelConfig.targetScore) {
-      levelComplete(); // BERHASIL: Buka Level Selanjutnya
+      levelComplete();
     } else {
-      levelFailed("SKOR BELUM MENCAPAI TARGET!"); // GAGAL SKOR: Wajib Ulang
+      levelFailed("SKOR BELUM MENCAPAI TARGET!");
     }
   }
 }
@@ -1017,7 +1028,9 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// LULUS LEVEL (TARGET SKOR & KILLS BERHASIL)
+// =============================================================
+// 4. LOGIKA KELULUSAN & INTEGRASI FIREBASE REAL-TIME
+// =============================================================
 function levelComplete() {
   isGameRunning = false;
   sounds.playWin();
@@ -1032,12 +1045,10 @@ function levelComplete() {
   document.getElementById('result-level').innerText = levelConfig.level;
   document.getElementById('result-kills').innerText = `${levelKills} Target`;
   
-  // MUNCULKAN TOMBOL LANJUT LEVEL
   document.getElementById('btn-next-level').classList.remove('hidden');
   document.getElementById('modal-result').classList.remove('hidden');
 }
 
-// GAGAL LEVEL (TARGET SKOR TIDAK TERCAPAI / GAME OVER)
 function levelFailed(reasonTitle = "MISI GAGAL!") {
   isGameRunning = false;
   triggerVibrate([200, 100, 200]);
@@ -1050,11 +1061,11 @@ function levelFailed(reasonTitle = "MISI GAGAL!") {
   document.getElementById('result-level').innerText = levelConfig.level;
   document.getElementById('result-kills').innerText = `${levelKills} Target`;
   
-  // SEMBUNYIKAN TOMBOL LANJUT LEVEL (HANYA BISA ULANG / MENU UTAMA)
   document.getElementById('btn-next-level').classList.add('hidden');
   document.getElementById('modal-result').classList.remove('hidden');
 }
 
+// SIMPAN SKOR KE FIREBASE & LOCALSTORAGE
 function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
   localScores.push({ name: name, score: scoreVal, level: levelVal });
@@ -1067,32 +1078,43 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
       score: scoreVal,
       level: levelVal,
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    }).catch(err => console.log("Gagal ke Firebase:", err));
+    }).catch(err => console.error("Gagal mengirim ke Firebase:", err));
   }
 }
 
+// BUKA LEADERBOARD STREAMING REAL-TIME (LIVESYNC ALL DEVICES)
 function openLeaderboard() {
   document.getElementById('modal-leaderboard').classList.remove('hidden');
   const tbody = document.getElementById('leaderboard-body');
-  tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Memuat Papan Peringkat...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Memuat Papan Peringkat Realtime...</td></tr>';
 
   if (db) {
-    db.collection('leaderboard').orderBy('score', 'desc').limit(10).get().then(snapshot => {
-      if (snapshot.empty) { showLocalScores(tbody); } 
-      else {
-        tbody.innerHTML = snapshot.docs.map((doc, index) => {
-          const s = doc.data();
-          return `
-            <tr>
-              <td>${index === 0 ? '1' : index === 1 ? '2' : index === 2 ? '3' : index + 1}</td>
-              <td><strong>${s.name}</strong></td>
-              <td>Lvl ${s.level || 1}</td>
-              <td><strong>${s.score}</strong></td>
-            </tr>
-          `;
-        }).join('');
-      }
-    }).catch(() => showLocalScores(tbody));
+    if (unsubscribeLeaderboard) unsubscribeLeaderboard();
+
+    // MENDENGARKAN DATABASE SCR LIVE VIA ONSNAPSHOT
+    unsubscribeLeaderboard = db.collection('leaderboard')
+      .orderBy('score', 'desc')
+      .limit(10)
+      .onSnapshot((snapshot) => {
+        if (snapshot.empty) {
+          showLocalScores(tbody);
+        } else {
+          tbody.innerHTML = snapshot.docs.map((doc, index) => {
+            const s = doc.data();
+            return `
+              <tr>
+                <td>${index === 0 ? '🥇 1' : index === 1 ? '🥈 2' : index === 2 ? '🥉 3' : index + 1}</td>
+                <td><strong>${escapeHtml(s.name)}</strong></td>
+                <td>Lvl ${s.level || 1}</td>
+                <td><strong>${s.score}</strong></td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }, (err) => {
+        console.error("Firebase Listener Error:", err);
+        showLocalScores(tbody);
+      });
   } else {
     showLocalScores(tbody);
   }
@@ -1106,12 +1128,18 @@ function showLocalScores(tbody) {
     tbody.innerHTML = localScores.map((s, index) => `
       <tr>
         <td>${index === 0 ? '1' : index === 1 ? '2' : index === 2 ? '3' : index + 1}</td>
-        <td><strong>${s.name}</strong></td>
+        <td><strong>${escapeHtml(s.name)}</strong></td>
         <td>Lvl ${s.level}</td>
         <td><strong>${s.score}</strong></td>
       </tr>
     `).join('');
   }
+}
+
+function escapeHtml(text) {
+  return String(text || 'Pahlawan').replace(/[&<>"']/g, function(m) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+  });
 }
 
 function unlockSticker(id) {
