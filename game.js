@@ -1,8 +1,8 @@
 // =============================================================
-// 1. KONFIGURASI FIREBASE (GANTI ISI DI BAWAH DENGAN MILIK ANDA)
+// 1. KONFIGURASI FIREBASE REALTIME DATABASE
 // =============================================================
 const firebaseConfig = {
-  apiKey: "AIzaSyAJMz9ElKNk5_VaH-R8vIEHSt2VL6wAdms",
+  apiKey: "AIzaSyAJmz9ElKNk5_VaH-R8vIEHSt2VL6wAdms",
   authDomain: "pahlawan-bintang.firebaseapp.com",
   databaseURL: "https://pahlawan-bintang-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "pahlawan-bintang",
@@ -15,8 +15,8 @@ const firebaseConfig = {
 let db = null;
 try {
   firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-  console.log("🔥 Firebase Firestore Terhubung Berhasil!");
+  db = firebase.database();
+  console.log("🔥 Firebase Realtime Database Terhubung Berhasil!");
 } catch(e) {
   console.log("⚠️ Firebase Mode Offline / Config Belum Diisi");
 }
@@ -225,8 +225,6 @@ let screenShake = 0;
 let isMovingLeft = false;
 let isMovingRight = false;
 
-let unsubscribeLeaderboard = null;
-
 let currentActor = localStorage.getItem('pahlawan_actor') || 'robot';
 let playerName = localStorage.getItem('pahlawan_nama') || 'Pahlawan';
 
@@ -305,7 +303,6 @@ function setupEventListeners() {
   
   document.getElementById('btn-leaderboard').onclick = openLeaderboard;
   document.getElementById('btn-close-leaderboard').onclick = () => {
-    if (unsubscribeLeaderboard) unsubscribeLeaderboard();
     document.getElementById('modal-leaderboard').classList.add('hidden');
   };
   
@@ -1029,7 +1026,7 @@ function gameLoop() {
 }
 
 // =============================================================
-// 4. LOGIKA KELULUSAN & INTEGRASI FIREBASE REAL-TIME
+// 4. LOGIKA KELULUSAN & INTEGRASI FIREBASE REALTIME DATABASE
 // =============================================================
 function levelComplete() {
   isGameRunning = false;
@@ -1065,7 +1062,7 @@ function levelFailed(reasonTitle = "MISI GAGAL!") {
   document.getElementById('modal-result').classList.remove('hidden');
 }
 
-// SIMPAN SKOR KE FIREBASE & LOCALSTORAGE
+// SIMPAN SKOR KE REALTIME DATABASE
 function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
   localScores.push({ name: name, score: scoreVal, level: levelVal });
@@ -1073,48 +1070,47 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   localStorage.setItem('pahlawan_scores', JSON.stringify(localScores.slice(0, 10)));
 
   if (db) {
-    db.collection('leaderboard').add({
+    db.ref('leaderboard').push({
       name: name,
-      score: scoreVal,
-      level: levelVal,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      score: Number(scoreVal),
+      level: Number(levelVal),
+      timestamp: Date.now()
     }).catch(err => console.error("Gagal mengirim ke Firebase:", err));
   }
 }
 
-// BUKA LEADERBOARD STREAMING REAL-TIME (LIVESYNC ALL DEVICES)
+// MEMBACA PERINGKAT REALTIME STREAMING DARI REALTIME DATABASE
 function openLeaderboard() {
   document.getElementById('modal-leaderboard').classList.remove('hidden');
   const tbody = document.getElementById('leaderboard-body');
   tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Memuat Papan Peringkat Realtime...</td></tr>';
 
   if (db) {
-    if (unsubscribeLeaderboard) unsubscribeLeaderboard();
-
-    // MENDENGARKAN DATABASE SCR LIVE VIA ONSNAPSHOT
-    unsubscribeLeaderboard = db.collection('leaderboard')
-      .orderBy('score', 'desc')
-      .limit(10)
-      .onSnapshot((snapshot) => {
-        if (snapshot.empty) {
-          showLocalScores(tbody);
-        } else {
-          tbody.innerHTML = snapshot.docs.map((doc, index) => {
-            const s = doc.data();
-            return `
-              <tr>
-                <td>${index === 0 ? '🥇 1' : index === 1 ? '🥈 2' : index === 2 ? '🥉 3' : index + 1}</td>
-                <td><strong>${escapeHtml(s.name)}</strong></td>
-                <td>Lvl ${s.level || 1}</td>
-                <td><strong>${s.score}</strong></td>
-              </tr>
-            `;
-          }).join('');
-        }
-      }, (err) => {
-        console.error("Firebase Listener Error:", err);
+    db.ref('leaderboard').orderByChild('score').limitToLast(10).on('value', (snapshot) => {
+      if (!snapshot.exists()) {
         showLocalScores(tbody);
+        return;
+      }
+
+      let list = [];
+      snapshot.forEach((childSnapshot) => {
+        list.push(childSnapshot.val());
       });
+
+      list.sort((a, b) => b.score - a.score);
+
+      tbody.innerHTML = list.map((s, index) => `
+        <tr>
+          <td>${index === 0 ? '🥇 1' : index === 1 ? '🥈 2' : index === 2 ? '🥉 3' : index + 1}</td>
+          <td><strong>${escapeHtml(s.name)}</strong></td>
+          <td>Lvl ${s.level || 1}</td>
+          <td><strong>${s.score}</strong></td>
+        </tr>
+      `).join('');
+    }, (error) => {
+      console.error("Firebase Listener Error:", error);
+      showLocalScores(tbody);
+    });
   } else {
     showLocalScores(tbody);
   }
