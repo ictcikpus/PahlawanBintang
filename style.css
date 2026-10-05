@@ -314,8 +314,8 @@ canvas {
 
 /* Actor Selection Grid */
 .actor-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-  gap: 8px; max-height: 200px; overflow-y: auto; margin: 10px 0; padding: 2px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px; max-height: 210px; overflow-y: auto; margin: 10px 0; padding: 2px;
 }
 
 .actor-card {
@@ -326,6 +326,7 @@ canvas {
 .actor-card.selected { border-color: #ff4757; background: #fff0f2; box-shadow: 0 0 10px rgba(255, 71, 87, 0.4); }
 .actor-card:active { transform: scale(0.95); }
 .actor-title { font-size: 10px; font-weight: 700; margin-top: 3px; color: #2f3542; }
+.actor-desc { font-size: 8px; color: #747d8c; font-weight: 600; text-align: center; margin-top: 2px; }
 
 /* Leaderboard */
 .leaderboard-container { max-height: 180px; overflow-y: auto; margin: 10px 0; border-radius: 12px; border: 2px solid #e1e2e6; background: #fff; }
