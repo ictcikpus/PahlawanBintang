@@ -2388,4 +2388,301 @@ function levelFailed(reasonTitle) {
   const rc = $('result-coins'); if (rc) rc.innerText = `+${levelCoinsEarned}`;
   const rl = $('result-level'); if (rl) rl.innerText = levelConfig.level;
   const rk = $('result-kills'); if (rk) rk.innerText = `${levelKills} Target`;
-  const starContainer = $('result-stars');
+ const starContainer = $('result-stars');
+  if (starContainer) {
+    starContainer.innerHTML = '<span style="color:#566a8c;font-size:12px;">—</span>';
+  }
+
+  const icon = $('result-icon');
+  if (icon) { icon.innerHTML = '<use href="#i-skull"/>'; icon.classList.add('fail'); }
+
+  const nextBtn = $('btn-next-level');
+  if (nextBtn) nextBtn.classList.add('hidden');
+  const modal = $('modal-result');
+  if (modal) modal.classList.remove('hidden');
+}
+
+// =============================================================
+// 18. FIREBASE LEADERBOARD — STRUKTUR TIDAK DIUBAH
+// =============================================================
+function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
+  const cleanName = (name || 'Pahlawan').trim();
+  if (!cleanName) return;
+
+  const playerKey = cleanName.toLowerCase().replace(/[^a-z0-9]/g, "_");
+  const numScore = Number(scoreVal) || 0;
+  const numLevel = Number(levelVal) || 1;
+  const sortValue = (numLevel * 100000000) + numScore;
+
+  let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
+  let existingIndex = localScores.findIndex(s => (s.name || '').trim().toLowerCase() === cleanName.toLowerCase());
+
+  let shouldUpdateLocal = false;
+  if (existingIndex === -1) {
+    shouldUpdateLocal = true;
+    localScores.push({ name: cleanName, score: numScore, level: numLevel, sortValue });
+  } else {
+    let existing = localScores[existingIndex];
+    let oldLevel = Number(existing.level) || 1;
+    let oldScore = Number(existing.score) || 0;
+    if (numLevel > oldLevel || (numLevel === oldLevel && numScore > oldScore)) {
+      shouldUpdateLocal = true;
+      localScores[existingIndex] = { name: cleanName, score: numScore, level: numLevel, sortValue };
+    }
+  }
+
+  if (shouldUpdateLocal) {
+    localScores.sort((a, b) => {
+      let lvlA = Number(a.level) || 1, lvlB = Number(b.level) || 1;
+      if (lvlB !== lvlA) return lvlB - lvlA;
+      return (Number(b.score) || 0) - (Number(a.score) || 0);
+    });
+    DB.set('pahlawan_scores', JSON.stringify(localScores.slice(0, 20)));
+  }
+
+  if (db && playerKey) {
+    const playerRef = db.ref('leaderboard/' + playerKey);
+    playerRef.once('value').then(snapshot => {
+      let existingData = snapshot.val();
+      let shouldUpdateDb = false;
+
+      if (!existingData) shouldUpdateDb = true;
+      else {
+        let oldLevel = Number(existingData.level) || 0;
+        let oldScore = Number(existingData.score) || 0;
+        if (numLevel > oldLevel || (numLevel === oldLevel && numScore > oldScore)) shouldUpdateDb = true;
+      }
+
+      if (shouldUpdateDb) {
+        playerRef.set({
+          name: cleanName,
+          score: numScore,
+          level: numLevel,
+          sortValue: sortValue,
+          timestamp: Date.now()
+        }).catch(err => console.error("Firebase save error:", err));
+      }
+    }).catch(err => console.error("Firebase read error:", err));
+  }
+}
+
+function openLeaderboard() {
+  const modal = document.getElementById('modal-leaderboard');
+  if (modal) modal.classList.remove('hidden');
+  const tbody = document.getElementById('leaderboard-body');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Memuat Papan Peringkat Realtime...</td></tr>';
+  if (!db) { showLocalScores(tbody); return; }
+
+  if (leaderboardRef && leaderboardHandler) {
+    try { leaderboardRef.off('value', leaderboardHandler); } catch(e) {}
+  }
+
+  leaderboardRef = db.ref('leaderboard');
+  leaderboardHandler = (snapshot) => {
+    if (!snapshot.exists()) { showLocalScores(tbody); return; }
+    let bestMap = new Map();
+    snapshot.forEach((childSnapshot) => {
+      let val = childSnapshot.val();
+      if (!val || !val.name) return;
+      let cleanName = val.name.trim();
+      let key = cleanName.toLowerCase();
+      let currentLevel = Number(val.level) || 1;
+      let currentScore = Number(val.score) || 0;
+      if (!bestMap.has(key)) bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
+      else {
+        let existing = bestMap.get(key);
+        if (currentLevel > existing.level || (currentLevel === existing.level && currentScore > existing.score))
+          bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
+      }
+    });
+    let uniqueList = Array.from(bestMap.values());
+    uniqueList.sort((a, b) => {
+      if (b.level !== a.level) return b.level - a.level;
+      return b.score - a.score;
+    });
+    let top10 = uniqueList.slice(0, 10);
+    if (top10.length === 0) { showLocalScores(tbody); return; }
+    tbody.innerHTML = top10.map((s, index) => `
+      <tr>
+        <td>${index === 0 ? '1' : index === 1 ? '2' : index === 2 ? '3' : index + 1}</td>
+        <td><strong>${escapeHtml(s.name)}</strong></td>
+        <td>Lvl ${s.level || 1}</td>
+        <td><strong>${s.score || 0}</strong></td>
+      </tr>`).join('');
+  };
+  leaderboardRef.on('value', leaderboardHandler, (error) => {
+    console.error("Firebase Listener Error:", error);
+    showLocalScores(tbody);
+  });
+}
+
+function showLocalScores(tbody) {
+  let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
+  let bestMap = new Map();
+  localScores.forEach(s => {
+    if (!s || !s.name) return;
+    let cleanName = s.name.trim();
+    let key = cleanName.toLowerCase();
+    let currentLevel = Number(s.level) || 1;
+    let currentScore = Number(s.score) || 0;
+    if (!bestMap.has(key)) bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
+    else {
+      let existing = bestMap.get(key);
+      if (currentLevel > existing.level || (currentLevel === existing.level && currentScore > existing.score))
+        bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
+    }
+  });
+  let uniqueList = Array.from(bestMap.values());
+  uniqueList.sort((a, b) => {
+    if (b.level !== a.level) return b.level - a.level;
+    return b.score - a.score;
+  });
+  if (uniqueList.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Belum ada skor tercatat.</td></tr>';
+  } else {
+    tbody.innerHTML = uniqueList.slice(0, 10).map((s, index) => `
+      <tr>
+        <td>${index === 0 ? '1' : index === 1 ? '2' : index === 2 ? '3' : index + 1}</td>
+        <td><strong>${escapeHtml(s.name)}</strong></td>
+        <td>Lvl ${s.level || 1}</td>
+        <td><strong>${s.score || 0}</strong></td>
+      </tr>`).join('');
+  }
+}
+
+function escapeHtml(text) {
+  return String(text || 'Pahlawan').replace(/[&<>"']/g, function(m) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+  });
+}
+
+// =============================================================
+// 19. LOADOUT MODAL
+// =============================================================
+function showLoadoutModal(levelConfig, onDone) {
+  loadoutCallback = onDone;
+  loadoutCurrentSelection = [...playerLoadout];
+
+  const lvlEl = document.getElementById('loadout-level');
+  if (lvlEl) lvlEl.innerText = levelConfig.level;
+  const themeEl = document.getElementById('loadout-theme');
+  if (themeEl) themeEl.innerText = currentTheme.name;
+
+  const cards = document.querySelectorAll('.loadout-card');
+  const startBtn = document.getElementById('btn-start-loaded');
+  const updateVisual = () => {
+    cards.forEach(c => {
+      const skill = c.dataset.skill;
+      const selected = loadoutCurrentSelection.includes(skill);
+      c.classList.toggle('selected', selected);
+      c.classList.toggle('disabled', !selected && loadoutCurrentSelection.length >= 2);
+    });
+    if (startBtn) startBtn.disabled = loadoutCurrentSelection.length !== 2;
+  };
+
+  cards.forEach(card => {
+    const skill = card.dataset.skill;
+    card.onclick = () => {
+      if (loadoutCurrentSelection.includes(skill)) {
+        loadoutCurrentSelection = loadoutCurrentSelection.filter(s => s !== skill);
+      } else {
+        if (loadoutCurrentSelection.length >= 2) {
+          loadoutCurrentSelection.shift();
+        }
+        loadoutCurrentSelection.push(skill);
+      }
+      updateVisual();
+    };
+  });
+
+  updateVisual();
+  const modal = document.getElementById('modal-loadout');
+  if (modal) modal.classList.remove('hidden');
+}
+
+// =============================================================
+// 20. NARRATIVE SYSTEM
+// =============================================================
+function showNarrative(lines, speaker, portrait, onDone) {
+  if (!lines || lines.length === 0) { if (onDone) onDone(); return; }
+  storyQueue = lines.slice();
+  storyOnDone = onDone || null;
+  const spk = document.getElementById('narrative-speaker');
+  if (spk) spk.innerText = speaker || '';
+  const psvg = document.getElementById('narrative-portrait-svg');
+  if (psvg) psvg.innerHTML = `<use href="#${portrait || 'i-vega'}"/>`;
+  const overlay = document.getElementById('narrative-overlay');
+  if (overlay) overlay.classList.remove('hidden');
+  playNextStoryLine();
+}
+
+function playNextStoryLine() {
+  if (storyQueue.length === 0) {
+    const overlay = document.getElementById('narrative-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    const cb = storyOnDone; storyOnDone = null;
+    if (cb) cb();
+    return;
+  }
+  const line = storyQueue.shift();
+  typeStoryLine(line);
+}
+
+function typeStoryLine(line) {
+  storyTyping = true;
+  storyCurrentText = line;
+  storyCurrentIdx = 0;
+  const el = document.getElementById('narrative-text');
+  if (!el) { storyTyping = false; playNextStoryLine(); return; }
+  el.innerHTML = '<span id="story-body"></span><span class="caret">&nbsp;</span>';
+  const body = document.getElementById('story-body');
+  if (storyTimer) clearInterval(storyTimer);
+  storyTimer = setInterval(() => {
+    if (storyCurrentIdx >= storyCurrentText.length) {
+      clearInterval(storyTimer); storyTimer = null; storyTyping = false;
+      return;
+    }
+    if (body) body.textContent += storyCurrentText[storyCurrentIdx++];
+    else storyCurrentIdx++;
+    if (storyCurrentIdx % 3 === 0) sounds.playType();
+  }, 28);
+}
+
+// =============================================================
+// 21. STICKER ALBUM
+// =============================================================
+function unlockSticker(id) {
+  let unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
+  if (!unlocked.includes(id)) {
+    unlocked.push(id);
+    DB.set('pahlawan_stickers', JSON.stringify(unlocked));
+    updateStickerAlbumUI();
+  }
+}
+
+function updateStickerAlbumUI() {
+  const unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
+  const el = document.getElementById('unlocked-count');
+  if (el) el.innerText = unlocked.length;
+}
+
+function openStickerAlbum() {
+  const unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
+  const grid = document.getElementById('sticker-grid');
+  if (!grid) return;
+  grid.innerHTML = (stickersData || DEFAULT_STICKERS).map((sticker, idx) => {
+    const isUnlocked = unlocked.includes(sticker.id);
+    const delay = (idx * 0.03).toFixed(2);
+    return `
+      <div class="sticker-card ${isUnlocked ? '' : 'locked'}" style="animation-delay:${delay}s">
+        <div class="sticker-title">${isUnlocked ? sticker.title : 'Terkunci'}</div>
+      </div>`;
+  }).join('');
+  const modal = document.getElementById('modal-stickers');
+  if (modal) modal.classList.remove('hidden');
+}
+
+// =============================================================
+// END OF FILE
+// =============================================================
