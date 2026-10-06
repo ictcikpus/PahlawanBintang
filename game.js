@@ -1,7 +1,7 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v17.2 (TOP 50 LEADERBOARD)
-// Fix: Revive bug (spawn loop)
-// New: Leaderboard Top 50 real-time dengan throttle
+// PAHLAWAN BINTANG — game.js v17.3
+// Fix: Fullscreen di semua tombol start (Endless/Daily/Restart)
+// Fitur: Top 50 Leaderboard, Revive, Endless, Daily, Kill Streak
 // =============================================================
 
 // =============================================================
@@ -616,7 +616,7 @@ window.addEventListener('load', async () => {
   }
   try { updateStickerAlbumUI(); } catch (e) {}
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=17.2').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=17.3').catch(err => console.log('SW Fail:', err));
   }
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
@@ -751,6 +751,7 @@ async function setEndlessBest(wave, scoreVal) {
 function setupEventListeners() {
   const $ = id => document.getElementById(id);
 
+  // MULAI MISI
   const btnPlay = $('btn-prepare-play');
   if (btnPlay) {
     btnPlay.onclick = (e) => {
@@ -861,10 +862,12 @@ function setupEventListeners() {
     });
   }
 
+  // NEXT LEVEL — dengan fullscreen
   const bNext = $('btn-next-level');
   if (bNext) bNext.onclick = () => {
     $('modal-result').classList.add('hidden');
     if (gameMode !== 'normal') { goToMainMenu(); return; }
+    try { requestFullscreenAndLandscape(); } catch (err) {}
     currentLevelIndex++;
     if (currentLevelIndex >= levelsData.length) { restartGame(); return; }
     lives = 3;
@@ -872,19 +875,24 @@ function setupEventListeners() {
     updateLivesDisplay();
     startCurrentLevel();
   };
+
+  // RESTART — dengan fullscreen
   const bRestart = $('btn-restart');
   if (bRestart) bRestart.onclick = () => {
     $('modal-result').classList.add('hidden');
+    try { requestFullscreenAndLandscape(); } catch (err) {}
     if (gameMode === 'endless') startEndless();
     else if (gameMode === 'daily') startDaily();
     else restartGame();
   };
+
   const bMenu = $('btn-menu');
   if (bMenu) bMenu.onclick = () => {
     $('modal-result').classList.add('hidden');
     goToMainMenu();
   };
 
+  // SKILL: FREEZE
   const bFreeze = $('btn-freeze');
   if (bFreeze) bFreeze.onclick = () => {
     if (freezeCharges <= 0 || isFrozen || isGamePaused || !isGameRunning) return;
@@ -898,6 +906,7 @@ function setupEventListeners() {
     screenShake = 6;
   };
 
+  // SKILL: SHIELD
   const bShield = $('btn-shield');
   if (bShield) bShield.onclick = () => {
     if (shieldCharges <= 0 || isShieldActive || isGamePaused || !isGameRunning) return;
@@ -910,6 +919,7 @@ function setupEventListeners() {
     spawnFloatingText(playerX, canvas.height - 70, 'SHIELD!', '#39ff14');
   };
 
+  // SKILL: BOMB
   const bBomb = $('btn-bomb');
   if (bBomb) bBomb.onclick = () => {
     if (bombCharges <= 0 || isGamePaused || !isGameRunning) return;
@@ -954,6 +964,7 @@ function setupEventListeners() {
     checkLevelObjectives();
   };
 
+  // LOADOUT START
   const loadoutBtn = $('btn-start-loaded');
   if (loadoutBtn) {
     loadoutBtn.addEventListener('click', async () => {
@@ -966,6 +977,7 @@ function setupEventListeners() {
     });
   }
 
+  // REVIVE
   const bRevAd = $('btn-revive-ad');
   if (bRevAd) bRevAd.onclick = async () => {
     $('modal-revive').classList.add('hidden');
@@ -981,20 +993,31 @@ function setupEventListeners() {
     finalizeFail();
   };
 
+  // ENDLESS — dengan fullscreen
   const bEndless = $('btn-endless');
   if (bEndless) bEndless.onclick = openEndlessModal;
   const bStartEndless = $('btn-start-endless');
-  if (bStartEndless) bStartEndless.onclick = () => { $('modal-endless').classList.add('hidden'); startEndless(); };
+  if (bStartEndless) bStartEndless.onclick = () => {
+    $('modal-endless').classList.add('hidden');
+    try { requestFullscreenAndLandscape(); } catch (err) {}
+    startEndless();
+  };
   const bCloseEndless = $('btn-close-endless');
   if (bCloseEndless) bCloseEndless.onclick = () => $('modal-endless').classList.add('hidden');
 
+  // DAILY — dengan fullscreen
   const bDaily = $('btn-daily');
   if (bDaily) bDaily.onclick = openDailyModal;
   const bStartDaily = $('btn-start-daily');
-  if (bStartDaily) bStartDaily.onclick = () => { $('modal-daily').classList.add('hidden'); startDaily(); };
+  if (bStartDaily) bStartDaily.onclick = () => {
+    $('modal-daily').classList.add('hidden');
+    try { requestFullscreenAndLandscape(); } catch (err) {}
+    startDaily();
+  };
   const bCloseDaily = $('btn-close-daily');
   if (bCloseDaily) bCloseDaily.onclick = () => $('modal-daily').classList.add('hidden');
 
+  // NARRATIVE TAP
   document.addEventListener('click', (e) => {
     const overlay = $('narrative-overlay');
     if (!overlay || overlay.classList.contains('hidden')) return;
@@ -1071,14 +1094,38 @@ function resumeGame() {
   if (p) p.classList.add('hidden');
   requestAnimationFrame(gameLoop);
 }
+
+// [FIX v17.3] Fullscreen robust — support semua browser
 function requestFullscreenAndLandscape() {
   try {
     const doc = document.documentElement;
-    if (doc.requestFullscreen) doc.requestFullscreen().catch(() => {});
-    else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
-    if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
-  } catch (e) {}
+    const body = document.body;
+    const fsPromise =
+      (doc.requestFullscreen && doc.requestFullscreen()) ||
+      (doc.webkitRequestFullscreen && doc.webkitRequestFullscreen()) ||
+      (doc.mozRequestFullScreen && doc.mozRequestFullScreen()) ||
+      (doc.msRequestFullscreen && doc.msRequestFullscreen()) ||
+      (body.webkitRequestFullscreen && body.webkitRequestFullscreen());
+    if (fsPromise && fsPromise.catch) fsPromise.catch(() => {});
+
+    setTimeout(() => {
+      try {
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(() => {});
+        } else if (screen.lockOrientation) {
+          screen.lockOrientation('landscape');
+        } else if (screen.mozLockOrientation) {
+          screen.mozLockOrientation('landscape');
+        } else if (screen.msLockOrientation) {
+          screen.msLockOrientation('landscape');
+        }
+      } catch (e) {}
+    }, 250);
+  } catch (e) {
+    console.log('Fullscreen tidak didukung:', e);
+  }
 }
+
 function updateActorSelectionUI() {
   const name = actorMap[currentActor] ? actorMap[currentActor].name : 'Robot Cyber';
   const el = document.getElementById('selected-actor-name');
@@ -1312,7 +1359,7 @@ function triggerBossSiren() {
 }
 
 // =============================================================
-// 14. SPAWN LOOP — TOKEN-BASED
+// 14. SPAWN LOOP
 // =============================================================
 function spawnMonsterLoop(token) {
   if (token !== undefined && token !== spawnLoopToken) return;
@@ -2597,7 +2644,7 @@ async function finalizeDaily(success) {
 }
 
 // =============================================================
-// 21. LEADERBOARD v17.2 — Top 50 real-time dengan throttle
+// 21. LEADERBOARD — Top 50 real-time
 // =============================================================
 function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   const cleanName = (name || 'Pahlawan').trim();
@@ -2728,10 +2775,8 @@ function loadLeaderboardData() {
   if (currentLeaderboardTab === 'endless') path = 'endless';
   else if (currentLeaderboardTab === 'daily') path = 'daily/' + getTodayKey();
 
-  // ✅ TOP 50: query hanya 50 terbesar berdasarkan sortValue
   leaderboardRef = db.ref(path).orderByChild('sortValue').limitToLast(50);
 
-  // Throttle render max 1× per detik
   let lastRenderTime = 0;
   let pendingSnapshot = null;
   let renderTimer = null;
@@ -2767,12 +2812,10 @@ function loadLeaderboardData() {
 function renderLeaderboardRows(snapshot, tbody) {
   if (!snapshot.exists()) { showLocalScores(tbody); return; }
 
-  // limitToLast mengembalikan ascending → reverse jadi descending
   let rawArr = [];
   snapshot.forEach((child) => { rawArr.push(child.val()); });
   rawArr.reverse();
 
-  // Dedup nama
   let bestMap = new Map();
   rawArr.forEach(val => {
     if (!val || !val.name) return;
@@ -2993,5 +3036,5 @@ function openStickerAlbum() {
 }
 
 // =============================================================
-// END OF FILE — v17.2
+// END OF FILE — v17.3
 // =============================================================
