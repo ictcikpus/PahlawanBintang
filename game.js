@@ -1,8 +1,8 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v16
-// Fitur: IndexedDB + Device ID, Enemy Telegraph, Boss Weak Point,
-//        Pre-Level Loadout, Narrative, 12 Tema Level, Boss Size Variatif
-// FIX: Bootstrap UI SEBELUM async init — tombol pasti berfungsi
+// PAHLAWAN BINTANG — game.js v17
+// Fitur: Rewarded Revive, Endless Mode, Daily Challenge,
+//        Kill Streak, Leaderboard 3 Tab, IndexedDB, Telegraph,
+//        Boss Weak Point, Pre-Level Loadout, Narrative, 12 Tema
 // =============================================================
 
 // =============================================================
@@ -25,7 +25,7 @@ try {
   db = firebase.database();
   console.log("🔥 Firebase Realtime Database Terhubung Berhasil!");
 } catch(e) {
-  console.log("⚠️ Firebase Mode Offline / Config Belum Diisi");
+  console.log("⚠️ Firebase Mode Offline");
 }
 
 // =============================================================
@@ -74,17 +74,6 @@ class GameDB {
       } catch(e) { resolve(); }
     });
   }
-  async remove(key) {
-    try { localStorage.removeItem(key); } catch(e) {}
-    if (!this.db) return;
-    return new Promise((resolve) => {
-      try {
-        const tx = this.db.transaction('kv', 'readwrite');
-        tx.objectStore('kv').delete(key);
-        tx.oncomplete = () => resolve();
-      } catch(e) { resolve(); }
-    });
-  }
 }
 const DB = new GameDB();
 
@@ -121,12 +110,10 @@ async function getLoadout() {
     return Array.isArray(arr) && arr.length === 2 ? arr : ['freeze','bomb'];
   } catch(e) { return ['freeze','bomb']; }
 }
-async function setLoadout(arr) {
-  await DB.set('pahlawan_loadout', JSON.stringify(arr));
-}
+async function setLoadout(arr) { await DB.set('pahlawan_loadout', JSON.stringify(arr)); }
 
 // =============================================================
-// 3. TEMA LEVEL (12 variasi)
+// 3. TEMA LEVEL
 // =============================================================
 const LEVEL_THEMES = [
   { id: 'cosmic', name: 'COSMIC SECTOR', bgTop: '#05061a', bgBottom: '#0e1035', accent: '#00d2ff', accentSoft: 'rgba(0,210,255,0.35)', stars: ['#ffffff','#70a1ff','#ffd700','#00d2d3'], ground: '#2f3640', groundLine: '#00d2ff', monsters: ['#ff4757','#2ed573','#ffa502','#1e90ff','#a55eea'] },
@@ -158,7 +145,7 @@ const BOSS_SIZES = { 5: 62, 10: 80, 15: 96, 20: 112, 25: 128, 30: 148 };
 let currentTheme = LEVEL_THEMES[0];
 
 // =============================================================
-// 4. STORY DATA
+// 4. STORY
 // =============================================================
 const STORY = {
   1:  { before: { speaker: 'VEGA', portrait: 'i-vega', lines: ['Pahlawan... gelombang Void datang dari Nebula.', 'Selamatkan 5 sektor. Kita satu-satunya harapan.'] },
@@ -179,7 +166,7 @@ const STORY = {
 };
 
 // =============================================================
-// 5. LEVEL GENERATOR
+// 5. LEVEL GENERATOR + DATA
 // =============================================================
 function generate30Levels() {
   const levels = [];
@@ -221,6 +208,14 @@ const ENEMY_SCORE_TABLE = {
   jelly: 100, donut: 200, cloud: 250, crystal: 300, splitter: 350,
   boss5: 2500, boss10: 5000, boss15: 7500, boss20: 10000, boss25: 12500, boss30: 20000
 };
+
+// Daily modifiers
+const DAILY_MODIFIERS = [
+  { id: 'double_speed', name: 'DOUBLE SPEED', desc: 'Musuh bergerak 2× lebih cepat', icon: 'i-bolt' },
+  { id: 'no_shield', name: 'NO SHIELD', desc: 'Skill Shield dimatikan', icon: 'i-shield' },
+  { id: 'one_life', name: 'ONE LIFE', desc: 'Hanya 1 nyawa', icon: 'i-heart' },
+  { id: 'double_monster', name: 'SWARM', desc: 'Musuh spawn 2× lebih banyak', icon: 'i-target' }
+];
 
 // =============================================================
 // 6. SOUND ENGINE
@@ -335,6 +330,20 @@ class SoundEngine {
       o.start(); o.stop(this.ctx.currentTime + 0.03);
     } catch(e) {}
   }
+  playKillstreak() {
+    if (this.isMuted) return; this.init(); if (!this.ctx) return;
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    notes.forEach((f, i) => {
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(f, this.ctx.currentTime + i * 0.05);
+      g.gain.setValueAtTime(0.2, this.ctx.currentTime + i * 0.05);
+      g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.05 + 0.15);
+      o.connect(g); g.connect(this.ctx.destination);
+      o.start(this.ctx.currentTime + i * 0.05);
+      o.stop(this.ctx.currentTime + i * 0.05 + 0.15);
+    });
+  }
   playWin() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
     const notes = [261.63, 329.63, 392.00, 523.25, 659.25];
     notes.forEach((f, i) => {
@@ -432,7 +441,36 @@ function triggerVibrate(pattern) {
 }
 
 // =============================================================
-// 7. GAME STATE
+// 7. AD SERVICE (placeholder, siap diganti AdMob/AdSense)
+// =============================================================
+const AdService = {
+  isAvailable: () => true,
+  showRewarded: async () => {
+    // Ganti fungsi ini dengan integrasi SDK iklan sungguhan
+    return new Promise((resolve) => {
+      const overlay = document.getElementById('ad-overlay');
+      const cd = document.getElementById('ad-countdown');
+      if (!overlay || !cd) { resolve(true); return; }
+      let countdown = 5;
+      cd.innerText = countdown;
+      overlay.classList.remove('hidden');
+      const timer = setInterval(() => {
+        countdown--;
+        cd.innerText = countdown > 0 ? countdown : '✓';
+        if (countdown <= 0) {
+          clearInterval(timer);
+          setTimeout(() => {
+            overlay.classList.add('hidden');
+            resolve(true);
+          }, 500);
+        }
+      }, 1000);
+    });
+  }
+};
+
+// =============================================================
+// 8. GAME STATE
 // =============================================================
 let currentLevelIndex = 0;
 let score = 0;
@@ -441,6 +479,7 @@ let levelCoinsEarned = 0;
 let lives = 3;
 let isGameRunning = false;
 let isGamePaused = false;
+let gameMode = 'normal'; // 'normal' | 'endless' | 'daily'
 
 let coins = Number(localStorage.getItem('pahlawan_coins')) || 0;
 let upgradeFireRate = Number(localStorage.getItem('pahlawan_up_firerate')) || 1;
@@ -451,6 +490,16 @@ let upgradeFreeze = Number(localStorage.getItem('pahlawan_up_freeze')) || 2;
 let combo = 1;
 let comboTimer = 0;
 const MAX_COMBO = 5;
+
+// Kill streak
+let killStreakCount = 0;
+let killStreakMilestone = 0;
+const KILLSTREAK_MILESTONES = [10, 25, 50, 100];
+const KILLSTREAK_TITLES = ['KILLING SPREE!', 'RAMPAGE!', 'UNSTOPPABLE!', 'GODLIKE!'];
+
+// Revive
+let reviveUsedThisRun = false;
+let reviveQuota = 3;
 
 let playerX = 0;
 let playerSpeed = 9;
@@ -469,6 +518,8 @@ let isShieldActive = false;
 let shieldTimer = 0;
 let isMagnetActive = false;
 let magnetTimer = 0;
+let isReviveInvuln = false;
+let reviveInvulnTimer = 0;
 
 let freezeCharges = 0;
 let shieldCharges = 0;
@@ -489,8 +540,19 @@ let isMovingRight = false;
 let currentActor = localStorage.getItem('pahlawan_actor') || 'robot';
 let playerName = localStorage.getItem('pahlawan_nama') || 'Pahlawan';
 
+// Endless mode state
+let endlessWave = 1;
+let endlessKillsThisWave = 0;
+const ENDLESS_KILLS_PER_WAVE = 15;
+
+// Daily mode state
+let currentDailyModifier = null;
+
+// Leaderboard tab
+let currentLeaderboardTab = 'global';
+
 const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas ? canvas.getContext('2d') : null;
 let deferredPrompt;
 let leaderboardRef = null;
 let leaderboardHandler = null;
@@ -514,8 +576,7 @@ let loadoutCurrentSelection = [];
 let loadoutCallback = null;
 
 // =============================================================
-// 8. BOOTSTRAP — Event listener DIPASANG SEBELUM async init
-//    Kunci perbaikan tombol "MULAI MISI"
+// 9. BOOTSTRAP — UI listener DIPASANG SEBELUM async init
 // =============================================================
 function bootstrapUI() {
   try {
@@ -525,68 +586,53 @@ function bootstrapUI() {
     console.error('❌ [Boot] Failed to attach listeners:', e);
   }
 }
-
-// Script ada di akhir <body>, DOM sudah diparse
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', bootstrapUI);
 } else {
   bootstrapUI();
 }
 
-// =============================================================
-// 9. ASYNC INIT — setiap fase dibungkus try/catch
-// =============================================================
 window.addEventListener('load', async () => {
-  // FASE 1: Async data (isolated)
   try {
     await DB.ready;
     playerUUID = await initDeviceId();
     console.log('✅ [Boot] Device ID:', playerUUID);
-
     coins = Number(localStorage.getItem('pahlawan_coins')) || 0;
     upgradeFireRate = Number(localStorage.getItem('pahlawan_up_firerate')) || 1;
     upgradeShield = Number(localStorage.getItem('pahlawan_up_shield')) || 1;
     upgradeBomb = Number(localStorage.getItem('pahlawan_up_bomb')) || 2;
     upgradeFreeze = Number(localStorage.getItem('pahlawan_up_freeze')) || 2;
     playerLoadout = await getLoadout();
-    console.log('✅ [Boot] Loadout:', playerLoadout);
+    const todayKey = getTodayKey();
+    const quotaData = await getReviveQuota(todayKey);
+    reviveQuota = quotaData;
+    console.log('✅ [Boot] Loadout:', playerLoadout, '| Revive quota:', reviveQuota);
   } catch (e) {
     console.warn('⚠️ [Boot] Async init partial failure (UI tetap jalan):', e);
   }
-
-  // FASE 2: UI init
   try {
     initStarfield();
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-
     const nameInput = document.getElementById('player-name-input');
     if (nameInput) nameInput.value = playerName;
-
     updateActorSelectionUI();
     updateShopUI();
     updateAudioButtonUI();
-  } catch (e) {
-    console.error('❌ [Boot] UI init error:', e);
-  }
-
-  // FASE 3: Load JSON
+    updateReviveQuotaUI();
+  } catch (e) { console.error('❌ [Boot] UI init error:', e); }
   try {
     await loadGameData();
     console.log('✅ [Boot] Level data loaded:', levelsData.length, 'levels');
   } catch (e) {
-    console.warn('⚠️ [Boot] loadGameData fail (pakai bawaan):', e);
+    console.warn('⚠️ [Boot] loadGameData fail:', e);
     levelsData = generate30Levels();
     stickersData = DEFAULT_STICKERS;
   }
-
-  // FASE 4: Sticker UI + SW
   try { updateStickerAlbumUI(); } catch (e) {}
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=16.0').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=17.0').catch(err => console.log('SW Fail:', err));
   }
-
-  // FASE 5: Sembunyikan loader
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
     if (loader) {
@@ -606,7 +652,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 function initStarfield() {
   stars = [];
   const starCount = 90;
-  const colors = currentTheme.stars || ['#ffffff', '#70a1ff', '#ffd700', '#00d2d3'];
+  const colors = currentTheme.stars || ['#ffffff'];
   for (let i = 0; i < starCount; i++) {
     stars.push({
       x: Math.random() * window.innerWidth,
@@ -619,18 +665,16 @@ function initStarfield() {
     });
   }
 }
-
 function recolorStars() {
   const colors = currentTheme.stars;
   stars.forEach(s => { s.color = colors[Math.floor(Math.random() * colors.length)]; });
 }
-
 function resizeCanvas() {
+  if (!canvas) return;
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
   if (playerX === 0 || playerX > canvas.width) playerX = canvas.width / 2;
 }
-
 async function loadGameData() {
   try {
     const [resLevels, resStickers] = await Promise.all([
@@ -640,12 +684,11 @@ async function loadGameData() {
     if (resLevels.ok) levelsData = await resLevels.json();
     if (resStickers.ok) stickersData = await resStickers.json();
   } catch (err) {
-    console.warn('Pakai 30 Level bawaan.');
+    console.warn('Pakai bawaan.');
     levelsData = generate30Levels();
     stickersData = DEFAULT_STICKERS;
   }
 }
-
 function updateAudioButtonUI() {
   const btn = document.getElementById('btn-audio');
   if (!btn) return;
@@ -654,82 +697,141 @@ function updateAudioButtonUI() {
     : '<svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>';
   btn.classList.toggle('muted', sounds.isMuted);
 }
+function updateReviveQuotaUI() {
+  const el = document.getElementById('revive-quota');
+  if (el) el.innerText = reviveQuota;
+}
 
 // =============================================================
-// 10. EVENT LISTENERS
+// 10. HELPERS — Daily / Revive
+// =============================================================
+function getTodayKey() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}${m}${dd}`;
+}
+function getDailySeed() {
+  const k = getTodayKey();
+  let n = 0;
+  for (let i = 0; i < k.length; i++) n = (n * 31 + k.charCodeAt(i)) % 1000000;
+  return n;
+}
+function getDailyModifier() {
+  const seed = getDailySeed();
+  return DAILY_MODIFIERS[seed % DAILY_MODIFIERS.length];
+}
+function getDailyLevel() {
+  const seed = getDailySeed();
+  // Level 1-30 tapi non-boss
+  const lvl = (seed % 29) + 1; // 1-29
+  return lvl;
+}
+function secondsUntilMidnight() {
+  const now = new Date();
+  const mid = new Date(now);
+  mid.setHours(24, 0, 0, 0);
+  return Math.max(0, Math.floor((mid - now) / 1000));
+}
+function formatTime(sec) {
+  const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+  const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+  const s = String(sec % 60).padStart(2, '0');
+  return `${h}:${m}:${s}`;
+}
+
+async function getReviveQuota(todayKey) {
+  const raw = await DB.get('pahlawan_revive_quota');
+  try {
+    const data = JSON.parse(raw || '{}');
+    if (data.date === todayKey) return Number(data.count) || 0;
+    return 3;
+  } catch(e) { return 3; }
+}
+async function saveReviveQuota(todayKey, count) {
+  await DB.set('pahlawan_revive_quota', JSON.stringify({ date: todayKey, count: count }));
+}
+
+async function getEndlessBest() {
+  const raw = await DB.get('pahlawan_endless_best');
+  try { return JSON.parse(raw || '{"wave":0,"score":0}'); } catch(e) { return {wave:0,score:0}; }
+}
+async function setEndlessBest(wave, scoreVal) {
+  const best = await getEndlessBest();
+  if (wave > best.wave || (wave === best.wave && scoreVal > best.score)) {
+    await DB.set('pahlawan_endless_best', JSON.stringify({ wave: wave, score: scoreVal }));
+  }
+}
+
+// =============================================================
+// 11. EVENT LISTENERS
 // =============================================================
 function setupEventListeners() {
   const $ = id => document.getElementById(id);
 
-  // --- TOMBOL MULAI MISI (perbaikan utama) ---
+  // --- MULAI MISI ---
   const btnPlay = $('btn-prepare-play');
   if (btnPlay) {
     btnPlay.onclick = (e) => {
       e.preventDefault();
-      console.log('▶ [Click] MULAI MISI ditekan');
-      try { requestFullscreenAndLandscape(); } catch (err) { console.warn('Fullscreen err:', err); }
+      console.log('▶ [Click] MULAI MISI');
+      try { requestFullscreenAndLandscape(); } catch (err) {}
       try { startGame(); } catch (err) { console.error('startGame error:', err); }
     };
-  } else {
-    console.error('❌ btn-prepare-play tidak ditemukan di DOM');
   }
 
   // --- HERO ---
-  const bActor = $('btn-select-actor');
-  if (bActor) bActor.onclick = () => $('modal-actors').classList.remove('hidden');
-  const bCloseActors = $('btn-close-actors');
-  if (bCloseActors) bCloseActors.onclick = () => $('modal-actors').classList.add('hidden');
+  const bActor = $('btn-select-actor'); if (bActor) bActor.onclick = () => $('modal-actors').classList.remove('hidden');
+  const bCloseActors = $('btn-close-actors'); if (bCloseActors) bCloseActors.onclick = () => $('modal-actors').classList.add('hidden');
 
   // --- TOKO ---
-  const bShop = $('btn-shop');
-  if (bShop) bShop.onclick = () => { updateShopUI(); $('modal-shop').classList.remove('hidden'); };
-  const bCloseShop = $('btn-close-shop');
-  if (bCloseShop) bCloseShop.onclick = () => $('modal-shop').classList.add('hidden');
+  const bShop = $('btn-shop'); if (bShop) bShop.onclick = () => { updateShopUI(); $('modal-shop').classList.remove('hidden'); };
+  const bCloseShop = $('btn-close-shop'); if (bCloseShop) bCloseShop.onclick = () => $('modal-shop').classList.add('hidden');
 
   // --- LEADERBOARD ---
-  const bLB = $('btn-leaderboard');
-  if (bLB) bLB.onclick = openLeaderboard;
+  const bLB = $('btn-leaderboard'); if (bLB) bLB.onclick = openLeaderboard;
   const bCloseLB = $('btn-close-leaderboard');
   if (bCloseLB) bCloseLB.onclick = () => {
     $('modal-leaderboard').classList.add('hidden');
     if (leaderboardRef && leaderboardHandler) {
       try { leaderboardRef.off('value', leaderboardHandler); } catch(e) {}
-      leaderboardRef = null;
-      leaderboardHandler = null;
+      leaderboardRef = null; leaderboardHandler = null;
     }
   };
+  document.querySelectorAll('.lb-tab').forEach(tab => {
+    tab.onclick = () => {
+      document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentLeaderboardTab = tab.dataset.tab || 'global';
+      loadLeaderboardData();
+    };
+  });
 
   // --- STICKER ---
-  const bStick = $('btn-stickers');
-  if (bStick) bStick.onclick = openStickerAlbum;
-  const bCloseStick = $('btn-close-stickers');
-  if (bCloseStick) bCloseStick.onclick = () => $('modal-stickers').classList.add('hidden');
+  const bStick = $('btn-stickers'); if (bStick) bStick.onclick = openStickerAlbum;
+  const bCloseStick = $('btn-close-stickers'); if (bCloseStick) bCloseStick.onclick = () => $('modal-stickers').classList.add('hidden');
 
   // --- PAUSE ---
-  const bPause = $('btn-pause');
-  if (bPause) bPause.onclick = pauseGame;
-  const bResume = $('btn-resume-game');
-  if (bResume) bResume.onclick = resumeGame;
-  const bPHero = $('btn-pause-change-hero');
-  if (bPHero) bPHero.onclick = () => $('modal-actors').classList.remove('hidden');
-  const bPLB = $('btn-pause-leaderboard');
-  if (bPLB) bPLB.onclick = () => openLeaderboard();
+  const bPause = $('btn-pause'); if (bPause) bPause.onclick = pauseGame;
+  const bResume = $('btn-resume-game'); if (bResume) bResume.onclick = resumeGame;
+  const bPHero = $('btn-pause-change-hero'); if (bPHero) bPHero.onclick = () => $('modal-actors').classList.remove('hidden');
+  const bPLB = $('btn-pause-leaderboard'); if (bPLB) bPLB.onclick = () => openLeaderboard();
   const bPMain = $('btn-pause-main-menu');
   if (bPMain) bPMain.onclick = () => {
     $('modal-pause').classList.add('hidden');
     $('hud-overlay').classList.add('hidden');
     $('screen-main-menu').classList.remove('hidden');
     sounds.stopBGM();
-    isGameRunning = false;
-    isGamePaused = false;
+    isGameRunning = false; isGamePaused = false;
     applyThemeToDocument(LEVEL_THEMES[0]);
   };
 
   // --- UPGRADES ---
   const bFR = $('btn-buy-firerate'); if (bFR) bFR.onclick = () => buyUpgrade('firerate');
-  const bSH = $('btn-buy-shield'); if (bSH) bSH.onclick = () => buyUpgrade('shield');
-  const bBB = $('btn-buy-bomb'); if (bBB) bBB.onclick = () => buyUpgrade('bomb');
-  const bFZ = $('btn-buy-freeze'); if (bFZ) bFZ.onclick = () => buyUpgrade('freeze');
+  const bSH = $('btn-buy-shield');   if (bSH) bSH.onclick = () => buyUpgrade('shield');
+  const bBB = $('btn-buy-bomb');     if (bBB) bBB.onclick = () => buyUpgrade('bomb');
+  const bFZ = $('btn-buy-freeze');   if (bFZ) bFZ.onclick = () => buyUpgrade('freeze');
 
   // --- ACTOR CARDS ---
   document.querySelectorAll('.actor-card').forEach(card => {
@@ -775,7 +877,6 @@ function setupEventListeners() {
     btnRight.addEventListener('pointerup', () => isMovingRight = false);
     btnRight.addEventListener('pointerleave', () => isMovingRight = false);
   }
-
   window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isMovingLeft = true;
     if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') isMovingRight = true;
@@ -784,7 +885,6 @@ function setupEventListeners() {
     if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isMovingLeft = false;
     if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') isMovingRight = false;
   });
-
   if (canvas) {
     canvas.addEventListener('pointermove', (e) => {
       if (!isGameRunning || isGamePaused) return;
@@ -795,30 +895,29 @@ function setupEventListeners() {
     });
   }
 
-  // --- NEXT LEVEL / RESTART / MENU ---
+  // --- NEXT / RESTART / MENU ---
   const bNext = $('btn-next-level');
   if (bNext) bNext.onclick = () => {
     $('modal-result').classList.add('hidden');
+    if (gameMode !== 'normal') { goToMainMenu(); return; }
     currentLevelIndex++;
     if (currentLevelIndex >= levelsData.length) { restartGame(); return; }
     lives = 3;
+    reviveUsedThisRun = false;
     updateLivesDisplay();
     startCurrentLevel();
   };
   const bRestart = $('btn-restart');
   if (bRestart) bRestart.onclick = () => {
     $('modal-result').classList.add('hidden');
-    restartGame();
+    if (gameMode === 'endless') startEndless();
+    else if (gameMode === 'daily') startDaily();
+    else restartGame();
   };
   const bMenu = $('btn-menu');
   if (bMenu) bMenu.onclick = () => {
     $('modal-result').classList.add('hidden');
-    $('hud-overlay').classList.add('hidden');
-    $('screen-main-menu').classList.remove('hidden');
-    sounds.stopBGM();
-    isGameRunning = false;
-    isGamePaused = false;
-    applyThemeToDocument(LEVEL_THEMES[0]);
+    goToMainMenu();
   };
 
   // --- SKILL: FREEZE ---
@@ -858,10 +957,7 @@ function setupEventListeners() {
     triggerVibrate([100, 50, 100]);
     updateSkillButtonsUI();
 
-    const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
-    let isBossLevel = levelConfig.algorithm.startsWith('boss_');
     let totalScoreFromBomb = 0;
-
     for (let i = monsters.length - 1; i >= 0; i--) {
       let m = monsters[i];
       if (m.type.startsWith('boss')) {
@@ -872,20 +968,21 @@ function setupEventListeners() {
           createBurstParticles3D(m.x, m.y, m.color, 40);
           totalScoreFromBomb += (ENEMY_SCORE_TABLE[m.type] || 150) * combo;
           levelKills++;
+          handleKillStreak();
           monsters.splice(i, 1);
           monsters.forEach(minion => createBurstParticles3D(minion.x, minion.y, minion.color, 20));
           monsters = [];
-          setTimeout(() => levelComplete(), 1500);
+          setTimeout(() => onLevelCleared(), 1500);
           break;
         }
       } else {
         createBurstParticles3D(m.x, m.y, m.color, 25);
         totalScoreFromBomb += (ENEMY_SCORE_TABLE[m.type] || 150) * combo;
-        if (!isBossLevel) levelKills++;
+        levelKills++;
+        handleKillStreak();
         monsters.splice(i, 1);
       }
     }
-
     score += totalScoreFromBomb;
     if (totalScoreFromBomb > 0) {
       spawnFloatingText(canvas.width / 2, canvas.height / 2, `BOOM +${totalScoreFromBomb}`, '#ff4757');
@@ -894,7 +991,7 @@ function setupEventListeners() {
     checkLevelObjectives();
   };
 
-  // --- LOADOUT MODAL START BUTTON ---
+  // --- LOADOUT START ---
   const loadoutBtn = $('btn-start-loaded');
   if (loadoutBtn) {
     loadoutBtn.addEventListener('click', async () => {
@@ -906,6 +1003,37 @@ function setupEventListeners() {
       if (loadoutCallback) { const cb = loadoutCallback; loadoutCallback = null; cb(); }
     });
   }
+
+  // --- REVIVE ---
+  const bRevAd = $('btn-revive-ad');
+  if (bRevAd) bRevAd.onclick = async () => {
+    $('modal-revive').classList.add('hidden');
+    sounds.init();
+    const success = await AdService.showRewarded();
+    if (success) doRevive();
+    else finalizeFail();
+  };
+  const bRevGiveUp = $('btn-revive-give-up');
+  if (bRevGiveUp) bRevGiveUp.onclick = () => {
+    $('modal-revive').classList.add('hidden');
+    finalizeFail();
+  };
+
+  // --- ENDLESS ---
+  const bEndless = $('btn-endless');
+  if (bEndless) bEndless.onclick = openEndlessModal;
+  const bStartEndless = $('btn-start-endless');
+  if (bStartEndless) bStartEndless.onclick = () => { $('modal-endless').classList.add('hidden'); startEndless(); };
+  const bCloseEndless = $('btn-close-endless');
+  if (bCloseEndless) bCloseEndless.onclick = () => $('modal-endless').classList.add('hidden');
+
+  // --- DAILY ---
+  const bDaily = $('btn-daily');
+  if (bDaily) bDaily.onclick = openDailyModal;
+  const bStartDaily = $('btn-start-daily');
+  if (bStartDaily) bStartDaily.onclick = () => { $('modal-daily').classList.add('hidden'); startDaily(); };
+  const bCloseDaily = $('btn-close-daily');
+  if (bCloseDaily) bCloseDaily.onclick = () => $('modal-daily').classList.add('hidden');
 
   // --- NARRATIVE TAP ---
   document.addEventListener('click', (e) => {
@@ -926,7 +1054,7 @@ function setupEventListeners() {
 }
 
 // =============================================================
-// 11. THEME
+// 12. THEME + UI
 // =============================================================
 function applyThemeToDocument(theme) {
   const root = document.documentElement;
@@ -934,9 +1062,6 @@ function applyThemeToDocument(theme) {
   root.style.setProperty('--theme-accent-soft', theme.accentSoft);
 }
 
-// =============================================================
-// 12. SHOP / UI
-// =============================================================
 function updateShopUI() {
   const $ = id => document.getElementById(id);
   const sc = $('shop-coin-count'); if (sc) sc.innerText = coins;
@@ -944,7 +1069,6 @@ function updateShopUI() {
   const ls = $('shop-level-shield'); if (ls) ls.innerText = upgradeShield;
   const lb = $('shop-level-bomb'); if (lb) lb.innerText = upgradeBomb;
   const lz = $('shop-level-freeze'); if (lz) lz.innerText = upgradeFreeze;
-
   const bf = $('btn-buy-firerate');
   if (bf && bf.querySelector('span')) bf.querySelector('span').innerText = upgradeFireRate >= 5 ? 'MAX' : `${upgradeFireRate * 50}`;
   const bs = $('btn-buy-shield');
@@ -981,7 +1105,6 @@ function pauseGame() {
   const p = document.getElementById('modal-pause');
   if (p) p.classList.remove('hidden');
 }
-
 function resumeGame() {
   isGamePaused = false;
   sounds.startBGM();
@@ -989,7 +1112,6 @@ function resumeGame() {
   if (p) p.classList.add('hidden');
   requestAnimationFrame(gameLoop);
 }
-
 function requestFullscreenAndLandscape() {
   try {
     const doc = document.documentElement;
@@ -998,7 +1120,6 @@ function requestFullscreenAndLandscape() {
     if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
   } catch (e) {}
 }
-
 function updateActorSelectionUI() {
   const name = actorMap[currentActor] ? actorMap[currentActor].name : 'Robot Cyber';
   const el = document.getElementById('selected-actor-name');
@@ -1006,7 +1127,6 @@ function updateActorSelectionUI() {
   const pauseHero = document.getElementById('pause-hero-name');
   if (pauseHero) pauseHero.innerText = name;
 }
-
 function updateSkillButtonsUI() {
   const btnFreeze = document.getElementById('btn-freeze');
   const btnShield = document.getElementById('btn-shield');
@@ -1038,11 +1158,23 @@ function updateSkillButtonsUI() {
   }
 }
 
+function goToMainMenu() {
+  const hud = document.getElementById('hud-overlay');
+  if (hud) hud.classList.add('hidden');
+  const menu = document.getElementById('screen-main-menu');
+  if (menu) menu.classList.remove('hidden');
+  sounds.stopBGM();
+  isGameRunning = false;
+  isGamePaused = false;
+  applyThemeToDocument(LEVEL_THEMES[0]);
+  gameMode = 'normal';
+}
+
 // =============================================================
-// 13. GAME FLOW
+// 13. GAME FLOW — normal / endless / daily
 // =============================================================
 function startGame() {
-  console.log('▶ [startGame] Beginning...');
+  console.log('▶ [startGame] normal mode');
   sounds.init();
   const input = document.getElementById('player-name-input');
   const inputName = input ? input.value.trim() : '';
@@ -1051,9 +1183,11 @@ function startGame() {
   const pnd = document.getElementById('player-name-display');
   if (pnd) pnd.innerText = playerName;
 
+  gameMode = 'normal';
   currentLevelIndex = 0;
   score = 0;
   lives = 3;
+  reviveUsedThisRun = false;
   coins = Number(localStorage.getItem('pahlawan_coins')) || 0;
 
   if (!levelsData || levelsData.length === 0) levelsData = generate30Levels();
@@ -1064,16 +1198,14 @@ function startGame() {
   if (hud) hud.classList.remove('hidden');
 
   resizeCanvas();
-  setTimeout(() => {
-    resizeCanvas();
-    startCurrentLevel();
-  }, 60);
+  setTimeout(() => { resizeCanvas(); startCurrentLevel(); }, 60);
 }
 
 function restartGame() {
   currentLevelIndex = 0;
   score = 0;
   lives = 3;
+  reviveUsedThisRun = false;
   coins = Number(localStorage.getItem('pahlawan_coins')) || 0;
   updateHUDValues();
   updateLivesDisplay();
@@ -1106,18 +1238,7 @@ async function startCurrentLevel() {
   applyThemeToDocument(currentTheme);
   recolorStars();
 
-  levelKills = 0;
-  levelCoinsEarned = 0;
-  playerX = canvas.width / 2;
-  bullets = []; bossBullets = []; powerups = [];
-  coinsOnField = []; muzzleFlashes = []; telegraphs = [];
-  combo = 1; comboTimer = 0;
-  isSuperShot = false; superShotTimer = 0;
-  isShieldActive = false; shieldTimer = 0;
-  isMagnetActive = false; magnetTimer = 0;
-  isFrozen = false; freezeFramesRemaining = 0;
-  monsters = []; particles = [];
-
+  resetLevelState();
   updateHUDValues();
   updateLivesDisplay();
 
@@ -1134,7 +1255,6 @@ async function startCurrentLevel() {
     if (runStory) DB.set(storyKey, '1');
     showLoadoutModal(levelConfig, () => actuallyStartLevel(levelConfig));
   };
-
   if (runStory) {
     showNarrative(story.before.lines, story.before.speaker, story.before.portrait, proceed);
   } else {
@@ -1142,10 +1262,29 @@ async function startCurrentLevel() {
   }
 }
 
+function resetLevelState() {
+  levelKills = 0;
+  levelCoinsEarned = 0;
+  playerX = canvas.width / 2;
+  bullets = []; bossBullets = []; powerups = [];
+  coinsOnField = []; muzzleFlashes = []; telegraphs = [];
+  combo = 1; comboTimer = 0;
+  killStreakCount = 0; killStreakMilestone = 0;
+  isSuperShot = false; superShotTimer = 0;
+  isShieldActive = false; shieldTimer = 0;
+  isMagnetActive = false; magnetTimer = 0;
+  isFrozen = false; freezeFramesRemaining = 0;
+  isReviveInvuln = false; reviveInvulnTimer = 0;
+  monsters = []; particles = [];
+}
+
 function actuallyStartLevel(levelConfig) {
   freezeCharges = playerLoadout.includes('freeze') ? upgradeFreeze : 0;
   shieldCharges = playerLoadout.includes('shield') ? upgradeShield : 0;
   bombCharges   = playerLoadout.includes('bomb') ? upgradeBomb : 0;
+  if (gameMode === 'daily' && currentDailyModifier && currentDailyModifier.id === 'no_shield') {
+    shieldCharges = 0;
+  }
   updateSkillButtonsUI();
 
   isGameRunning = true;
@@ -1158,20 +1297,36 @@ function actuallyStartLevel(levelConfig) {
 }
 
 function updateHUDValues() {
-  const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
-  const hl = document.getElementById('hud-level'); if (hl) hl.innerText = levelConfig.level;
-  const hs = document.getElementById('hud-score'); if (hs) hs.innerText = score;
-  const hc = document.getElementById('hud-coins'); if (hc) hc.innerText = coins;
-  const hm = document.getElementById('hud-mission'); if (hm) hm.innerText = `${levelKills}/${levelConfig.targetKills}`;
-  const comboPill = document.getElementById('hud-combo-pill');
+  const $ = id => document.getElementById(id);
+  let levelNum = 1, targetKills = 0;
+  if (gameMode === 'endless') {
+    levelNum = endlessWave;
+    targetKills = ENDLESS_KILLS_PER_WAVE;
+    const hl = $('hud-level'); if (hl) hl.innerText = '∞' + levelNum;
+    const hm = $('hud-mission'); if (hm) hm.innerText = `${endlessKillsThisWave}/${targetKills}`;
+  } else if (gameMode === 'daily') {
+    const lvl = getDailyLevel();
+    levelNum = lvl;
+    const levelConfig = levelsData[levelNum - 1] || levelsData[0];
+    targetKills = levelConfig.targetKills;
+    const hl = $('hud-level'); if (hl) hl.innerText = '★' + lvl;
+    const hm = $('hud-mission'); if (hm) hm.innerText = `${levelKills}/${targetKills}`;
+  } else {
+    const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
+    levelNum = levelConfig.level;
+    targetKills = levelConfig.targetKills;
+    const hl = $('hud-level'); if (hl) hl.innerText = levelNum;
+    const hm = $('hud-mission'); if (hm) hm.innerText = `${levelKills}/${targetKills}`;
+  }
+  const hs = $('hud-score'); if (hs) hs.innerText = score;
+  const hc = $('hud-coins'); if (hc) hc.innerText = coins;
+  const comboPill = $('hud-combo-pill');
   if (comboPill) {
     if (combo > 1) {
       comboPill.classList.remove('hidden');
-      const ct = document.getElementById('hud-combo-text');
+      const ct = $('hud-combo-text');
       if (ct) ct.innerText = `${combo}x COMBO`;
-    } else {
-      comboPill.classList.add('hidden');
-    }
+    } else comboPill.classList.add('hidden');
   }
 }
 
@@ -1196,29 +1351,62 @@ function triggerBossSiren() {
 }
 
 // =============================================================
-// 14. SPAWNING
+// 14. SPAWNING — adaptif untuk normal/endless/daily
 // =============================================================
 function spawnMonsterLoop() {
   if (!isGameRunning) return;
   if (!isGamePaused && !isFrozen) {
-    const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
+    let levelConfig;
+    let spawnMultiplier = 1;
+    if (gameMode === 'endless') {
+      const baseLevel = 1 + (endlessWave - 1) * 0.3;
+      const typesPool = ["jelly","donut","cloud","crystal","splitter"];
+      const count = Math.min(5, Math.floor(1 + endlessWave / 3) + 1);
+      const algos = ["linear","zigzag","gravity","stealth","swarm","splitter"];
+      levelConfig = {
+        level: 999,
+        targetKills: ENDLESS_KILLS_PER_WAVE,
+        speed: 1 + endlessWave * 0.08,
+        spawnRate: Math.max(300, 1200 - endlessWave * 40),
+        algorithm: algos[endlessWave % algos.length],
+        types: typesPool.slice(0, count)
+      };
+      if (endlessWave > 0 && endlessWave % 5 === 0) {
+        // boss wave
+        const bossLevel = Math.min(30, Math.ceil(endlessWave / 5) * 5);
+        levelConfig.algorithm = `boss_${bossLevel}`;
+        levelConfig.types = [`boss${bossLevel}`];
+        levelConfig.bossHp = Math.floor((levelConfig.bossHp || 150) * (1 + endlessWave * 0.5));
+      }
+    } else if (gameMode === 'daily') {
+      const lvl = getDailyLevel();
+      const base = levelsData[lvl - 1] || levelsData[0];
+      levelConfig = { ...base };
+      if (currentDailyModifier) {
+        if (currentDailyModifier.id === 'double_speed') levelConfig.speed = (levelConfig.speed || 1) * 2;
+        if (currentDailyModifier.id === 'double_monster') spawnMultiplier = 2;
+      }
+    } else {
+      levelConfig = levelsData[currentLevelIndex] || levelsData[0];
+    }
     if (levelConfig) {
       const algo = levelConfig.algorithm;
       const typeList = levelConfig.types || ['jelly'];
 
       if (algo.startsWith('boss_')) {
-        if (monsters.length === 0 && levelKills < levelConfig.targetKills) {
+        if (monsters.length === 0 && (gameMode !== 'normal' || levelKills < levelConfig.targetKills)) {
           triggerBossSiren();
+          const bossNum = parseInt(algo.replace('boss_','')) || 5;
           let hpVal = levelConfig.bossHp || 150;
-          const bossSize = BOSS_SIZES[levelConfig.level] || 75;
-          const isTutorialBoss = levelConfig.level === 5;
-
+          if (gameMode === 'endless') hpVal = 150 + endlessWave * 60;
+          const bossSize = BOSS_SIZES[bossNum] || 75;
+          const isTutorialBoss = (bossNum === 5 && gameMode === 'normal');
           monsters.push({
             x: canvas.width / 2, startX: canvas.width / 2, y: -100,
             speed: 1.0, size: bossSize,
             hp: hpVal, maxHp: hpVal,
             color: currentTheme.accent,
-            type: `boss${levelConfig.level}`,
+            type: `boss${bossNum}`,
             algorithm: algo,
             shootTimer: 0, minionTimer: 0, enrageTimer: 0,
             timeAlive: 0, opacity: 1,
@@ -1230,6 +1418,7 @@ function spawnMonsterLoop() {
         }
       } else {
         let countToSpawn = (algo === 'swarm') ? 2 : 1;
+        countToSpawn *= spawnMultiplier;
         for (let c = 0; c < countToSpawn; c++) {
           const chosenType = typeList[Math.floor(Math.random() * typeList.length)];
           const hpVal = (chosenType === 'donut' ? 2 : (chosenType === 'crystal' ? 3 : 1));
@@ -1252,32 +1441,32 @@ function spawnMonsterLoop() {
       }
     }
   }
-  const currentRate = levelsData[currentLevelIndex] ? levelsData[currentLevelIndex].spawnRate : 1500;
+  let currentRate = 1500;
+  if (gameMode === 'endless') currentRate = Math.max(300, 1200 - endlessWave * 40);
+  else if (gameMode === 'daily') currentRate = 1200;
+  else currentRate = levelsData[currentLevelIndex] ? levelsData[currentLevelIndex].spawnRate : 1500;
   setTimeout(spawnMonsterLoop, currentRate);
 }
 
 function trySpawnDrop(x, y) {
-  if (Math.random() < 0.45) coinsOnField.push({ x, y, vy: 1.8, size: 10, rot: 0, trail: 0 });
+  const coinChance = (gameMode === 'endless') ? 0.7 : 0.45;
+  if (Math.random() < coinChance) coinsOnField.push({ x, y, vy: 1.8, size: 10, rot: 0, trail: 0 });
   if (Math.random() < 0.32) {
     const types = ['supershot', 'shield', 'bomb', 'freeze', 'heart', 'magnet'];
     const chosenType = types[Math.floor(Math.random() * types.length)];
     powerups.push({ x, y, type: chosenType, speed: 2.2, size: 16, rot: 0 });
   }
 }
-
 function spawnFloatingText(x, y, text, color) {
   const container = document.getElementById('popup-container');
   if (!container) return;
   const el = document.createElement('div');
   el.className = 'floating-text';
   el.innerText = text;
-  el.style.left = `${x}px`;
-  el.style.top = `${y}px`;
-  el.style.color = color;
+  el.style.left = `${x}px`; el.style.top = `${y}px`; el.style.color = color;
   container.appendChild(el);
   setTimeout(() => el.remove(), 900);
 }
-
 function createBurstParticles3D(x, y, color, count = 20) {
   for (let i = 0; i < count; i++) {
     particles.push({
@@ -1287,27 +1476,64 @@ function createBurstParticles3D(x, y, color, count = 20) {
       size: Math.random() * 7 + 3,
       life: 1.0, color,
       spin: (Math.random() - 0.5) * 0.4,
-      rot: 0,
-      star: Math.random() < 0.35
+      rot: 0, star: Math.random() < 0.35
     });
   }
 }
-
 function spawnTelegraph(fromX, fromY, toX, toY, durationFrames, color) {
   telegraphs.push({
-    x: fromX, y: fromY,
-    targetX: toX, targetY: toY,
-    progress: 0, duration: durationFrames,
-    color: color || '#ff2e88'
+    x: fromX, y: fromY, targetX: toX, targetY: toY,
+    progress: 0, duration: durationFrames, color: color || '#ff2e88'
   });
 }
 
+function handleKillStreak() {
+  killStreakCount++;
+  const nextIdx = killStreakMilestone;
+  if (nextIdx < KILLSTREAK_MILESTONES.length && killStreakCount >= KILLSTREAK_MILESTONES[nextIdx]) {
+    killStreakMilestone++;
+    showKillStreak(KILLSTREAK_TITLES[nextIdx], KILLSTREAK_MILESTONES[nextIdx]);
+  }
+}
+function showKillStreak(title, count) {
+  const overlay = document.getElementById('killstreak-overlay');
+  const txt = document.getElementById('killstreak-text');
+  const sub = document.getElementById('killstreak-sub');
+  if (!overlay || !txt || !sub) return;
+  txt.innerText = title;
+  sub.innerText = `${count} KILLS`;
+  overlay.classList.remove('hidden');
+  // retrigger animation
+  void overlay.offsetWidth;
+  sounds.playKillstreak();
+  setTimeout(() => overlay.classList.add('hidden'), 1300);
+}
+
 function checkLevelObjectives() {
+  if (gameMode === 'endless') {
+    if (endlessKillsThisWave >= ENDLESS_KILLS_PER_WAVE && monsters.length === 0) {
+      endlessWave++;
+      endlessKillsThisWave = 0;
+      sounds.playWin();
+      spawnFloatingText(canvas.width/2, canvas.height/2, `WAVE ${endlessWave}`, '#ffd700');
+      updateHUDValues();
+    }
+    return;
+  }
+  if (gameMode === 'daily') {
+    const lvl = getDailyLevel();
+    const levelConfig = levelsData[lvl - 1] || levelsData[0];
+    if (levelKills >= levelConfig.targetKills) {
+      if (score >= levelConfig.targetScore) onLevelCleared();
+      else onLevelFailed("SKOR BELUM MENCAPAI TARGET");
+    }
+    return;
+  }
   const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
   if (levelConfig.algorithm.startsWith('boss_')) return;
   if (levelKills >= levelConfig.targetKills) {
-    if (score >= levelConfig.targetScore) levelComplete();
-    else levelFailed("SKOR BELUM MENCAPAI TARGET");
+    if (score >= levelConfig.targetScore) onLevelCleared();
+    else onLevelFailed("SKOR BELUM MENCAPAI TARGET");
   }
 }
 
@@ -1319,12 +1545,9 @@ function drawHeroVector(ctx, x, y, type) {
   ctx.translate(x, y);
 
   if (type === 'robot') {
-    ctx.fillStyle = '#1e90ff';
-    ctx.fillRect(-18, -10, 36, 28);
-    ctx.fillStyle = '#70a1ff';
-    ctx.fillRect(-12, -26, 24, 16);
-    ctx.fillStyle = '#00d2d3';
-    ctx.fillRect(-8, -22, 16, 6);
+    ctx.fillStyle = '#1e90ff'; ctx.fillRect(-18, -10, 36, 28);
+    ctx.fillStyle = '#70a1ff'; ctx.fillRect(-12, -26, 24, 16);
+    ctx.fillStyle = '#00d2d3'; ctx.fillRect(-8, -22, 16, 6);
     ctx.fillStyle = '#2f3542';
     ctx.fillRect(-24, -8, 6, 16); ctx.fillRect(18, -8, 6, 16);
     ctx.fillStyle = '#ff4757';
@@ -1360,7 +1583,7 @@ function drawHeroVector(ctx, x, y, type) {
     ctx.beginPath(); ctx.moveTo(0, -32); ctx.lineTo(5, -12); ctx.lineTo(-5, -12); ctx.closePath(); ctx.fill();
   }
 
-  if (isShieldActive) {
+  if (isShieldActive || isReviveInvuln) {
     ctx.save();
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
@@ -1369,26 +1592,19 @@ function drawHeroVector(ctx, x, y, type) {
       if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
     }
     ctx.closePath();
-    ctx.fillStyle = 'rgba(0, 210, 211, 0.18)';
+    ctx.fillStyle = isReviveInvuln ? 'rgba(255, 215, 0, 0.25)' : 'rgba(0, 210, 211, 0.18)';
     ctx.fill();
     ctx.lineWidth = 2.5;
-    ctx.strokeStyle = '#00d2d3';
+    ctx.strokeStyle = isReviveInvuln ? '#ffd700' : '#00d2d3';
     ctx.stroke();
     ctx.restore();
   }
-
   if (isMagnetActive) {
-    ctx.beginPath();
-    ctx.arc(0, -2, 42, 0, Math.PI * 2);
-    ctx.strokeStyle = '#ffa502';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([4, 4]);
-    ctx.lineDashOffset = -playerPulse;
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.lineDashOffset = 0;
+    ctx.beginPath(); ctx.arc(0, -2, 42, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ffa502'; ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]); ctx.lineDashOffset = -playerPulse;
+    ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
   }
-
   ctx.restore();
 }
 
@@ -1397,6 +1613,7 @@ function drawHeroVector(ctx, x, y, type) {
 // =============================================================
 function gameLoop() {
   if (!isGameRunning || isGamePaused) return;
+  if (!ctx || !canvas) return;
 
   playerPulse += 0.08;
   const theme = currentTheme;
@@ -1408,26 +1625,24 @@ function gameLoop() {
     if (screenShake < 0.5) screenShake = 0;
   }
 
-  // BACKGROUND
+  // Background
   const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
   bgGrad.addColorStop(0, theme.bgTop);
   bgGrad.addColorStop(1, theme.bgBottom);
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // STARS
+  // Stars
   stars.forEach(s => {
-    s.y += s.speed;
-    s.twinkle += 0.05;
+    s.y += s.speed; s.twinkle += 0.05;
     if (s.y > canvas.height) { s.y = 0; s.x = Math.random() * canvas.width; }
     const alpha = s.opacity * (0.7 + Math.sin(s.twinkle) * 0.3);
-    ctx.fillStyle = s.color;
-    ctx.globalAlpha = alpha;
+    ctx.fillStyle = s.color; ctx.globalAlpha = alpha;
     ctx.fillRect(s.x, s.y, s.size, s.size);
   });
   ctx.globalAlpha = 1.0;
 
-  // GROUND
+  // Ground
   ctx.fillStyle = theme.ground;
   ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
   ctx.fillStyle = theme.groundLine;
@@ -1435,23 +1650,23 @@ function gameLoop() {
   ctx.fillRect(0, canvas.height - 45, canvas.width, 5);
   ctx.globalAlpha = 1.0;
 
-  // MOVEMENT
+  // Movement
   if (isMovingLeft) playerX -= playerSpeed;
   if (isMovingRight) playerX += playerSpeed;
   playerX = Math.max(40, Math.min(canvas.width - 40, playerX));
 
-  // TIMERS
+  // Timers
   if (isSuperShot) { superShotTimer--; if (superShotTimer <= 0) isSuperShot = false; }
   if (isShieldActive) { shieldTimer--; if (shieldTimer <= 0) isShieldActive = false; }
   if (isMagnetActive) { magnetTimer--; if (magnetTimer <= 0) isMagnetActive = false; }
+  if (isReviveInvuln) { reviveInvulnTimer--; if (reviveInvulnTimer <= 0) isReviveInvuln = false; }
   if (isFrozen) { freezeFramesRemaining--; if (freezeFramesRemaining <= 0) { isFrozen = false; freezeFramesRemaining = 0; } }
   if (combo > 1) { comboTimer--; if (comboTimer <= 0) { combo = 1; updateHUDValues(); } }
 
-  // SHOOTING
+  // Shooting
   let baseInterval = 160;
   if (currentActor === 'cat') baseInterval = 110;
   else if (currentActor === 'cannon') baseInterval = 210;
-
   const fireInterval = Math.max(70, baseInterval - (upgradeFireRate - 1) * 15);
   const now = Date.now();
   const heroPlayerY = canvas.height - 45;
@@ -1482,18 +1697,15 @@ function gameLoop() {
     lastShotTime = now;
   }
 
-  // Muzzle flashes
   for (let mf = muzzleFlashes.length - 1; mf >= 0; mf--) {
     const flash = muzzleFlashes[mf];
-    ctx.beginPath();
-    ctx.arc(flash.x, flash.y, flash.radius, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255, 215, 0, ${flash.opacity})`;
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(flash.x, flash.y, flash.radius, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 215, 0, ${flash.opacity})`; ctx.fill();
     flash.opacity -= 0.25;
     if (flash.opacity <= 0) muzzleFlashes.splice(mf, 1);
   }
 
-  // TELEGRAPHS
+  // Telegraphs
   for (let t = telegraphs.length - 1; t >= 0; t--) {
     const tg = telegraphs[t];
     tg.progress++;
@@ -1501,35 +1713,27 @@ function gameLoop() {
     const alpha = 0.15 + Math.sin(p * Math.PI) * 0.5;
     ctx.save();
     ctx.beginPath();
-    ctx.moveTo(tg.x, tg.y);
-    ctx.lineTo(tg.targetX, tg.targetY);
+    ctx.moveTo(tg.x, tg.y); ctx.lineTo(tg.targetX, tg.targetY);
     ctx.lineWidth = 2 + Math.sin(p * Math.PI * 6) * 0.8;
     ctx.strokeStyle = tg.color;
     ctx.globalAlpha = alpha;
-    ctx.setLineDash([6, 4]);
-    ctx.lineDashOffset = -tg.progress * 2;
-    ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.setLineDash([6, 4]); ctx.lineDashOffset = -tg.progress * 2;
+    ctx.stroke(); ctx.setLineDash([]);
     ctx.restore();
-
     ctx.save();
     ctx.beginPath();
     ctx.arc(tg.targetX, tg.targetY, 6 + Math.sin(p * Math.PI * 8) * 4, 0, Math.PI * 2);
-    ctx.strokeStyle = tg.color;
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = 0.7;
-    ctx.stroke();
+    ctx.strokeStyle = tg.color; ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.7; ctx.stroke();
     ctx.restore();
-
     if (tg.progress >= tg.duration) telegraphs.splice(t, 1);
   }
 
-  // BULLETS
+  // Bullets
   for (let b = bullets.length - 1; b >= 0; b--) {
     const bullet = bullets[b];
     bullet.y -= bullet.vy;
     bullet.x += bullet.vx;
-
     ctx.save();
     ctx.translate(bullet.x, bullet.y);
     if (bullet.heroType === 'cat') {
@@ -1553,8 +1757,7 @@ function gameLoop() {
     ctx.restore();
 
     if (bullet.y < -20 || bullet.x < -20 || bullet.x > canvas.width + 20) {
-      bullets.splice(b, 1);
-      continue;
+      bullets.splice(b, 1); continue;
     }
 
     let bulletConsumed = false;
@@ -1574,7 +1777,6 @@ function gameLoop() {
             sounds.playCombo();
           }
         }
-
         m.hp -= damage;
         m.hitFlash = 8;
         sounds.playPop();
@@ -1586,10 +1788,11 @@ function gameLoop() {
           let isBoss = m.type.startsWith('boss');
           let basePoints = ENEMY_SCORE_TABLE[m.type] || 150;
           let pointsGained = basePoints * combo;
+          if (gameMode === 'endless') pointsGained = Math.floor(pointsGained * 1.5);
           score += pointsGained;
-
-          const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
-          if (!levelConfig.algorithm.startsWith('boss_') || isBoss) levelKills++;
+          levelKills++;
+          if (gameMode === 'endless') endlessKillsThisWave++;
+          handleKillStreak();
 
           combo = Math.min(MAX_COMBO, combo + 1);
           comboTimer = 180;
@@ -1602,14 +1805,20 @@ function gameLoop() {
               { x: m.x + 20, startX: m.x + 20, y: m.y, speed: m.speed * 1.25, size: 22, hp: 1, maxHp: 1, color: '#ff7f50', type: 'jelly', algorithm: 'linear', shootTimer: 0, timeAlive: 0, opacity: 1, hitFlash: 0, canShoot: false }
             );
           }
-
           monsters.splice(i, 1);
           updateHUDValues();
-
           if (isBoss) {
             monsters.forEach(minion => createBurstParticles3D(minion.x, minion.y, minion.color, 20));
             monsters = [];
-            setTimeout(() => levelComplete(), 1500);
+            if (gameMode === 'endless') {
+              setTimeout(() => {
+                endlessWave++;
+                endlessKillsThisWave = 0;
+                updateHUDValues();
+              }, 1500);
+            } else {
+              setTimeout(() => onLevelCleared(), 1500);
+            }
           } else {
             checkLevelObjectives();
           }
@@ -1622,12 +1831,11 @@ function gameLoop() {
     if (bulletConsumed) continue;
   }
 
-  // COINS
+  // Coins
   const isMagnetPulling = isMagnetActive || (currentActor === 'cat');
   for (let c = coinsOnField.length - 1; c >= 0; c--) {
     const coin = coinsOnField[c];
     coin.trail = (coin.trail || 0) + 1;
-
     if (isMagnetPulling) {
       let pullRange = isMagnetActive ? 350 : 160;
       let distToPlayer = Math.hypot(playerX - coin.x, heroPlayerY - coin.y);
@@ -1637,19 +1845,12 @@ function gameLoop() {
         coin.y += Math.sin(angle) * 8.5;
       } else coin.y += coin.vy;
     } else coin.y += coin.vy;
-
     coin.rot += 0.1;
-
     if (coin.trail % 3 === 0) {
-      ctx.beginPath();
-      ctx.arc(coin.x, coin.y + 4, coin.size * 0.5, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(coin.x, coin.y + 4, coin.size * 0.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.3)'; ctx.fill();
     }
-
-    ctx.save();
-    ctx.translate(coin.x, coin.y);
-    ctx.rotate(coin.rot);
+    ctx.save(); ctx.translate(coin.x, coin.y); ctx.rotate(coin.rot);
     ctx.beginPath(); ctx.arc(0, 0, coin.size, 0, Math.PI * 2);
     ctx.fillStyle = '#ffd700'; ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke();
@@ -1659,12 +1860,13 @@ function gameLoop() {
 
     const distPlayer = Math.hypot(playerX - coin.x, heroPlayerY - coin.y);
     if (distPlayer < coin.size + 25) {
-      coins++;
-      levelCoinsEarned++;
+      const coinMult = (gameMode === 'endless' || gameMode === 'daily') ? 2 : 1;
+      coins += coinMult;
+      levelCoinsEarned += coinMult;
       DB.set('pahlawan_coins', coins);
       sounds.playCoin();
       triggerVibrate(30);
-      spawnFloatingText(coin.x, coin.y, '+1', '#ffd700');
+      spawnFloatingText(coin.x, coin.y, `+${coinMult}`, '#ffd700');
       coinsOnField.splice(c, 1);
       updateHUDValues();
       continue;
@@ -1672,22 +1874,17 @@ function gameLoop() {
     if (coin.y > canvas.height) coinsOnField.splice(c, 1);
   }
 
-  // POWERUPS
+  // Powerups
   for (let p = powerups.length - 1; p >= 0; p--) {
     const pw = powerups[p];
     pw.y += pw.speed;
     pw.rot = (pw.rot || 0) + 0.04;
-
-    ctx.save();
-    ctx.translate(pw.x, pw.y);
-    ctx.rotate(Math.sin(pw.rot) * 0.2);
-
+    ctx.save(); ctx.translate(pw.x, pw.y); ctx.rotate(Math.sin(pw.rot) * 0.2);
     ctx.beginPath(); ctx.arc(0, 0, pw.size + 6, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(255,255,255,0.2)';
     ctx.setLineDash([3, 6]); ctx.lineDashOffset = -playerPulse * 2;
     ctx.lineWidth = 1.5; ctx.stroke();
     ctx.setLineDash([]); ctx.lineDashOffset = 0;
-
     ctx.beginPath(); ctx.arc(0, 0, pw.size, 0, Math.PI * 2);
     let pwColor = '#00d2d3', pwLabel = 'SS';
     if (pw.type === 'shield') { pwColor = '#1e90ff'; pwLabel = 'SH'; }
@@ -1698,17 +1895,14 @@ function gameLoop() {
     else { pwColor = '#2ed573'; pwLabel = 'SS'; }
     ctx.fillStyle = pwColor; ctx.fill();
     ctx.lineWidth = 3; ctx.strokeStyle = '#ffffff'; ctx.stroke();
-
     ctx.font = 'bold 12px Orbitron, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(pwLabel, 0, 0);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(pwLabel, 0, 0);
     ctx.restore();
 
     const distPlayer = Math.hypot(playerX - pw.x, heroPlayerY - pw.y);
     if (distPlayer < pw.size + 25) {
-      sounds.playPowerup();
-      triggerVibrate([40, 40]);
+      sounds.playPowerup(); triggerVibrate([40, 40]);
       if (pw.type === 'supershot') { isSuperShot = true; superShotTimer = 450; spawnFloatingText(playerX, canvas.height - 70, 'SUPER SHOT', '#2ed573'); }
       else if (pw.type === 'shield') { isShieldActive = true; shieldTimer = 450 + (upgradeShield - 1) * 80; spawnFloatingText(playerX, canvas.height - 70, 'SHIELD', '#00d2d3'); }
       else if (pw.type === 'bomb') { if (playerLoadout.includes('bomb')) { bombCharges = Math.min(upgradeBomb, bombCharges + 1); updateSkillButtonsUI(); } spawnFloatingText(playerX, canvas.height - 70, '+1 BOMB', '#ff4757'); }
@@ -1721,17 +1915,12 @@ function gameLoop() {
     if (pw.y > canvas.height) powerups.splice(p, 1);
   }
 
-  // BOSS BULLETS
+  // Boss bullets
   for (let bb = bossBullets.length - 1; bb >= 0; bb--) {
     const bBullet = bossBullets[bb];
-    bBullet.y += bBullet.vy;
-    bBullet.x += bBullet.vx;
-
-    ctx.beginPath();
-    ctx.arc(bBullet.x, bBullet.y - 6, 5, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 71, 87, 0.4)';
-    ctx.fill();
-
+    bBullet.y += bBullet.vy; bBullet.x += bBullet.vx;
+    ctx.beginPath(); ctx.arc(bBullet.x, bBullet.y - 6, 5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 71, 87, 0.4)'; ctx.fill();
     ctx.beginPath(); ctx.arc(bBullet.x, bBullet.y, 8, 0, Math.PI * 2);
     ctx.fillStyle = '#ff4757'; ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = '#ffd700'; ctx.stroke();
@@ -1739,18 +1928,12 @@ function gameLoop() {
     const distHero = Math.hypot(playerX - bBullet.x, heroPlayerY - bBullet.y);
     if (distHero < 30) {
       bossBullets.splice(bb, 1);
-      if (isShieldActive) {
-        spawnFloatingText(playerX, canvas.height - 60, 'BLOCKED', '#00d2d3');
+      if (isShieldActive || isReviveInvuln) {
+        spawnFloatingText(playerX, canvas.height - 60, isReviveInvuln ? 'INVULN' : 'BLOCKED', '#ffd700');
         sounds.playPop();
       } else {
-        lives--; combo = 1;
-        updateHUDValues();
-        sounds.playHit();
-        screenShake = 16;
-        triggerVibrate([100, 50, 100]);
-        updateLivesDisplay();
-        spawnFloatingText(playerX, canvas.height - 60, '-1', '#ff4757');
-        if (lives <= 0) { levelFailed("GAME OVER - NYAWA HABIS"); ctx.restore(); return; }
+        handlePlayerHit();
+        if (!isGameRunning) { ctx.restore(); return; }
       }
       continue;
     }
@@ -1759,7 +1942,7 @@ function gameLoop() {
     }
   }
 
-  // HERO GROUND AURA
+  // Hero aura
   ctx.save();
   const auraAlpha = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
   const auraGrad = ctx.createRadialGradient(playerX, heroPlayerY + 20, 4, playerX, heroPlayerY + 20, 55);
@@ -1773,7 +1956,7 @@ function gameLoop() {
 
   drawHeroVector(ctx, playerX, heroPlayerY, currentActor);
 
-  // MONSTERS
+  // Monsters
   for (let i = monsters.length - 1; i >= 0; i--) {
     const m = monsters[i];
     m.timeAlive += 0.05;
@@ -1802,8 +1985,7 @@ function gameLoop() {
           }
         } else if (m.shootTimer > 60) {
           m.aimTimer = 36;
-          m.aimTargetX = playerX;
-          m.aimTargetY = heroPlayerY;
+          m.aimTargetX = playerX; m.aimTargetY = heroPlayerY;
           spawnTelegraph(m.x, m.y + m.size, playerX, heroPlayerY, 36, '#ff2e88');
         }
 
@@ -1827,8 +2009,7 @@ function gameLoop() {
 
         if (!m.noWeakPoint) {
           m.coreTimer++;
-          const cycle = 180;
-          const openDur = 60;
+          const cycle = 180, openDur = 60;
           const wasOpen = m.coreOpen;
           m.coreOpen = (m.coreTimer % cycle) < openDur;
           if (m.coreOpen && !wasOpen) m.coreGlow = 0;
@@ -1841,7 +2022,6 @@ function gameLoop() {
           case 'stealth': m.y += m.speed; m.opacity = 0.3 + Math.abs(Math.sin(m.timeAlive * 2)) * 0.7; break;
           default: m.y += m.speed; break;
         }
-
         if (m.canShoot) {
           if (m.aimTimer > 0) {
             m.aimTimer--;
@@ -1857,8 +2037,7 @@ function gameLoop() {
             m.shootCooldown--;
             if (m.shootCooldown <= 0 && m.y > 40 && m.y < canvas.height - 100) {
               m.aimTimer = 30;
-              m.aimTargetX = playerX;
-              m.aimTargetY = heroPlayerY;
+              m.aimTargetX = playerX; m.aimTargetY = heroPlayerY;
               spawnTelegraph(m.x, m.y + m.size, playerX, heroPlayerY, 30, '#00d2d3');
             }
           }
@@ -1866,14 +2045,12 @@ function gameLoop() {
       }
     }
 
+    // Draw
     ctx.save();
     ctx.globalAlpha = m.opacity || 1.0;
-
     ctx.beginPath();
     ctx.ellipse(m.x, canvas.height - 38, m.size * 0.7, m.size * 0.25, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.fill();
-
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fill();
     ctx.translate(m.x, m.y);
 
     if (m.type.startsWith('boss')) {
@@ -1881,23 +2058,18 @@ function gameLoop() {
       ctx.rotate((m.aura || 0));
       ctx.beginPath();
       ctx.arc(0, 0, m.size + 15, 0, Math.PI * 2);
-      ctx.setLineDash([10, 14]);
-      ctx.lineWidth = 4;
+      ctx.setLineDash([10, 14]); ctx.lineWidth = 4;
       ctx.strokeStyle = currentTheme.accent;
-      ctx.globalAlpha = 0.55;
-      ctx.stroke();
+      ctx.globalAlpha = 0.55; ctx.stroke();
       ctx.setLineDash([]);
       ctx.restore();
-
       ctx.save();
       ctx.rotate(-(m.aura || 0) * 0.8);
       ctx.beginPath();
       ctx.arc(0, 0, m.size + 28, 0, Math.PI * 2);
-      ctx.setLineDash([4, 18]);
-      ctx.lineWidth = 2.5;
+      ctx.setLineDash([4, 18]); ctx.lineWidth = 2.5;
       ctx.strokeStyle = '#ffd700';
-      ctx.globalAlpha = 0.45;
-      ctx.stroke();
+      ctx.globalAlpha = 0.45; ctx.stroke();
       ctx.setLineDash([]);
       ctx.restore();
       ctx.globalAlpha = m.opacity || 1.0;
@@ -1908,22 +2080,14 @@ function gameLoop() {
       bossGrad.addColorStop(0, '#ffffff');
       bossGrad.addColorStop(0.4, m.color);
       bossGrad.addColorStop(1, '#000000');
-
-      ctx.beginPath();
-      ctx.arc(0, 0, m.size, 0, Math.PI * 2);
-      ctx.fillStyle = bossGrad;
-      ctx.fill();
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = '#ffd700';
-      ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, m.size, 0, Math.PI * 2);
+      ctx.fillStyle = bossGrad; ctx.fill();
+      ctx.lineWidth = 5; ctx.strokeStyle = '#ffd700'; ctx.stroke();
 
       ctx.fillStyle = '#ffd700';
       ctx.beginPath();
-      ctx.moveTo(-30, -m.size);
-      ctx.lineTo(-15, -m.size - 25);
-      ctx.lineTo(0, -m.size - 10);
-      ctx.lineTo(15, -m.size - 25);
-      ctx.lineTo(30, -m.size);
+      ctx.moveTo(-30, -m.size); ctx.lineTo(-15, -m.size - 25); ctx.lineTo(0, -m.size - 10);
+      ctx.lineTo(15, -m.size - 25); ctx.lineTo(30, -m.size);
       ctx.closePath(); ctx.fill();
 
       ctx.fillStyle = '#ffffff';
@@ -1947,14 +2111,11 @@ function gameLoop() {
           coreGrad.addColorStop(0, 'rgba(255, 50, 50, 0.95)');
           coreGrad.addColorStop(0.5, 'rgba(255, 200, 0, 0.7)');
           coreGrad.addColorStop(1, 'rgba(255, 50, 50, 0)');
-          ctx.fillStyle = coreGrad;
-          ctx.fill();
+          ctx.fillStyle = coreGrad; ctx.fill();
           ctx.beginPath();
           ctx.arc(0, 0, m.size * 0.6 * pulse, 0, Math.PI * 2);
-          ctx.strokeStyle = '#ffd700';
-          ctx.lineWidth = 3;
-          ctx.globalAlpha = 0.9;
-          ctx.stroke();
+          ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 3;
+          ctx.globalAlpha = 0.9; ctx.stroke();
           ctx.restore();
         } else {
           ctx.save();
@@ -1962,8 +2123,7 @@ function gameLoop() {
           ctx.arc(0, 0, m.size * 0.4, 0, Math.PI * 2);
           ctx.strokeStyle = 'rgba(100, 100, 150, 0.5)';
           ctx.lineWidth = 2;
-          ctx.setLineDash([4, 4]);
-          ctx.stroke();
+          ctx.setLineDash([4, 4]); ctx.stroke();
           ctx.setLineDash([]);
           ctx.restore();
         }
@@ -1991,17 +2151,13 @@ function gameLoop() {
       ctx.fillStyle = radGrad; ctx.fill();
       ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.stroke();
     }
-
     if (m.hitFlash > 0) {
       ctx.save();
       ctx.globalAlpha = (m.hitFlash / 8) * 0.85;
-      ctx.beginPath();
-      ctx.arc(0, 0, m.size * 1.05, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, m.size * 1.05, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff'; ctx.fill();
       ctx.restore();
     }
-
     if (m.maxHp > 1 && !m.type.startsWith('boss')) {
       let widthBar = m.size * 1.5;
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -2009,9 +2165,9 @@ function gameLoop() {
       ctx.fillStyle = '#2ed573';
       ctx.fillRect(-widthBar/2, -m.size - 18, (m.hp / m.maxHp) * widthBar, 8);
     }
-
     ctx.restore();
 
+    // Boss HP bar
     if (m.type.startsWith('boss')) {
       ctx.save();
       let barWidth = Math.min(400, canvas.width * 0.6);
@@ -2020,16 +2176,13 @@ function gameLoop() {
       ctx.fillRect(barX, 15, barWidth, 18);
       ctx.fillStyle = '#ff4757';
       ctx.fillRect(barX, 15, (Math.max(0, m.hp) / m.maxHp) * barWidth, 18);
-      ctx.strokeStyle = '#ffd700';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
       ctx.strokeRect(barX, 15, barWidth, 18);
-
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 12px Orbitron, sans-serif';
       ctx.textAlign = 'center';
       const coreStatus = (!m.noWeakPoint) ? (m.coreOpen ? ' [CRITICAL]' : '') : '';
       ctx.fillText(`BOSS HP: ${Math.ceil(Math.max(0, m.hp))} / ${m.maxHp}${coreStatus}`, canvas.width / 2, 29);
-
       if (!m.noWeakPoint) {
         const wpY = 38;
         const cycle = 180;
@@ -2044,21 +2197,16 @@ function gameLoop() {
 
     if (m.y > canvas.height - 55 && !m.type.startsWith('boss')) {
       monsters.splice(i, 1);
-      if (isShieldActive) {
-        spawnFloatingText(playerX, canvas.height - 60, 'BLOCKED', '#00d2d3');
+      if (isShieldActive || isReviveInvuln) {
+        spawnFloatingText(playerX, canvas.height - 60, isReviveInvuln ? 'INVULN' : 'BLOCKED', '#ffd700');
       } else {
-        lives--; combo = 1;
-        updateHUDValues();
-        sounds.playHit();
-        screenShake = 14;
-        triggerVibrate([100, 50, 100]);
-        updateLivesDisplay();
-        if (lives <= 0) { levelFailed("GAME OVER - NYAWA HABIS"); ctx.restore(); return; }
+        handlePlayerHit();
+        if (!isGameRunning) { ctx.restore(); return; }
       }
     }
   }
 
-  // PARTICLES
+  // Particles
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.x += p.vx; p.y += p.vy; p.life -= 0.04;
@@ -2069,21 +2217,18 @@ function gameLoop() {
     ctx.fillStyle = p.color;
     if (p.star) {
       ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.rot || 0);
+      ctx.translate(p.x, p.y); ctx.rotate(p.rot || 0);
       ctx.beginPath();
       for (let s = 0; s < 5; s++) {
         const a = (Math.PI * 2 / 5) * s - Math.PI / 2;
         const r = p.size * 1.6;
-        const x1 = Math.cos(a) * r;
-        const y1 = Math.sin(a) * r;
+        const x1 = Math.cos(a) * r, y1 = Math.sin(a) * r;
         if (s === 0) ctx.moveTo(x1, y1); else ctx.lineTo(x1, y1);
         const a2 = a + Math.PI / 5;
         const r2 = p.size * 0.7;
         ctx.lineTo(Math.cos(a2) * r2, Math.sin(a2) * r2);
       }
-      ctx.closePath();
-      ctx.fill();
+      ctx.closePath(); ctx.fill();
       ctx.restore();
     } else {
       ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
@@ -2096,8 +2241,87 @@ function gameLoop() {
 }
 
 // =============================================================
-// 17. LEVEL COMPLETE / FAILED
+// 17. PLAYER HIT / REVIVE / FAIL
 // =============================================================
+function handlePlayerHit() {
+  if (isReviveInvuln) return;
+  if (gameMode === 'daily' && currentDailyModifier && currentDailyModifier.id === 'one_life') {
+    lives = 0;
+  } else {
+    lives--;
+  }
+  combo = 1;
+  updateHUDValues();
+  sounds.playHit();
+  screenShake = 16;
+  triggerVibrate([100, 50, 100]);
+  updateLivesDisplay();
+  spawnFloatingText(playerX, canvas.height - 60, '-1', '#ff4757');
+  if (lives <= 0) {
+    // Offer revive atau fail
+    offerReviveOrFail();
+  }
+}
+
+async function offerReviveOrFail() {
+  isGameRunning = false;
+  isGamePaused = false;
+  sounds.stopBGM();
+
+  const todayKey = getTodayKey();
+  reviveQuota = await getReviveQuota(todayKey);
+
+  if (reviveUsedThisRun || reviveQuota <= 0) {
+    finalizeFail();
+    return;
+  }
+
+  const modal = document.getElementById('modal-revive');
+  const quotaEl = document.getElementById('revive-quota');
+  if (quotaEl) quotaEl.innerText = reviveQuota;
+  if (modal) modal.classList.remove('hidden');
+}
+
+async function doRevive() {
+  const todayKey = getTodayKey();
+  reviveQuota = await getReviveQuota(todayKey);
+  reviveQuota = Math.max(0, reviveQuota - 1);
+  await saveReviveQuota(todayKey, reviveQuota);
+  reviveUsedThisRun = true;
+
+  lives = 1;
+  isReviveInvuln = true;
+  reviveInvulnTimer = 120; // 2 detik
+  updateLivesDisplay();
+  updateHUDValues();
+  updateReviveQuotaUI();
+
+  // Bersihkan peluru musuh
+  bossBullets = [];
+
+  isGameRunning = true;
+  isGamePaused = false;
+  sounds.startBGM();
+  spawnFloatingText(playerX, canvas.height - 70, 'REVIVED!', '#39ff14');
+  triggerVibrate([200, 50, 200]);
+  requestAnimationFrame(gameLoop);
+}
+
+// =============================================================
+// 18. LEVEL COMPLETE / FAILED
+// =============================================================
+function onLevelCleared() {
+  if (gameMode === 'endless') { finalizeEndless(); return; }
+  if (gameMode === 'daily') { finalizeDaily(true); return; }
+  levelComplete();
+}
+
+function onLevelFailed(reason) {
+  if (gameMode === 'endless') { finalizeEndless(); return; }
+  if (gameMode === 'daily') { finalizeDaily(false); return; }
+  levelFailed(reason);
+}
+
 async function levelComplete() {
   isGameRunning = false;
   isGamePaused = false;
@@ -2120,7 +2344,6 @@ async function levelComplete() {
     const rc = $('result-coins'); if (rc) rc.innerText = `+${levelCoinsEarned}`;
     const rl = $('result-level'); if (rl) rl.innerText = levelConfig.level;
     const rk = $('result-kills'); if (rk) rk.innerText = `${levelKills} Target`;
-
     const starContainer = $('result-stars');
     if (starContainer) {
       let html = '';
@@ -2129,10 +2352,8 @@ async function levelComplete() {
       }
       starContainer.innerHTML = html;
     }
-
     const icon = $('result-icon');
     if (icon) { icon.innerHTML = '<use href="#i-trophy"/>'; icon.classList.remove('fail'); }
-
     const nextBtn = $('btn-next-level');
     if (nextBtn) nextBtn.classList.remove('hidden');
     const modal = $('modal-result');
@@ -2151,7 +2372,7 @@ async function levelComplete() {
   }
 }
 
-function levelFailed(reasonTitle = "MISI GAGAL") {
+function levelFailed(reasonTitle) {
   isGameRunning = false;
   isGamePaused = false;
   sounds.stopBGM();
@@ -2161,308 +2382,10 @@ function levelFailed(reasonTitle = "MISI GAGAL") {
   saveScoreToGlobalLeaderboard(playerName, score, levelConfig.level);
 
   const $ = id => document.getElementById(id);
-  const rt = $('result-title'); if (rt) rt.innerText = reasonTitle;
+  const rt = $('result-title'); if (rt) rt.innerText = reasonTitle || "MISI GAGAL";
   const rpn = $('result-player-name'); if (rpn) rpn.innerText = playerName;
   const rs = $('result-score'); if (rs) rs.innerText = score;
   const rc = $('result-coins'); if (rc) rc.innerText = `+${levelCoinsEarned}`;
   const rl = $('result-level'); if (rl) rl.innerText = levelConfig.level;
   const rk = $('result-kills'); if (rk) rk.innerText = `${levelKills} Target`;
-
   const starContainer = $('result-stars');
-  if (starContainer) {
-    starContainer.innerHTML = '<span style="color:#566a8c;font-size:12px;">—</span>';
-  }
-
-  const icon = $('result-icon');
-  if (icon) { icon.innerHTML = '<use href="#i-skull"/>'; icon.classList.add('fail'); }
-
-  const nextBtn = $('btn-next-level');
-  if (nextBtn) nextBtn.classList.add('hidden');
-  const modal = $('modal-result');
-  if (modal) modal.classList.remove('hidden');
-}
-
-// =============================================================
-// 18. FIREBASE LEADERBOARD — STRUKTUR TIDAK DIUBAH
-// =============================================================
-function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
-  const cleanName = (name || 'Pahlawan').trim();
-  if (!cleanName) return;
-
-  const playerKey = cleanName.toLowerCase().replace(/[^a-z0-9]/g, "_");
-  const numScore = Number(scoreVal) || 0;
-  const numLevel = Number(levelVal) || 1;
-  const sortValue = (numLevel * 100000000) + numScore;
-
-  let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
-  let existingIndex = localScores.findIndex(s => (s.name || '').trim().toLowerCase() === cleanName.toLowerCase());
-
-  let shouldUpdateLocal = false;
-  if (existingIndex === -1) {
-    shouldUpdateLocal = true;
-    localScores.push({ name: cleanName, score: numScore, level: numLevel, sortValue });
-  } else {
-    let existing = localScores[existingIndex];
-    let oldLevel = Number(existing.level) || 1;
-    let oldScore = Number(existing.score) || 0;
-    if (numLevel > oldLevel || (numLevel === oldLevel && numScore > oldScore)) {
-      shouldUpdateLocal = true;
-      localScores[existingIndex] = { name: cleanName, score: numScore, level: numLevel, sortValue };
-    }
-  }
-
-  if (shouldUpdateLocal) {
-    localScores.sort((a, b) => {
-      let lvlA = Number(a.level) || 1, lvlB = Number(b.level) || 1;
-      if (lvlB !== lvlA) return lvlB - lvlA;
-      return (Number(b.score) || 0) - (Number(a.score) || 0);
-    });
-    DB.set('pahlawan_scores', JSON.stringify(localScores.slice(0, 20)));
-  }
-
-  if (db && playerKey) {
-    const playerRef = db.ref('leaderboard/' + playerKey);
-    playerRef.once('value').then(snapshot => {
-      let existingData = snapshot.val();
-      let shouldUpdateDb = false;
-
-      if (!existingData) shouldUpdateDb = true;
-      else {
-        let oldLevel = Number(existingData.level) || 0;
-        let oldScore = Number(existingData.score) || 0;
-        if (numLevel > oldLevel || (numLevel === oldLevel && numScore > oldScore)) shouldUpdateDb = true;
-      }
-
-      if (shouldUpdateDb) {
-        playerRef.set({
-          name: cleanName,
-          score: numScore,
-          level: numLevel,
-          sortValue: sortValue,
-          timestamp: Date.now()
-        }).catch(err => console.error("Firebase save error:", err));
-      }
-    }).catch(err => console.error("Firebase read error:", err));
-  }
-}
-
-function openLeaderboard() {
-  const modal = document.getElementById('modal-leaderboard');
-  if (modal) modal.classList.remove('hidden');
-  const tbody = document.getElementById('leaderboard-body');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Memuat Papan Peringkat Realtime...</td></tr>';
-  if (!db) { showLocalScores(tbody); return; }
-
-  if (leaderboardRef && leaderboardHandler) {
-    try { leaderboardRef.off('value', leaderboardHandler); } catch(e) {}
-  }
-
-  leaderboardRef = db.ref('leaderboard');
-  leaderboardHandler = (snapshot) => {
-    if (!snapshot.exists()) { showLocalScores(tbody); return; }
-    let bestMap = new Map();
-    snapshot.forEach((childSnapshot) => {
-      let val = childSnapshot.val();
-      if (!val || !val.name) return;
-      let cleanName = val.name.trim();
-      let key = cleanName.toLowerCase();
-      let currentLevel = Number(val.level) || 1;
-      let currentScore = Number(val.score) || 0;
-      if (!bestMap.has(key)) bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
-      else {
-        let existing = bestMap.get(key);
-        if (currentLevel > existing.level || (currentLevel === existing.level && currentScore > existing.score))
-          bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
-      }
-    });
-    let uniqueList = Array.from(bestMap.values());
-    uniqueList.sort((a, b) => {
-      if (b.level !== a.level) return b.level - a.level;
-      return b.score - a.score;
-    });
-    let top10 = uniqueList.slice(0, 10);
-    if (top10.length === 0) { showLocalScores(tbody); return; }
-    tbody.innerHTML = top10.map((s, index) => `
-      <tr>
-        <td>${index === 0 ? '1' : index === 1 ? '2' : index === 2 ? '3' : index + 1}</td>
-        <td><strong>${escapeHtml(s.name)}</strong></td>
-        <td>Lvl ${s.level || 1}</td>
-        <td><strong>${s.score || 0}</strong></td>
-      </tr>`).join('');
-  };
-  leaderboardRef.on('value', leaderboardHandler, (error) => {
-    console.error("Firebase Listener Error:", error);
-    showLocalScores(tbody);
-  });
-}
-
-function showLocalScores(tbody) {
-  let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
-  let bestMap = new Map();
-  localScores.forEach(s => {
-    if (!s || !s.name) return;
-    let cleanName = s.name.trim();
-    let key = cleanName.toLowerCase();
-    let currentLevel = Number(s.level) || 1;
-    let currentScore = Number(s.score) || 0;
-    if (!bestMap.has(key)) bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
-    else {
-      let existing = bestMap.get(key);
-      if (currentLevel > existing.level || (currentLevel === existing.level && currentScore > existing.score))
-        bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
-    }
-  });
-  let uniqueList = Array.from(bestMap.values());
-  uniqueList.sort((a, b) => {
-    if (b.level !== a.level) return b.level - a.level;
-    return b.score - a.score;
-  });
-  if (uniqueList.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Belum ada skor tercatat.</td></tr>';
-  } else {
-    tbody.innerHTML = uniqueList.slice(0, 10).map((s, index) => `
-      <tr>
-        <td>${index === 0 ? '1' : index === 1 ? '2' : index === 2 ? '3' : index + 1}</td>
-        <td><strong>${escapeHtml(s.name)}</strong></td>
-        <td>Lvl ${s.level || 1}</td>
-        <td><strong>${s.score || 0}</strong></td>
-      </tr>`).join('');
-  }
-}
-
-function escapeHtml(text) {
-  return String(text || 'Pahlawan').replace(/[&<>"']/g, function(m) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
-  });
-}
-
-// =============================================================
-// 19. LOADOUT MODAL
-// =============================================================
-function showLoadoutModal(levelConfig, onDone) {
-  loadoutCallback = onDone;
-  loadoutCurrentSelection = [...playerLoadout];
-
-  const lvlEl = document.getElementById('loadout-level');
-  if (lvlEl) lvlEl.innerText = levelConfig.level;
-  const themeEl = document.getElementById('loadout-theme');
-  if (themeEl) themeEl.innerText = currentTheme.name;
-
-  const cards = document.querySelectorAll('.loadout-card');
-  const startBtn = document.getElementById('btn-start-loaded');
-  const updateVisual = () => {
-    cards.forEach(c => {
-      const skill = c.dataset.skill;
-      const selected = loadoutCurrentSelection.includes(skill);
-      c.classList.toggle('selected', selected);
-      c.classList.toggle('disabled', !selected && loadoutCurrentSelection.length >= 2);
-    });
-    if (startBtn) startBtn.disabled = loadoutCurrentSelection.length !== 2;
-  };
-
-  cards.forEach(card => {
-    const skill = card.dataset.skill;
-    card.onclick = () => {
-      if (loadoutCurrentSelection.includes(skill)) {
-        loadoutCurrentSelection = loadoutCurrentSelection.filter(s => s !== skill);
-      } else {
-        if (loadoutCurrentSelection.length >= 2) {
-          loadoutCurrentSelection.shift();
-        }
-        loadoutCurrentSelection.push(skill);
-      }
-      updateVisual();
-    };
-  });
-
-  updateVisual();
-  const modal = document.getElementById('modal-loadout');
-  if (modal) modal.classList.remove('hidden');
-}
-
-// =============================================================
-// 20. NARRATIVE SYSTEM
-// =============================================================
-function showNarrative(lines, speaker, portrait, onDone) {
-  if (!lines || lines.length === 0) { if (onDone) onDone(); return; }
-  storyQueue = lines.slice();
-  storyOnDone = onDone || null;
-  const spk = document.getElementById('narrative-speaker');
-  if (spk) spk.innerText = speaker || '';
-  const psvg = document.getElementById('narrative-portrait-svg');
-  if (psvg) psvg.innerHTML = `<use href="#${portrait || 'i-vega'}"/>`;
-  const overlay = document.getElementById('narrative-overlay');
-  if (overlay) overlay.classList.remove('hidden');
-  playNextStoryLine();
-}
-
-function playNextStoryLine() {
-  if (storyQueue.length === 0) {
-    const overlay = document.getElementById('narrative-overlay');
-    if (overlay) overlay.classList.add('hidden');
-    const cb = storyOnDone; storyOnDone = null;
-    if (cb) cb();
-    return;
-  }
-  const line = storyQueue.shift();
-  typeStoryLine(line);
-}
-
-function typeStoryLine(line) {
-  storyTyping = true;
-  storyCurrentText = line;
-  storyCurrentIdx = 0;
-  const el = document.getElementById('narrative-text');
-  if (!el) { storyTyping = false; playNextStoryLine(); return; }
-  el.innerHTML = '<span id="story-body"></span><span class="caret">&nbsp;</span>';
-  const body = document.getElementById('story-body');
-  if (storyTimer) clearInterval(storyTimer);
-  storyTimer = setInterval(() => {
-    if (storyCurrentIdx >= storyCurrentText.length) {
-      clearInterval(storyTimer); storyTimer = null; storyTyping = false;
-      return;
-    }
-    if (body) body.textContent += storyCurrentText[storyCurrentIdx++];
-    else storyCurrentIdx++;
-    if (storyCurrentIdx % 3 === 0) sounds.playType();
-  }, 28);
-}
-
-// =============================================================
-// 21. STICKER ALBUM
-// =============================================================
-function unlockSticker(id) {
-  let unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
-  if (!unlocked.includes(id)) {
-    unlocked.push(id);
-    DB.set('pahlawan_stickers', JSON.stringify(unlocked));
-    updateStickerAlbumUI();
-  }
-}
-
-function updateStickerAlbumUI() {
-  const unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
-  const el = document.getElementById('unlocked-count');
-  if (el) el.innerText = unlocked.length;
-}
-
-function openStickerAlbum() {
-  const unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
-  const grid = document.getElementById('sticker-grid');
-  if (!grid) return;
-  grid.innerHTML = (stickersData || DEFAULT_STICKERS).map((sticker, idx) => {
-    const isUnlocked = unlocked.includes(sticker.id);
-    const delay = (idx * 0.03).toFixed(2);
-    return `
-      <div class="sticker-card ${isUnlocked ? '' : 'locked'}" style="animation-delay:${delay}s">
-        <div class="sticker-title">${isUnlocked ? sticker.title : 'Terkunci'}</div>
-      </div>`;
-  }).join('');
-  const modal = document.getElementById('modal-stickers');
-  if (modal) modal.classList.remove('hidden');
-}
-
-// =============================================================
-// END OF FILE
-// =============================================================
