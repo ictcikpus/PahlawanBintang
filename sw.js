@@ -1,9 +1,9 @@
-const CACHE_NAME = 'pahlawan-bintang-v17.2';
+const CACHE_NAME = 'pahlawan-bintang-v17.3';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=17.2',
-  './game.js?v=17.2',
+  './style.css?v=17.3',
+  './game.js?v=17.3',
   './levels.json?v=10.0',
   './stickers.json?v=8.0',
   './manifest.json'
