@@ -30,16 +30,21 @@ class GameDB {
   constructor() { this.db = null; this.ready = this._init(); }
   _init() {
     return new Promise((resolve) => {
+      let settled = false;
+      const finish = (val) => { if (!settled) { settled = true; resolve(val); } };
+      // Safety: jika IndexedDB hang, tetap resolve dalam 2.5 detik
+      setTimeout(() => finish(false), 2500);
       try {
-        if (!window.indexedDB) return resolve(false);
+        if (!window.indexedDB) return finish(false);
         const req = indexedDB.open('pahlawan_bintang', 1);
         req.onupgradeneeded = (e) => {
           const d = e.target.result;
           if (!d.objectStoreNames.contains('kv')) d.createObjectStore('kv');
         };
-        req.onsuccess = (e) => { this.db = e.target.result; resolve(true); };
-        req.onerror = () => resolve(false);
-      } catch(e) { resolve(false); }
+        req.onsuccess = (e) => { this.db = e.target.result; finish(true); };
+        req.onerror = () => finish(false);
+        req.onblocked = () => finish(false);
+      } catch(e) { finish(false); }
     });
   }
   async get(key) {
@@ -518,36 +523,81 @@ let loadoutCallback = null;
 // =============================================================
 // 8. INIT ON LOAD
 // =============================================================
+// =============================================================
+// 8A. BOOTSTRAP — Pasang listener DULUAN sebelum async init
+//     Supaya tombol selalu berfungsi walau async init gagal
+// =============================================================
+function bootstrapUI() {
+  try {
+    setupEventListeners();
+    console.log('✅ [Boot] Event listeners attached');
+  } catch (e) {
+    console.error('❌ [Boot] Failed to attach listeners:', e);
+  }
+}
+
+// Script ada di akhir <body>, jadi DOM sudah diparse
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootstrapUI);
+} else {
+  bootstrapUI();
+}
+
+// =============================================================
+// 8B. ASYNC INIT — non-blocking, aman dari error
+// =============================================================
 window.addEventListener('load', async () => {
-  await DB.ready;
-  playerUUID = await initDeviceId();
-  console.log('Device ID:', playerUUID);
+  // ---- Fase 1: async data (isolated, aman) ----
+  try {
+    await DB.ready;
+    playerUUID = await initDeviceId();
+    console.log('✅ [Boot] Device ID:', playerUUID);
 
-  // Sync state dari localStorage (backward-compatible)
-  coins = Number(localStorage.getItem('pahlawan_coins')) || 0;
-  upgradeFireRate = Number(localStorage.getItem('pahlawan_up_firerate')) || 1;
-  upgradeShield = Number(localStorage.getItem('pahlawan_up_shield')) || 1;
-  upgradeBomb = Number(localStorage.getItem('pahlawan_up_bomb')) || 2;
-  upgradeFreeze = Number(localStorage.getItem('pahlawan_up_freeze')) || 2;
-  playerLoadout = await getLoadout();
-
-  initStarfield();
-  resizeCanvas();
-  window.addEventListener('resize', resizeCanvas);
-  document.getElementById('player-name-input').value = playerName;
-  updateActorSelectionUI();
-  updateShopUI();
-  updateAudioButtonUI();
-
-  await loadGameData();
-
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=15.0').catch(err => console.log('SW Fail:', err));
+    coins = Number(localStorage.getItem('pahlawan_coins')) || 0;
+    upgradeFireRate = Number(localStorage.getItem('pahlawan_up_firerate')) || 1;
+    upgradeShield = Number(localStorage.getItem('pahlawan_up_shield')) || 1;
+    upgradeBomb = Number(localStorage.getItem('pahlawan_up_bomb')) || 2;
+    upgradeFreeze = Number(localStorage.getItem('pahlawan_up_freeze')) || 2;
+    playerLoadout = await getLoadout();
+    console.log('✅ [Boot] Loadout:', playerLoadout);
+  } catch (e) {
+    console.warn('⚠️ [Boot] Async data init partial failure (UI tetap jalan):', e);
   }
 
-  setupEventListeners();
-  updateStickerAlbumUI();
+  // ---- Fase 2: UI init (dengan try/catch masing-masing) ----
+  try {
+    initStarfield();
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
+    const nameInput = document.getElementById('player-name-input');
+    if (nameInput) nameInput.value = playerName;
+
+    updateActorSelectionUI();
+    updateShopUI();
+    updateAudioButtonUI();
+  } catch (e) {
+    console.error('❌ [Boot] UI init error:', e);
+  }
+
+  // ---- Fase 3: load JSON (fallback sudah ada di fungsi) ----
+  try {
+    await loadGameData();
+    console.log('✅ [Boot] Level data loaded:', levelsData.length, 'levels');
+  } catch (e) {
+    console.warn('⚠️ [Boot] loadGameData fail (pakai bawaan):', e);
+    levelsData = generate30Levels();
+    stickersData = DEFAULT_STICKERS;
+  }
+
+  // ---- Fase 4: sticker & service worker ----
+  try { updateStickerAlbumUI(); } catch (e) {}
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js?v=15.1').catch(err => console.log('SW Fail:', err));
+  }
+
+  // ---- Fase 5: SELALU sembunyikan loading screen ----
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
     if (loader) {
