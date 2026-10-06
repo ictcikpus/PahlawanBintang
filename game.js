@@ -1,8 +1,8 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v17
-// Fitur: Rewarded Revive, Endless Mode, Daily Challenge,
-//        Kill Streak, Leaderboard 3 Tab, IndexedDB, Telegraph,
-//        Boss Weak Point, Pre-Level Loadout, Narrative, 12 Tema
+// PAHLAWAN BINTANG — game.js v17.1 (BUG-FREE)
+// Fix: Rewarded revive tidak lagi mematikan spawn loop
+// Fitur: Endless, Daily, Kill Streak, Leaderboard 3 Tab,
+//        IndexedDB, Telegraph, Weak Point, Loadout, Narrative
 // =============================================================
 
 // =============================================================
@@ -23,7 +23,7 @@ let db = null;
 try {
   firebase.initializeApp(firebaseConfig);
   db = firebase.database();
-  console.log("🔥 Firebase Realtime Database Terhubung Berhasil!");
+  console.log("🔥 Firebase Realtime Database Terhubung!");
 } catch(e) {
   console.log("⚠️ Firebase Mode Offline");
 }
@@ -113,21 +113,21 @@ async function getLoadout() {
 async function setLoadout(arr) { await DB.set('pahlawan_loadout', JSON.stringify(arr)); }
 
 // =============================================================
-// 3. TEMA LEVEL
+// 3. TEMA LEVEL (12 variasi)
 // =============================================================
 const LEVEL_THEMES = [
-  { id: 'cosmic', name: 'COSMIC SECTOR', bgTop: '#05061a', bgBottom: '#0e1035', accent: '#00d2ff', accentSoft: 'rgba(0,210,255,0.35)', stars: ['#ffffff','#70a1ff','#ffd700','#00d2d3'], ground: '#2f3640', groundLine: '#00d2ff', monsters: ['#ff4757','#2ed573','#ffa502','#1e90ff','#a55eea'] },
-  { id: 'inferno', name: 'BOSS: INFERNO', bgTop: '#1a0505', bgBottom: '#4a0a05', accent: '#ff6b00', accentSoft: 'rgba(255,107,0,0.4)', stars: ['#ffb142','#ff6b00','#ffd700','#ff3838'], ground: '#2a1010', groundLine: '#ff6b00', monsters: ['#ff6b00','#ffb142','#ff3838','#ffd700'] },
-  { id: 'nebula', name: 'NEBULA DEPTHS', bgTop: '#0d0520', bgBottom: '#1f0a3a', accent: '#a55eea', accentSoft: 'rgba(165,94,234,0.4)', stars: ['#ffffff','#a55eea','#ff2e88','#c3a3ff'], ground: '#26183d', groundLine: '#a55eea', monsters: ['#ff2e88','#a55eea','#ff6bcb','#c3a3ff','#8c46d6'] },
-  { id: 'void', name: 'BOSS: VOID', bgTop: '#0a0010', bgBottom: '#2b0033', accent: '#c86bff', accentSoft: 'rgba(200,107,255,0.4)', stars: ['#c86bff','#ffffff','#7a2bb8','#ff77ff'], ground: '#1c0a24', groundLine: '#c86bff', monsters: ['#c86bff','#7a2bb8','#ff77ff','#e0b3ff'] },
-  { id: 'aurora', name: 'AURORA FIELDS', bgTop: '#021a10', bgBottom: '#043328', accent: '#39ff14', accentSoft: 'rgba(57,255,20,0.35)', stars: ['#ffffff','#39ff14','#00ffaa','#c8ffb0'], ground: '#0e2f1e', groundLine: '#39ff14', monsters: ['#39ff14','#00ffaa','#7dff8e','#ffd700','#2ed573'] },
-  { id: 'cryo', name: 'BOSS: CRYO', bgTop: '#021222', bgBottom: '#053a55', accent: '#4de8ff', accentSoft: 'rgba(77,232,255,0.4)', stars: ['#ffffff','#4de8ff','#70a1ff','#c3f0ff'], ground: '#0d2a3d', groundLine: '#4de8ff', monsters: ['#4de8ff','#70a1ff','#ffffff','#a3d8ff'] },
-  { id: 'magma', name: 'MAGMA CORE', bgTop: '#1a0505', bgBottom: '#3a0f00', accent: '#ff3838', accentSoft: 'rgba(255,56,56,0.35)', stars: ['#ff3838','#ffb142','#ffd700','#ffffff'], ground: '#2a0808', groundLine: '#ff3838', monsters: ['#ff3838','#ff6b00','#ffb142','#ffd700'] },
-  { id: 'titan', name: 'BOSS: TITAN', bgTop: '#001a1a', bgBottom: '#004d4d', accent: '#1abc9c', accentSoft: 'rgba(26,188,156,0.4)', stars: ['#1abc9c','#00ffcc','#ffffff','#a3ffe6'], ground: '#0a2a2a', groundLine: '#1abc9c', monsters: ['#1abc9c','#00ffcc','#16a085','#7cffdd'] },
-  { id: 'gold', name: 'GOLDEN VOID', bgTop: '#1a1000', bgBottom: '#3a2800', accent: '#ffd700', accentSoft: 'rgba(255,215,0,0.4)', stars: ['#ffd700','#ffb142','#ffffff','#ffe680'], ground: '#2a2000', groundLine: '#ffd700', monsters: ['#ffd700','#ffb142','#ff8a00','#ffe680','#fff2b0'] },
-  { id: 'solar', name: 'BOSS: SOLAR', bgTop: '#1a0a00', bgBottom: '#5a1e00', accent: '#ffaa00', accentSoft: 'rgba(255,170,0,0.45)', stars: ['#ffaa00','#ff6600','#ffd700','#ffffff'], ground: '#2e1400', groundLine: '#ffaa00', monsters: ['#ffaa00','#ff6600','#ffd700','#ff2200'] },
-  { id: 'phantom', name: 'PHANTOM REALM', bgTop: '#0a0015', bgBottom: '#23003a', accent: '#ff2e88', accentSoft: 'rgba(255,46,136,0.4)', stars: ['#ff2e88','#a55eea','#ffffff','#ff9ad4'], ground: '#1f0a2a', groundLine: '#ff2e88', monsters: ['#ff2e88','#a55eea','#c86bff','#ff9ad4'] },
-  { id: 'omega', name: 'FINAL BOSS: OMEGA', bgTop: '#000000', bgBottom: '#2a0033', accent: '#ff0055', accentSoft: 'rgba(255,0,85,0.5)', stars: ['#ff0055','#ffd700','#00ffff','#ffffff','#ff00ff'], ground: '#0a0010', groundLine: '#ff0055', monsters: ['#ff0055','#ffd700','#00ffff','#ff00ff','#39ff14'] }
+  { id:'cosmic', name:'COSMIC SECTOR', bgTop:'#05061a', bgBottom:'#0e1035', accent:'#00d2ff', accentSoft:'rgba(0,210,255,0.35)', stars:['#ffffff','#70a1ff','#ffd700','#00d2d3'], ground:'#2f3640', groundLine:'#00d2ff', monsters:['#ff4757','#2ed573','#ffa502','#1e90ff','#a55eea'] },
+  { id:'inferno', name:'BOSS: INFERNO', bgTop:'#1a0505', bgBottom:'#4a0a05', accent:'#ff6b00', accentSoft:'rgba(255,107,0,0.4)', stars:['#ffb142','#ff6b00','#ffd700','#ff3838'], ground:'#2a1010', groundLine:'#ff6b00', monsters:['#ff6b00','#ffb142','#ff3838','#ffd700'] },
+  { id:'nebula', name:'NEBULA DEPTHS', bgTop:'#0d0520', bgBottom:'#1f0a3a', accent:'#a55eea', accentSoft:'rgba(165,94,234,0.4)', stars:['#ffffff','#a55eea','#ff2e88','#c3a3ff'], ground:'#26183d', groundLine:'#a55eea', monsters:['#ff2e88','#a55eea','#ff6bcb','#c3a3ff','#8c46d6'] },
+  { id:'void', name:'BOSS: VOID', bgTop:'#0a0010', bgBottom:'#2b0033', accent:'#c86bff', accentSoft:'rgba(200,107,255,0.4)', stars:['#c86bff','#ffffff','#7a2bb8','#ff77ff'], ground:'#1c0a24', groundLine:'#c86bff', monsters:['#c86bff','#7a2bb8','#ff77ff','#e0b3ff'] },
+  { id:'aurora', name:'AURORA FIELDS', bgTop:'#021a10', bgBottom:'#043328', accent:'#39ff14', accentSoft:'rgba(57,255,20,0.35)', stars:['#ffffff','#39ff14','#00ffaa','#c8ffb0'], ground:'#0e2f1e', groundLine:'#39ff14', monsters:['#39ff14','#00ffaa','#7dff8e','#ffd700','#2ed573'] },
+  { id:'cryo', name:'BOSS: CRYO', bgTop:'#021222', bgBottom:'#053a55', accent:'#4de8ff', accentSoft:'rgba(77,232,255,0.4)', stars:['#ffffff','#4de8ff','#70a1ff','#c3f0ff'], ground:'#0d2a3d', groundLine:'#4de8ff', monsters:['#4de8ff','#70a1ff','#ffffff','#a3d8ff'] },
+  { id:'magma', name:'MAGMA CORE', bgTop:'#1a0505', bgBottom:'#3a0f00', accent:'#ff3838', accentSoft:'rgba(255,56,56,0.35)', stars:['#ff3838','#ffb142','#ffd700','#ffffff'], ground:'#2a0808', groundLine:'#ff3838', monsters:['#ff3838','#ff6b00','#ffb142','#ffd700'] },
+  { id:'titan', name:'BOSS: TITAN', bgTop:'#001a1a', bgBottom:'#004d4d', accent:'#1abc9c', accentSoft:'rgba(26,188,156,0.4)', stars:['#1abc9c','#00ffcc','#ffffff','#a3ffe6'], ground:'#0a2a2a', groundLine:'#1abc9c', monsters:['#1abc9c','#00ffcc','#16a085','#7cffdd'] },
+  { id:'gold', name:'GOLDEN VOID', bgTop:'#1a1000', bgBottom:'#3a2800', accent:'#ffd700', accentSoft:'rgba(255,215,0,0.4)', stars:['#ffd700','#ffb142','#ffffff','#ffe680'], ground:'#2a2000', groundLine:'#ffd700', monsters:['#ffd700','#ffb142','#ff8a00','#ffe680','#fff2b0'] },
+  { id:'solar', name:'BOSS: SOLAR', bgTop:'#1a0a00', bgBottom:'#5a1e00', accent:'#ffaa00', accentSoft:'rgba(255,170,0,0.45)', stars:['#ffaa00','#ff6600','#ffd700','#ffffff'], ground:'#2e1400', groundLine:'#ffaa00', monsters:['#ffaa00','#ff6600','#ffd700','#ff2200'] },
+  { id:'phantom', name:'PHANTOM REALM', bgTop:'#0a0015', bgBottom:'#23003a', accent:'#ff2e88', accentSoft:'rgba(255,46,136,0.4)', stars:['#ff2e88','#a55eea','#ffffff','#ff9ad4'], ground:'#1f0a2a', groundLine:'#ff2e88', monsters:['#ff2e88','#a55eea','#c86bff','#ff9ad4'] },
+  { id:'omega', name:'FINAL BOSS: OMEGA', bgTop:'#000000', bgBottom:'#2a0033', accent:'#ff0055', accentSoft:'rgba(255,0,85,0.5)', stars:['#ff0055','#ffd700','#00ffff','#ffffff','#ff00ff'], ground:'#0a0010', groundLine:'#ff0055', monsters:['#ff0055','#ffd700','#00ffff','#ff00ff','#39ff14'] }
 ];
 
 function getThemeForLevel(levelNum) {
@@ -145,24 +145,24 @@ const BOSS_SIZES = { 5: 62, 10: 80, 15: 96, 20: 112, 25: 128, 30: 148 };
 let currentTheme = LEVEL_THEMES[0];
 
 // =============================================================
-// 4. STORY
+// 4. STORY DATA
 // =============================================================
 const STORY = {
-  1:  { before: { speaker: 'VEGA', portrait: 'i-vega', lines: ['Pahlawan... gelombang Void datang dari Nebula.', 'Selamatkan 5 sektor. Kita satu-satunya harapan.'] },
-        after:  { speaker: 'PAHLAWAN', portrait: 'i-hero-portrait', lines: ['Sektor pertama... aman.'] } },
-  3:  { before: { speaker: 'ARIA', portrait: 'i-aria', lines: ['Aku Dr. Aria. Musuh mulai bervariasi.', 'Gunakan upgrade di Toko untuk bertahan.'] } },
-  5:  { before: { speaker: 'VEGA', portrait: 'i-vega', lines: ['Peringatan! Bos pertama mendekat.', 'Fokus ke inti merahnya saat terbuka.'] },
-        after:  { speaker: 'VEGA', portrait: 'i-vega', lines: ['Kerja bagus! Namun ini baru permulaan.'] } },
-  8:  { before: { speaker: 'RIVAL', portrait: 'i-rival', lines: ['Kau... masih hidup?', 'Jangan harap bisa lewat sektorku.'] } },
-  10: { before: { speaker: 'VEGA', portrait: 'i-vega', lines: ['Ini... mantan rekanku.', 'Dia jatuh ke Void. Kalahkan dia. Bebaskan dia.'] },
-        after:  { speaker: 'ARIA', portrait: 'i-aria', lines: ['Aku mendeteksi sinyal aneh. Ada dalang di balik ini.'] } },
-  15: { before: { speaker: 'VEGA', portrait: 'i-vega', lines: ['Bos Cryo. Ciptaan eksperimen kami sendiri.', 'Maafkan aku, Pahlawan.'] },
-        after:  { speaker: 'RIVAL', portrait: 'i-rival', lines: ['Kau kuat. Bergabung denganku, atau hancur.'] } },
-  20: { before: { speaker: 'ARIA', portrait: 'i-aria', lines: ['Titan — penjaga inti galaksi.', 'Aku percaya padamu.'] },
-        after:  { speaker: 'VEGA', portrait: 'i-vega', lines: ['Aria... dia dikorbankan untuk membuka jalan.', 'Lanjutkan. Demi dia.'] } },
-  25: { before: { speaker: 'VILLAIN', portrait: 'i-villain', lines: ['Aku adalah Void itu sendiri.', 'Setiap pahlawan yang kau kalahkan... adalah aku.'] } },
-  30: { before: { speaker: 'VILLAIN', portrait: 'i-villain', lines: ['Ini akhirnya. Kau vs aku. Takdir atau kehancuran.'] },
-        after:  { speaker: 'PAHLAWAN', portrait: 'i-hero-portrait', lines: ['Damai... akhirnya.'] } }
+  1:  { before:{ speaker:'VEGA', portrait:'i-vega', lines:['Pahlawan... gelombang Void datang dari Nebula.','Selamatkan 5 sektor. Kita satu-satunya harapan.'] },
+        after:{ speaker:'PAHLAWAN', portrait:'i-hero-portrait', lines:['Sektor pertama... aman.'] } },
+  3:  { before:{ speaker:'ARIA', portrait:'i-aria', lines:['Aku Dr. Aria. Musuh mulai bervariasi.','Gunakan upgrade di Toko untuk bertahan.'] } },
+  5:  { before:{ speaker:'VEGA', portrait:'i-vega', lines:['Peringatan! Bos pertama mendekat.','Fokus ke inti merahnya saat terbuka.'] },
+        after:{ speaker:'VEGA', portrait:'i-vega', lines:['Kerja bagus! Namun ini baru permulaan.'] } },
+  8:  { before:{ speaker:'RIVAL', portrait:'i-rival', lines:['Kau... masih hidup?','Jangan harap bisa lewat sektorku.'] } },
+  10: { before:{ speaker:'VEGA', portrait:'i-vega', lines:['Ini... mantan rekanku.','Dia jatuh ke Void. Kalahkan dia. Bebaskan dia.'] },
+        after:{ speaker:'ARIA', portrait:'i-aria', lines:['Aku mendeteksi sinyal aneh. Ada dalang di balik ini.'] } },
+  15: { before:{ speaker:'VEGA', portrait:'i-vega', lines:['Bos Cryo. Ciptaan eksperimen kami sendiri.','Maafkan aku, Pahlawan.'] },
+        after:{ speaker:'RIVAL', portrait:'i-rival', lines:['Kau kuat. Bergabung denganku, atau hancur.'] } },
+  20: { before:{ speaker:'ARIA', portrait:'i-aria', lines:['Titan — penjaga inti galaksi.','Aku percaya padamu.'] },
+        after:{ speaker:'VEGA', portrait:'i-vega', lines:['Aria... dia dikorbankan untuk membuka jalan.','Lanjutkan. Demi dia.'] } },
+  25: { before:{ speaker:'VILLAIN', portrait:'i-villain', lines:['Aku adalah Void itu sendiri.','Setiap pahlawan yang kau kalahkan... adalah aku.'] } },
+  30: { before:{ speaker:'VILLAIN', portrait:'i-villain', lines:['Ini akhirnya. Kau vs aku. Takdir atau kehancuran.'] },
+        after:{ speaker:'PAHLAWAN', portrait:'i-hero-portrait', lines:['Damai... akhirnya.'] } }
 };
 
 // =============================================================
@@ -170,23 +170,22 @@ const STORY = {
 // =============================================================
 function generate30Levels() {
   const levels = [];
-  const enemyTypesPool = ["jelly", "donut", "cloud", "crystal", "splitter"];
-  const algorithmsPool = ["linear", "zigzag", "gravity", "stealth", "swarm", "splitter"];
+  const enemyTypesPool = ["jelly","donut","cloud","crystal","splitter"];
+  const algorithmsPool = ["linear","zigzag","gravity","stealth","swarm","splitter"];
   for (let i = 1; i <= 30; i++) {
     if (i % 5 === 0) {
-      const hpScale = { 5: 150, 10: 350, 15: 600, 20: 1000, 25: 1500, 30: 2500 };
+      const hpScale = { 5:150, 10:350, 15:600, 20:1000, 25:1500, 30:2500 };
       levels.push({
-        level: i, targetKills: 1, targetScore: i * 2000, speed: 1.0, spawnRate: 2000,
-        algorithm: `boss_${i}`, types: [`boss${i}`], bossHp: hpScale[i] || 150
+        level:i, targetKills:1, targetScore:i*2000, speed:1.0, spawnRate:2000,
+        algorithm:`boss_${i}`, types:[`boss${i}`], bossHp:hpScale[i]||150
       });
     } else {
-      const availableTypes = enemyTypesPool.slice(0, Math.min(enemyTypesPool.length, Math.floor(i / 3) + 1));
-      const chosenAlgo = algorithmsPool[(i - 1) % algorithmsPool.length];
+      const availableTypes = enemyTypesPool.slice(0, Math.min(enemyTypesPool.length, Math.floor(i/3)+1));
+      const chosenAlgo = algorithmsPool[(i-1) % algorithmsPool.length];
       levels.push({
-        level: i, targetKills: 10 + (i * 3), targetScore: i * 1500,
-        speed: 1.0 + (i * 0.08),
-        spawnRate: Math.max(500, 1500 - (i * 30)),
-        algorithm: chosenAlgo, types: availableTypes
+        level:i, targetKills:10+(i*3), targetScore:i*1500,
+        speed:1.0+(i*0.08), spawnRate:Math.max(500, 1500-(i*30)),
+        algorithm:chosenAlgo, types:availableTypes
       });
     }
   }
@@ -195,33 +194,32 @@ function generate30Levels() {
 let levelsData = generate30Levels();
 
 const DEFAULT_STICKERS = [
-  { id: 1, title: "Pahlawan Pemula" },
-  { id: 2, title: "Penembak Jitu" },
-  { id: 3, title: "Penjelajah Galaksi" },
-  { id: 4, title: "Penakluk Boss 1" },
-  { id: 5, title: "Master Kombinasi" },
-  { id: 6, title: "Pahlawan Legendaris" }
+  { id:1, title:"Pahlawan Pemula" },
+  { id:2, title:"Penembak Jitu" },
+  { id:3, title:"Penjelajah Galaksi" },
+  { id:4, title:"Penakluk Boss 1" },
+  { id:5, title:"Master Kombinasi" },
+  { id:6, title:"Pahlawan Legendaris" }
 ];
 let stickersData = DEFAULT_STICKERS;
 
 const ENEMY_SCORE_TABLE = {
-  jelly: 100, donut: 200, cloud: 250, crystal: 300, splitter: 350,
-  boss5: 2500, boss10: 5000, boss15: 7500, boss20: 10000, boss25: 12500, boss30: 20000
+  jelly:100, donut:200, cloud:250, crystal:300, splitter:350,
+  boss5:2500, boss10:5000, boss15:7500, boss20:10000, boss25:12500, boss30:20000
 };
 
-// Daily modifiers
 const DAILY_MODIFIERS = [
-  { id: 'double_speed', name: 'DOUBLE SPEED', desc: 'Musuh bergerak 2× lebih cepat', icon: 'i-bolt' },
-  { id: 'no_shield', name: 'NO SHIELD', desc: 'Skill Shield dimatikan', icon: 'i-shield' },
-  { id: 'one_life', name: 'ONE LIFE', desc: 'Hanya 1 nyawa', icon: 'i-heart' },
-  { id: 'double_monster', name: 'SWARM', desc: 'Musuh spawn 2× lebih banyak', icon: 'i-target' }
+  { id:'double_speed',   name:'DOUBLE SPEED', desc:'Musuh bergerak 2× lebih cepat', icon:'i-bolt' },
+  { id:'no_shield',      name:'NO SHIELD',    desc:'Skill Shield dimatikan',        icon:'i-shield' },
+  { id:'one_life',       name:'ONE LIFE',     desc:'Hanya 1 nyawa',                 icon:'i-heart' },
+  { id:'double_monster', name:'SWARM',        desc:'Musuh spawn 2× lebih banyak',   icon:'i-target' }
 ];
 
 // =============================================================
 // 6. SOUND ENGINE
 // =============================================================
 class SoundEngine {
-  constructor() { this.ctx = null; this.isMuted = false; this.bgmTimer = null; this.bgmStep = 0; }
+  constructor() { this.ctx=null; this.isMuted=false; this.bgmTimer=null; this.bgmStep=0; }
   init() {
     try {
       if (!this.ctx) { const A = window.AudioContext || window.webkitAudioContext; this.ctx = new A(); }
@@ -229,77 +227,77 @@ class SoundEngine {
     } catch(e) {}
   }
   playLaser() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
     o.type='sawtooth'; o.frequency.setValueAtTime(850,this.ctx.currentTime);
     o.frequency.exponentialRampToValueAtTime(120,this.ctx.currentTime+0.05);
     g.gain.setValueAtTime(0.12,this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.05);
     o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.05);
   }
   playPowerup() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
     o.type='sine'; o.frequency.setValueAtTime(300,this.ctx.currentTime);
     o.frequency.exponentialRampToValueAtTime(1200,this.ctx.currentTime+0.2);
     g.gain.setValueAtTime(0.25,this.ctx.currentTime); g.gain.linearRampToValueAtTime(0.01,this.ctx.currentTime+0.2);
     o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.2);
   }
   playCoin() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
     o.type='sine'; o.frequency.setValueAtTime(987.77,this.ctx.currentTime);
     o.frequency.setValueAtTime(1318.51,this.ctx.currentTime+0.08);
     g.gain.setValueAtTime(0.2,this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.2);
     o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.2);
   }
   playHit() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
     o.type='sawtooth'; o.frequency.setValueAtTime(180,this.ctx.currentTime);
     o.frequency.linearRampToValueAtTime(40,this.ctx.currentTime+0.2);
     g.gain.setValueAtTime(0.3,this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.2);
     o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.2);
   }
   playCombo() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
     o.type='triangle'; o.frequency.setValueAtTime(523.25,this.ctx.currentTime);
     o.frequency.exponentialRampToValueAtTime(1046.50,this.ctx.currentTime+0.15);
     g.gain.setValueAtTime(0.25,this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.15);
     o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.15);
   }
   playBossWarning() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
     o.type='square'; o.frequency.setValueAtTime(440,this.ctx.currentTime);
     o.frequency.setValueAtTime(880,this.ctx.currentTime+0.15);
     g.gain.setValueAtTime(0.3,this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.3);
     o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.3);
   }
   playBossShoot() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
     o.type='square'; o.frequency.setValueAtTime(300,this.ctx.currentTime);
     o.frequency.exponentialRampToValueAtTime(80,this.ctx.currentTime+0.12);
     g.gain.setValueAtTime(0.2,this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.12);
     o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.12);
   }
   playPop() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
     o.type='sine'; o.frequency.setValueAtTime(450,this.ctx.currentTime);
     o.frequency.exponentialRampToValueAtTime(900,this.ctx.currentTime+0.08);
     g.gain.setValueAtTime(0.35,this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.08);
     o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.08);
   }
   playFreeze() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
     o.type='triangle'; o.frequency.setValueAtTime(950,this.ctx.currentTime);
     o.frequency.exponentialRampToValueAtTime(320,this.ctx.currentTime+0.3);
     g.gain.setValueAtTime(0.3,this.ctx.currentTime); g.gain.linearRampToValueAtTime(0.01,this.ctx.currentTime+0.3);
     o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.3);
   }
   playShield() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
     o.type='sine'; o.frequency.setValueAtTime(600,this.ctx.currentTime);
     o.frequency.exponentialRampToValueAtTime(1400,this.ctx.currentTime+0.25);
     g.gain.setValueAtTime(0.28,this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.28);
     o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.28);
   }
   playBomb() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
     o.type='sawtooth'; o.frequency.setValueAtTime(220,this.ctx.currentTime);
     o.frequency.exponentialRampToValueAtTime(35,this.ctx.currentTime+0.4);
     g.gain.setValueAtTime(0.45,this.ctx.currentTime); g.gain.linearRampToValueAtTime(0.01,this.ctx.currentTime+0.4);
@@ -307,47 +305,40 @@ class SoundEngine {
   }
   playLevelIntro() {
     if (this.isMuted) return; this.init(); if (!this.ctx) return;
-    const notes = [523.25, 659.25, 783.99];
-    notes.forEach((f, i) => {
-      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
-      o.type = 'triangle';
-      o.frequency.setValueAtTime(f, this.ctx.currentTime + i * 0.1);
-      g.gain.setValueAtTime(0.18, this.ctx.currentTime + i * 0.1);
-      g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.1 + 0.2);
+    [523.25,659.25,783.99].forEach((f,i)=>{
+      const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+      o.type='triangle'; o.frequency.setValueAtTime(f,this.ctx.currentTime+i*0.1);
+      g.gain.setValueAtTime(0.18,this.ctx.currentTime+i*0.1);
+      g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+i*0.1+0.2);
       o.connect(g); g.connect(this.ctx.destination);
-      o.start(this.ctx.currentTime + i * 0.1);
-      o.stop(this.ctx.currentTime + i * 0.1 + 0.2);
+      o.start(this.ctx.currentTime+i*0.1); o.stop(this.ctx.currentTime+i*0.1+0.2);
     });
   }
   playType() {
     if (this.isMuted || !this.ctx) return;
     try {
-      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
-      o.type = 'square'; o.frequency.value = 900 + Math.random() * 400;
-      g.gain.setValueAtTime(0.015, this.ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.03);
+      const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+      o.type='square'; o.frequency.value=900+Math.random()*400;
+      g.gain.setValueAtTime(0.015,this.ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+0.03);
       o.connect(g); g.connect(this.ctx.destination);
-      o.start(); o.stop(this.ctx.currentTime + 0.03);
+      o.start(); o.stop(this.ctx.currentTime+0.03);
     } catch(e) {}
   }
   playKillstreak() {
     if (this.isMuted) return; this.init(); if (!this.ctx) return;
-    const notes = [523.25, 659.25, 783.99, 1046.50];
-    notes.forEach((f, i) => {
-      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
-      o.type = 'triangle';
-      o.frequency.setValueAtTime(f, this.ctx.currentTime + i * 0.05);
-      g.gain.setValueAtTime(0.2, this.ctx.currentTime + i * 0.05);
-      g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.05 + 0.15);
+    [523.25,659.25,783.99,1046.50].forEach((f,i)=>{
+      const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+      o.type='triangle'; o.frequency.setValueAtTime(f,this.ctx.currentTime+i*0.05);
+      g.gain.setValueAtTime(0.2,this.ctx.currentTime+i*0.05);
+      g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+i*0.05+0.15);
       o.connect(g); g.connect(this.ctx.destination);
-      o.start(this.ctx.currentTime + i * 0.05);
-      o.stop(this.ctx.currentTime + i * 0.05 + 0.15);
+      o.start(this.ctx.currentTime+i*0.05); o.stop(this.ctx.currentTime+i*0.05+0.15);
     });
   }
   playWin() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
-    const notes = [261.63, 329.63, 392.00, 523.25, 659.25];
-    notes.forEach((f, i) => {
-      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    [261.63,329.63,392.00,523.25,659.25].forEach((f,i)=>{
+      const o=this.ctx.createOscillator(), g=this.ctx.createGain();
       o.type='sine'; o.frequency.setValueAtTime(f,this.ctx.currentTime+i*0.09);
       g.gain.setValueAtTime(0.25,this.ctx.currentTime+i*0.09);
       g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+i*0.09+0.22);
@@ -357,16 +348,16 @@ class SoundEngine {
   }
   _playTone(freq, dur, type='square', vol=0.05, detune=0) {
     if (!this.ctx) return;
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
-    o.type = type; o.frequency.setValueAtTime(freq, this.ctx.currentTime);
-    if (detune) o.detune.setValueAtTime(detune, this.ctx.currentTime);
-    g.gain.setValueAtTime(vol, this.ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
-    o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime + dur);
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+    o.type=type; o.frequency.setValueAtTime(freq,this.ctx.currentTime);
+    if (detune) o.detune.setValueAtTime(detune,this.ctx.currentTime);
+    g.gain.setValueAtTime(vol,this.ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+dur);
+    o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+dur);
   }
   _playKick() {
     if (!this.ctx) return;
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
     o.type='sine'; o.frequency.setValueAtTime(150,this.ctx.currentTime);
     o.frequency.exponentialRampToValueAtTime(40,this.ctx.currentTime+0.15);
     g.gain.setValueAtTime(0.35,this.ctx.currentTime);
@@ -375,51 +366,51 @@ class SoundEngine {
   }
   _playSnare() {
     if (!this.ctx) return;
-    const bs = this.ctx.sampleRate * 0.12;
-    const buf = this.ctx.createBuffer(1, bs, this.ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < bs; i++) d[i] = Math.random() * 2 - 1;
-    const s = this.ctx.createBufferSource(); s.buffer = buf;
-    const f = this.ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=1200;
-    const g = this.ctx.createGain();
-    g.gain.setValueAtTime(0.18, this.ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+    const bs=this.ctx.sampleRate*0.12;
+    const buf=this.ctx.createBuffer(1,bs,this.ctx.sampleRate);
+    const d=buf.getChannelData(0);
+    for (let i=0;i<bs;i++) d[i]=Math.random()*2-1;
+    const s=this.ctx.createBufferSource(); s.buffer=buf;
+    const f=this.ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=1200;
+    const g=this.ctx.createGain();
+    g.gain.setValueAtTime(0.18,this.ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+0.12);
     s.connect(f); f.connect(g); g.connect(this.ctx.destination); s.start();
   }
   _playHiHat() {
     if (!this.ctx) return;
-    const bs = this.ctx.sampleRate * 0.05;
-    const buf = this.ctx.createBuffer(1, bs, this.ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < bs; i++) d[i] = Math.random() * 2 - 1;
-    const s = this.ctx.createBufferSource(); s.buffer = buf;
-    const f = this.ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=7000;
-    const g = this.ctx.createGain();
-    g.gain.setValueAtTime(0.07, this.ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+    const bs=this.ctx.sampleRate*0.05;
+    const buf=this.ctx.createBuffer(1,bs,this.ctx.sampleRate);
+    const d=buf.getChannelData(0);
+    for (let i=0;i<bs;i++) d[i]=Math.random()*2-1;
+    const s=this.ctx.createBufferSource(); s.buffer=buf;
+    const f=this.ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=7000;
+    const g=this.ctx.createGain();
+    g.gain.setValueAtTime(0.07,this.ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+0.05);
     s.connect(f); f.connect(g); g.connect(this.ctx.destination); s.start();
   }
   startBGM() {
     if (this.bgmTimer) return;
-    const bpm = 138, stepMs = (60 / bpm / 4) * 1000;
-    const bassNotes = [65.41, 98.00, 110.00, 87.31];
-    const chordNotes = [
-      [261.63, 329.63, 392.00, 523.25],
-      [392.00, 493.88, 587.33, 783.99],
-      [440.00, 523.25, 659.25, 880.00],
-      [349.23, 440.00, 523.25, 698.46]
+    const bpm=138, stepMs=(60/bpm/4)*1000;
+    const bassNotes=[65.41,98.00,110.00,87.31];
+    const chordNotes=[
+      [261.63,329.63,392.00,523.25],
+      [392.00,493.88,587.33,783.99],
+      [440.00,523.25,659.25,880.00],
+      [349.23,440.00,523.25,698.46]
     ];
-    const melodyPattern = [
+    const melodyPattern=[
       [523.25,null,659.25,null,783.99,null,659.25,null,523.25,null,392.00,null,523.25,null,587.33,null],
       [493.88,null,587.33,null,783.99,null,587.33,null,493.88,null,392.00,null,493.88,null,587.33,null],
       [440.00,null,523.25,null,659.25,null,523.25,null,440.00,null,349.23,null,440.00,null,523.25,null],
       [349.23,null,440.00,null,523.25,null,698.46,null,587.33,null,523.25,null,440.00,null,523.25,587.33]
     ];
-    let step = 0;
+    let step=0;
     this.bgmTimer = setInterval(() => {
-      if (this.isMuted || !isGameRunning || isGamePaused) { step = 0; return; }
+      if (this.isMuted || !isGameRunning || isGamePaused) { step=0; return; }
       this.init(); if (!this.ctx) return;
-      const bar = Math.floor(step / 16) % 4;
+      const bar = Math.floor(step/16) % 4;
       const beat = step % 16;
       if (beat % 4 === 0) this._playTone(bassNotes[bar], 0.22, 'triangle', 0.09);
       if (beat % 2 === 0) this._playTone(chordNotes[bar][(beat/2) % 4], 0.14, 'square', 0.028);
@@ -437,16 +428,15 @@ class SoundEngine {
 const sounds = new SoundEngine();
 
 function triggerVibrate(pattern) {
-  if ('vibrate' in navigator) { try { navigator.vibrate(pattern); } catch (e) {} }
+  if ('vibrate' in navigator) { try { navigator.vibrate(pattern); } catch(e) {} }
 }
 
 // =============================================================
-// 7. AD SERVICE (placeholder, siap diganti AdMob/AdSense)
+// 7. AD SERVICE (placeholder)
 // =============================================================
 const AdService = {
   isAvailable: () => true,
   showRewarded: async () => {
-    // Ganti fungsi ini dengan integrasi SDK iklan sungguhan
     return new Promise((resolve) => {
       const overlay = document.getElementById('ad-overlay');
       const cd = document.getElementById('ad-countdown');
@@ -491,13 +481,11 @@ let combo = 1;
 let comboTimer = 0;
 const MAX_COMBO = 5;
 
-// Kill streak
 let killStreakCount = 0;
 let killStreakMilestone = 0;
 const KILLSTREAK_MILESTONES = [10, 25, 50, 100];
 const KILLSTREAK_TITLES = ['KILLING SPREE!', 'RAMPAGE!', 'UNSTOPPABLE!', 'GODLIKE!'];
 
-// Revive
 let reviveUsedThisRun = false;
 let reviveQuota = 3;
 
@@ -540,15 +528,11 @@ let isMovingRight = false;
 let currentActor = localStorage.getItem('pahlawan_actor') || 'robot';
 let playerName = localStorage.getItem('pahlawan_nama') || 'Pahlawan';
 
-// Endless mode state
 let endlessWave = 1;
 let endlessKillsThisWave = 0;
 const ENDLESS_KILLS_PER_WAVE = 15;
 
-// Daily mode state
 let currentDailyModifier = null;
-
-// Leaderboard tab
 let currentLeaderboardTab = 'global';
 
 const canvas = document.getElementById('gameCanvas');
@@ -558,11 +542,11 @@ let leaderboardRef = null;
 let leaderboardHandler = null;
 
 const actorMap = {
-  robot:   { name: 'Robot Cyber',    color: '#1e90ff' },
-  cannon:  { name: 'Meriam Bintang', color: '#ff4757' },
-  dragon:  { name: 'Cyber Dragon',   color: '#2ed573' },
-  cat:     { name: 'Ninja Cat',      color: '#ffa502' },
-  unicorn: { name: 'Unicorn Star',   color: '#a55eea' }
+  robot:   { name:'Robot Cyber',    color:'#1e90ff' },
+  cannon:  { name:'Meriam Bintang', color:'#ff4757' },
+  dragon:  { name:'Cyber Dragon',   color:'#2ed573' },
+  cat:     { name:'Ninja Cat',      color:'#ffa502' },
+  unicorn: { name:'Unicorn Star',   color:'#a55eea' }
 };
 
 let storyQueue = [];
@@ -575,8 +559,12 @@ let storyCurrentIdx = 0;
 let loadoutCurrentSelection = [];
 let loadoutCallback = null;
 
+// [FIX v17.1] Token & flag untuk spawn loop + revive
+let spawnLoopToken = 0;
+let isReviveModalOpen = false;
+
 // =============================================================
-// 9. BOOTSTRAP — UI listener DIPASANG SEBELUM async init
+// 9. BOOTSTRAP — UI dulu, async menyusul
 // =============================================================
 function bootstrapUI() {
   try {
@@ -604,11 +592,10 @@ window.addEventListener('load', async () => {
     upgradeFreeze = Number(localStorage.getItem('pahlawan_up_freeze')) || 2;
     playerLoadout = await getLoadout();
     const todayKey = getTodayKey();
-    const quotaData = await getReviveQuota(todayKey);
-    reviveQuota = quotaData;
+    reviveQuota = await getReviveQuota(todayKey);
     console.log('✅ [Boot] Loadout:', playerLoadout, '| Revive quota:', reviveQuota);
   } catch (e) {
-    console.warn('⚠️ [Boot] Async init partial failure (UI tetap jalan):', e);
+    console.warn('⚠️ [Boot] Async init partial failure:', e);
   }
   try {
     initStarfield();
@@ -631,7 +618,7 @@ window.addEventListener('load', async () => {
   }
   try { updateStickerAlbumUI(); } catch (e) {}
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=17.0').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=17.1').catch(err => console.log('SW Fail:', err));
   }
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
@@ -724,9 +711,7 @@ function getDailyModifier() {
 }
 function getDailyLevel() {
   const seed = getDailySeed();
-  // Level 1-30 tapi non-boss
-  const lvl = (seed % 29) + 1; // 1-29
-  return lvl;
+  return (seed % 29) + 1;
 }
 function secondsUntilMidnight() {
   const now = new Date();
@@ -740,7 +725,6 @@ function formatTime(sec) {
   const s = String(sec % 60).padStart(2, '0');
   return `${h}:${m}:${s}`;
 }
-
 async function getReviveQuota(todayKey) {
   const raw = await DB.get('pahlawan_revive_quota');
   try {
@@ -752,7 +736,6 @@ async function getReviveQuota(todayKey) {
 async function saveReviveQuota(todayKey, count) {
   await DB.set('pahlawan_revive_quota', JSON.stringify({ date: todayKey, count: count }));
 }
-
 async function getEndlessBest() {
   const raw = await DB.get('pahlawan_endless_best');
   try { return JSON.parse(raw || '{"wave":0,"score":0}'); } catch(e) { return {wave:0,score:0}; }
@@ -770,7 +753,6 @@ async function setEndlessBest(wave, scoreVal) {
 function setupEventListeners() {
   const $ = id => document.getElementById(id);
 
-  // --- MULAI MISI ---
   const btnPlay = $('btn-prepare-play');
   if (btnPlay) {
     btnPlay.onclick = (e) => {
@@ -781,15 +763,12 @@ function setupEventListeners() {
     };
   }
 
-  // --- HERO ---
   const bActor = $('btn-select-actor'); if (bActor) bActor.onclick = () => $('modal-actors').classList.remove('hidden');
   const bCloseActors = $('btn-close-actors'); if (bCloseActors) bCloseActors.onclick = () => $('modal-actors').classList.add('hidden');
 
-  // --- TOKO ---
   const bShop = $('btn-shop'); if (bShop) bShop.onclick = () => { updateShopUI(); $('modal-shop').classList.remove('hidden'); };
   const bCloseShop = $('btn-close-shop'); if (bCloseShop) bCloseShop.onclick = () => $('modal-shop').classList.add('hidden');
 
-  // --- LEADERBOARD ---
   const bLB = $('btn-leaderboard'); if (bLB) bLB.onclick = openLeaderboard;
   const bCloseLB = $('btn-close-leaderboard');
   if (bCloseLB) bCloseLB.onclick = () => {
@@ -808,11 +787,9 @@ function setupEventListeners() {
     };
   });
 
-  // --- STICKER ---
   const bStick = $('btn-stickers'); if (bStick) bStick.onclick = openStickerAlbum;
   const bCloseStick = $('btn-close-stickers'); if (bCloseStick) bCloseStick.onclick = () => $('modal-stickers').classList.add('hidden');
 
-  // --- PAUSE ---
   const bPause = $('btn-pause'); if (bPause) bPause.onclick = pauseGame;
   const bResume = $('btn-resume-game'); if (bResume) bResume.onclick = resumeGame;
   const bPHero = $('btn-pause-change-hero'); if (bPHero) bPHero.onclick = () => $('modal-actors').classList.remove('hidden');
@@ -820,20 +797,14 @@ function setupEventListeners() {
   const bPMain = $('btn-pause-main-menu');
   if (bPMain) bPMain.onclick = () => {
     $('modal-pause').classList.add('hidden');
-    $('hud-overlay').classList.add('hidden');
-    $('screen-main-menu').classList.remove('hidden');
-    sounds.stopBGM();
-    isGameRunning = false; isGamePaused = false;
-    applyThemeToDocument(LEVEL_THEMES[0]);
+    goToMainMenu();
   };
 
-  // --- UPGRADES ---
   const bFR = $('btn-buy-firerate'); if (bFR) bFR.onclick = () => buyUpgrade('firerate');
   const bSH = $('btn-buy-shield');   if (bSH) bSH.onclick = () => buyUpgrade('shield');
   const bBB = $('btn-buy-bomb');     if (bBB) bBB.onclick = () => buyUpgrade('bomb');
   const bFZ = $('btn-buy-freeze');   if (bFZ) bFZ.onclick = () => buyUpgrade('freeze');
 
-  // --- ACTOR CARDS ---
   document.querySelectorAll('.actor-card').forEach(card => {
     card.onclick = () => {
       document.querySelectorAll('.actor-card').forEach(c => c.classList.remove('selected'));
@@ -844,7 +815,6 @@ function setupEventListeners() {
     };
   });
 
-  // --- AUDIO ---
   const bAudio = $('btn-audio');
   if (bAudio) bAudio.onclick = () => {
     sounds.isMuted = !sounds.isMuted;
@@ -852,7 +822,6 @@ function setupEventListeners() {
     updateAudioButtonUI();
   };
 
-  // --- PWA INSTALL ---
   const btnInstall = $('btn-pwa-install');
   if (btnInstall) {
     btnInstall.onclick = async () => {
@@ -864,7 +833,6 @@ function setupEventListeners() {
     };
   }
 
-  // --- MOVEMENT ---
   const btnLeft = $('btn-move-left');
   const btnRight = $('btn-move-right');
   if (btnLeft) {
@@ -895,7 +863,6 @@ function setupEventListeners() {
     });
   }
 
-  // --- NEXT / RESTART / MENU ---
   const bNext = $('btn-next-level');
   if (bNext) bNext.onclick = () => {
     $('modal-result').classList.add('hidden');
@@ -920,7 +887,7 @@ function setupEventListeners() {
     goToMainMenu();
   };
 
-  // --- SKILL: FREEZE ---
+  // FREEZE
   const bFreeze = $('btn-freeze');
   if (bFreeze) bFreeze.onclick = () => {
     if (freezeCharges <= 0 || isFrozen || isGamePaused || !isGameRunning) return;
@@ -930,11 +897,11 @@ function setupEventListeners() {
     sounds.playFreeze();
     triggerVibrate([50, 50, 50]);
     updateSkillButtonsUI();
-    spawnFloatingText(canvas.width / 2, canvas.height / 2, 'FREEZE!', currentTheme.accent);
+    spawnFloatingText(canvas.width/2, canvas.height/2, 'FREEZE!', currentTheme.accent);
     screenShake = 6;
   };
 
-  // --- SKILL: SHIELD ---
+  // SHIELD
   const bShield = $('btn-shield');
   if (bShield) bShield.onclick = () => {
     if (shieldCharges <= 0 || isShieldActive || isGamePaused || !isGameRunning) return;
@@ -947,7 +914,7 @@ function setupEventListeners() {
     spawnFloatingText(playerX, canvas.height - 70, 'SHIELD!', '#39ff14');
   };
 
-  // --- SKILL: BOMB ---
+  // BOMB
   const bBomb = $('btn-bomb');
   if (bBomb) bBomb.onclick = () => {
     if (bombCharges <= 0 || isGamePaused || !isGameRunning) return;
@@ -979,19 +946,19 @@ function setupEventListeners() {
         createBurstParticles3D(m.x, m.y, m.color, 25);
         totalScoreFromBomb += (ENEMY_SCORE_TABLE[m.type] || 150) * combo;
         levelKills++;
+        if (gameMode === 'endless') endlessKillsThisWave++;
         handleKillStreak();
         monsters.splice(i, 1);
       }
     }
     score += totalScoreFromBomb;
     if (totalScoreFromBomb > 0) {
-      spawnFloatingText(canvas.width / 2, canvas.height / 2, `BOOM +${totalScoreFromBomb}`, '#ff4757');
+      spawnFloatingText(canvas.width/2, canvas.height/2, `BOOM +${totalScoreFromBomb}`, '#ff4757');
     }
     updateHUDValues();
     checkLevelObjectives();
   };
 
-  // --- LOADOUT START ---
   const loadoutBtn = $('btn-start-loaded');
   if (loadoutBtn) {
     loadoutBtn.addEventListener('click', async () => {
@@ -1004,22 +971,23 @@ function setupEventListeners() {
     });
   }
 
-  // --- REVIVE ---
+  // REVIVE
   const bRevAd = $('btn-revive-ad');
   if (bRevAd) bRevAd.onclick = async () => {
     $('modal-revive').classList.add('hidden');
     sounds.init();
     const success = await AdService.showRewarded();
     if (success) doRevive();
-    else finalizeFail();
+    else { isReviveModalOpen = false; finalizeFail(); }
   };
   const bRevGiveUp = $('btn-revive-give-up');
   if (bRevGiveUp) bRevGiveUp.onclick = () => {
     $('modal-revive').classList.add('hidden');
+    isReviveModalOpen = false;
     finalizeFail();
   };
 
-  // --- ENDLESS ---
+  // ENDLESS
   const bEndless = $('btn-endless');
   if (bEndless) bEndless.onclick = openEndlessModal;
   const bStartEndless = $('btn-start-endless');
@@ -1027,7 +995,7 @@ function setupEventListeners() {
   const bCloseEndless = $('btn-close-endless');
   if (bCloseEndless) bCloseEndless.onclick = () => $('modal-endless').classList.add('hidden');
 
-  // --- DAILY ---
+  // DAILY
   const bDaily = $('btn-daily');
   if (bDaily) bDaily.onclick = openDailyModal;
   const bStartDaily = $('btn-start-daily');
@@ -1035,7 +1003,7 @@ function setupEventListeners() {
   const bCloseDaily = $('btn-close-daily');
   if (bCloseDaily) bCloseDaily.onclick = () => $('modal-daily').classList.add('hidden');
 
-  // --- NARRATIVE TAP ---
+  // NARRATIVE TAP
   document.addEventListener('click', (e) => {
     const overlay = $('narrative-overlay');
     if (!overlay || overlay.classList.contains('hidden')) return;
@@ -1159,6 +1127,7 @@ function updateSkillButtonsUI() {
 }
 
 function goToMainMenu() {
+  stopSpawnLoop();
   const hud = document.getElementById('hud-overlay');
   if (hud) hud.classList.add('hidden');
   const menu = document.getElementById('screen-main-menu');
@@ -1166,12 +1135,13 @@ function goToMainMenu() {
   sounds.stopBGM();
   isGameRunning = false;
   isGamePaused = false;
+  isReviveModalOpen = false;
   applyThemeToDocument(LEVEL_THEMES[0]);
   gameMode = 'normal';
 }
 
 // =============================================================
-// 13. GAME FLOW — normal / endless / daily
+// 13. GAME FLOW
 // =============================================================
 function startGame() {
   console.log('▶ [startGame] normal mode');
@@ -1292,7 +1262,7 @@ function actuallyStartLevel(levelConfig) {
 
   showLevelIntro(levelConfig);
   sounds.startBGM();
-  spawnMonsterLoop();
+  startSpawnLoop();
   gameLoop();
 }
 
@@ -1351,15 +1321,16 @@ function triggerBossSiren() {
 }
 
 // =============================================================
-// 14. SPAWNING — adaptif untuk normal/endless/daily
+// 14. SPAWN LOOP — TOKEN-BASED (FIX v17.1)
 // =============================================================
-function spawnMonsterLoop() {
-  if (!isGameRunning) return;
-  if (!isGamePaused && !isFrozen) {
+function spawnMonsterLoop(token) {
+  if (token !== undefined && token !== spawnLoopToken) return;
+
+  if (isGameRunning && !isGamePaused && !isFrozen) {
     let levelConfig;
     let spawnMultiplier = 1;
+
     if (gameMode === 'endless') {
-      const baseLevel = 1 + (endlessWave - 1) * 0.3;
       const typesPool = ["jelly","donut","cloud","crystal","splitter"];
       const count = Math.min(5, Math.floor(1 + endlessWave / 3) + 1);
       const algos = ["linear","zigzag","gravity","stealth","swarm","splitter"];
@@ -1372,11 +1343,10 @@ function spawnMonsterLoop() {
         types: typesPool.slice(0, count)
       };
       if (endlessWave > 0 && endlessWave % 5 === 0) {
-        // boss wave
         const bossLevel = Math.min(30, Math.ceil(endlessWave / 5) * 5);
         levelConfig.algorithm = `boss_${bossLevel}`;
         levelConfig.types = [`boss${bossLevel}`];
-        levelConfig.bossHp = Math.floor((levelConfig.bossHp || 150) * (1 + endlessWave * 0.5));
+        levelConfig.bossHp = 150 + endlessWave * 60;
       }
     } else if (gameMode === 'daily') {
       const lvl = getDailyLevel();
@@ -1389,6 +1359,7 @@ function spawnMonsterLoop() {
     } else {
       levelConfig = levelsData[currentLevelIndex] || levelsData[0];
     }
+
     if (levelConfig) {
       const algo = levelConfig.algorithm;
       const typeList = levelConfig.types || ['jelly'];
@@ -1441,18 +1412,33 @@ function spawnMonsterLoop() {
       }
     }
   }
+
   let currentRate = 1500;
   if (gameMode === 'endless') currentRate = Math.max(300, 1200 - endlessWave * 40);
   else if (gameMode === 'daily') currentRate = 1200;
   else currentRate = levelsData[currentLevelIndex] ? levelsData[currentLevelIndex].spawnRate : 1500;
-  setTimeout(spawnMonsterLoop, currentRate);
+
+  const myToken = (token !== undefined) ? token : spawnLoopToken;
+  setTimeout(() => spawnMonsterLoop(myToken), currentRate);
+}
+
+function startSpawnLoop() {
+  spawnLoopToken++;
+  const myToken = spawnLoopToken;
+  spawnMonsterLoop(myToken);
+  console.log('✅ [Spawn] Loop started, token =', myToken);
+}
+
+function stopSpawnLoop() {
+  spawnLoopToken++;
+  console.log('🛑 [Spawn] Loop stopped, token =', spawnLoopToken);
 }
 
 function trySpawnDrop(x, y) {
   const coinChance = (gameMode === 'endless') ? 0.7 : 0.45;
   if (Math.random() < coinChance) coinsOnField.push({ x, y, vy: 1.8, size: 10, rot: 0, trail: 0 });
   if (Math.random() < 0.32) {
-    const types = ['supershot', 'shield', 'bomb', 'freeze', 'heart', 'magnet'];
+    const types = ['supershot','shield','bomb','freeze','heart','magnet'];
     const chosenType = types[Math.floor(Math.random() * types.length)];
     powerups.push({ x, y, type: chosenType, speed: 2.2, size: 16, rot: 0 });
   }
@@ -1486,7 +1472,6 @@ function spawnTelegraph(fromX, fromY, toX, toY, durationFrames, color) {
     progress: 0, duration: durationFrames, color: color || '#ff2e88'
   });
 }
-
 function handleKillStreak() {
   killStreakCount++;
   const nextIdx = killStreakMilestone;
@@ -1503,12 +1488,10 @@ function showKillStreak(title, count) {
   txt.innerText = title;
   sub.innerText = `${count} KILLS`;
   overlay.classList.remove('hidden');
-  // retrigger animation
   void overlay.offsetWidth;
   sounds.playKillstreak();
   setTimeout(() => overlay.classList.add('hidden'), 1300);
 }
-
 function checkLevelObjectives() {
   if (gameMode === 'endless') {
     if (endlessKillsThisWave >= ENDLESS_KILLS_PER_WAVE && monsters.length === 0) {
@@ -1625,14 +1608,12 @@ function gameLoop() {
     if (screenShake < 0.5) screenShake = 0;
   }
 
-  // Background
   const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
   bgGrad.addColorStop(0, theme.bgTop);
   bgGrad.addColorStop(1, theme.bgBottom);
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Stars
   stars.forEach(s => {
     s.y += s.speed; s.twinkle += 0.05;
     if (s.y > canvas.height) { s.y = 0; s.x = Math.random() * canvas.width; }
@@ -1642,7 +1623,6 @@ function gameLoop() {
   });
   ctx.globalAlpha = 1.0;
 
-  // Ground
   ctx.fillStyle = theme.ground;
   ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
   ctx.fillStyle = theme.groundLine;
@@ -1650,12 +1630,10 @@ function gameLoop() {
   ctx.fillRect(0, canvas.height - 45, canvas.width, 5);
   ctx.globalAlpha = 1.0;
 
-  // Movement
   if (isMovingLeft) playerX -= playerSpeed;
   if (isMovingRight) playerX += playerSpeed;
   playerX = Math.max(40, Math.min(canvas.width - 40, playerX));
 
-  // Timers
   if (isSuperShot) { superShotTimer--; if (superShotTimer <= 0) isSuperShot = false; }
   if (isShieldActive) { shieldTimer--; if (shieldTimer <= 0) isShieldActive = false; }
   if (isMagnetActive) { magnetTimer--; if (magnetTimer <= 0) isMagnetActive = false; }
@@ -1663,7 +1641,6 @@ function gameLoop() {
   if (isFrozen) { freezeFramesRemaining--; if (freezeFramesRemaining <= 0) { isFrozen = false; freezeFramesRemaining = 0; } }
   if (combo > 1) { comboTimer--; if (comboTimer <= 0) { combo = 1; updateHUDValues(); } }
 
-  // Shooting
   let baseInterval = 160;
   if (currentActor === 'cat') baseInterval = 110;
   else if (currentActor === 'cannon') baseInterval = 210;
@@ -1705,7 +1682,6 @@ function gameLoop() {
     if (flash.opacity <= 0) muzzleFlashes.splice(mf, 1);
   }
 
-  // Telegraphs
   for (let t = telegraphs.length - 1; t >= 0; t--) {
     const tg = telegraphs[t];
     tg.progress++;
@@ -1729,7 +1705,6 @@ function gameLoop() {
     if (tg.progress >= tg.duration) telegraphs.splice(t, 1);
   }
 
-  // Bullets
   for (let b = bullets.length - 1; b >= 0; b--) {
     const bullet = bullets[b];
     bullet.y -= bullet.vy;
@@ -1831,7 +1806,6 @@ function gameLoop() {
     if (bulletConsumed) continue;
   }
 
-  // Coins
   const isMagnetPulling = isMagnetActive || (currentActor === 'cat');
   for (let c = coinsOnField.length - 1; c >= 0; c--) {
     const coin = coinsOnField[c];
@@ -1874,7 +1848,6 @@ function gameLoop() {
     if (coin.y > canvas.height) coinsOnField.splice(c, 1);
   }
 
-  // Powerups
   for (let p = powerups.length - 1; p >= 0; p--) {
     const pw = powerups[p];
     pw.y += pw.speed;
@@ -1915,7 +1888,6 @@ function gameLoop() {
     if (pw.y > canvas.height) powerups.splice(p, 1);
   }
 
-  // Boss bullets
   for (let bb = bossBullets.length - 1; bb >= 0; bb--) {
     const bBullet = bossBullets[bb];
     bBullet.y += bBullet.vy; bBullet.x += bBullet.vx;
@@ -1942,7 +1914,6 @@ function gameLoop() {
     }
   }
 
-  // Hero aura
   ctx.save();
   const auraAlpha = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
   const auraGrad = ctx.createRadialGradient(playerX, heroPlayerY + 20, 4, playerX, heroPlayerY + 20, 55);
@@ -1956,7 +1927,6 @@ function gameLoop() {
 
   drawHeroVector(ctx, playerX, heroPlayerY, currentActor);
 
-  // Monsters
   for (let i = monsters.length - 1; i >= 0; i--) {
     const m = monsters[i];
     m.timeAlive += 0.05;
@@ -2045,7 +2015,6 @@ function gameLoop() {
       }
     }
 
-    // Draw
     ctx.save();
     ctx.globalAlpha = m.opacity || 1.0;
     ctx.beginPath();
@@ -2167,7 +2136,6 @@ function gameLoop() {
     }
     ctx.restore();
 
-    // Boss HP bar
     if (m.type.startsWith('boss')) {
       ctx.save();
       let barWidth = Math.min(400, canvas.width * 0.6);
@@ -2206,7 +2174,6 @@ function gameLoop() {
     }
   }
 
-  // Particles
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.x += p.vx; p.y += p.vy; p.life -= 0.04;
@@ -2241,10 +2208,11 @@ function gameLoop() {
 }
 
 // =============================================================
-// 17. PLAYER HIT / REVIVE / FAIL
+// 17. PLAYER HIT / REVIVE (FIX v17.1)
 // =============================================================
 function handlePlayerHit() {
   if (isReviveInvuln) return;
+  if (isReviveModalOpen) return;
   if (gameMode === 'daily' && currentDailyModifier && currentDailyModifier.id === 'one_life') {
     lives = 0;
   } else {
@@ -2258,20 +2226,23 @@ function handlePlayerHit() {
   updateLivesDisplay();
   spawnFloatingText(playerX, canvas.height - 60, '-1', '#ff4757');
   if (lives <= 0) {
-    // Offer revive atau fail
     offerReviveOrFail();
   }
 }
 
 async function offerReviveOrFail() {
+  if (isReviveModalOpen) return;
+  isReviveModalOpen = true;
+
   isGameRunning = false;
   isGamePaused = false;
   sounds.stopBGM();
 
   const todayKey = getTodayKey();
-  reviveQuota = await getReviveQuota(todayKey);
+  try { reviveQuota = await getReviveQuota(todayKey); } catch(e) {}
 
   if (reviveUsedThisRun || reviveQuota <= 0) {
+    isReviveModalOpen = false;
     finalizeFail();
     return;
   }
@@ -2283,28 +2254,35 @@ async function offerReviveOrFail() {
 }
 
 async function doRevive() {
+  isReviveModalOpen = false;
+
   const todayKey = getTodayKey();
-  reviveQuota = await getReviveQuota(todayKey);
-  reviveQuota = Math.max(0, reviveQuota - 1);
-  await saveReviveQuota(todayKey, reviveQuota);
+  try {
+    reviveQuota = await getReviveQuota(todayKey);
+    reviveQuota = Math.max(0, reviveQuota - 1);
+    await saveReviveQuota(todayKey, reviveQuota);
+  } catch(e) {}
   reviveUsedThisRun = true;
 
   lives = 1;
   isReviveInvuln = true;
-  reviveInvulnTimer = 120; // 2 detik
+  reviveInvulnTimer = 120;
+  bossBullets = [];
+
   updateLivesDisplay();
   updateHUDValues();
   updateReviveQuotaUI();
 
-  // Bersihkan peluru musuh
-  bossBullets = [];
-
   isGameRunning = true;
   isGamePaused = false;
+  startSpawnLoop();
   sounds.startBGM();
+
   spawnFloatingText(playerX, canvas.height - 70, 'REVIVED!', '#39ff14');
   triggerVibrate([200, 50, 200]);
+
   requestAnimationFrame(gameLoop);
+  console.log('✅ [Revive] Player revived, spawn loop restarted');
 }
 
 // =============================================================
@@ -2325,6 +2303,7 @@ function onLevelFailed(reason) {
 async function levelComplete() {
   isGameRunning = false;
   isGamePaused = false;
+  stopSpawnLoop();
   sounds.stopBGM();
   sounds.playWin();
   triggerVibrate([50, 50, 50, 50, 100]);
@@ -2375,6 +2354,7 @@ async function levelComplete() {
 function levelFailed(reasonTitle) {
   isGameRunning = false;
   isGamePaused = false;
+  stopSpawnLoop();
   sounds.stopBGM();
   triggerVibrate([200, 100, 200]);
 
@@ -2449,7 +2429,6 @@ function startEndless() {
   resizeCanvas();
   setTimeout(() => {
     resizeCanvas();
-    // Loadout modal langsung tanpa story
     const dummy = { level: 999, targetKills: ENDLESS_KILLS_PER_WAVE, targetScore: 0, algorithm: 'linear', types: ['jelly'] };
     showLoadoutModal(dummy, () => {
       freezeCharges = playerLoadout.includes('freeze') ? upgradeFreeze : 0;
@@ -2458,7 +2437,6 @@ function startEndless() {
       updateSkillButtonsUI();
       isGameRunning = true;
       isGamePaused = false;
-      const introData = { level: 999, targetKills: ENDLESS_KILLS_PER_WAVE, targetScore: 0, algorithm: 'endless', types: [] };
       const numEl = document.getElementById('level-intro-number'); if (numEl) numEl.innerText = '∞';
       const nameEl = document.getElementById('level-intro-name'); if (nameEl) nameEl.innerText = 'ENDLESS MODE';
       const misEl = document.getElementById('level-intro-mission'); if (misEl) misEl.innerText = 'SURVIVE AS LONG AS YOU CAN';
@@ -2469,7 +2447,7 @@ function startEndless() {
         setTimeout(() => { banner.classList.add('fade-out'); setTimeout(() => banner.classList.add('hidden'), 500); }, 1800);
       }
       sounds.startBGM();
-      spawnMonsterLoop();
+      startSpawnLoop();
       gameLoop();
     });
   }, 60);
@@ -2478,6 +2456,7 @@ function startEndless() {
 async function finalizeEndless() {
   isGameRunning = false;
   isGamePaused = false;
+  stopSpawnLoop();
   sounds.stopBGM();
   sounds.playWin();
   await setEndlessBest(endlessWave, score);
@@ -2505,20 +2484,15 @@ async function finalizeEndless() {
 // =============================================================
 async function openDailyModal() {
   currentDailyModifier = getDailyModifier();
-  const lvl = getDailyLevel();
-
   const $ = id => document.getElementById(id);
   const d = new Date();
   const dateEl = $('daily-date');
-  if (dateEl) dateEl.innerText = d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-
+  if (dateEl) dateEl.innerText = d.toLocaleDateString('id-ID', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   const nameEl = $('daily-mod-name'); if (nameEl) nameEl.innerText = currentDailyModifier.name;
   const descEl = $('daily-mod-desc'); if (descEl) descEl.innerText = currentDailyModifier.desc;
-
   const iconWrap = document.querySelector('.daily-mod-icon svg use');
   if (iconWrap) iconWrap.setAttribute('href', '#' + currentDailyModifier.icon);
 
-  // Cek status selesai
   const todayKey = getTodayKey();
   const doneRaw = await DB.get('pahlawan_daily_done_' + todayKey);
   const doneBadge = $('daily-done-badge');
@@ -2530,17 +2504,11 @@ async function openDailyModal() {
     if (doneBadge) doneBadge.classList.add('hidden');
     if (startBtn) startBtn.disabled = false;
   }
-
-  // Timer reset
   const timerEl = $('daily-reset-timer');
-  if (timerEl) {
-    timerEl.innerText = formatTime(secondsUntilMidnight());
-  }
-
+  if (timerEl) timerEl.innerText = formatTime(secondsUntilMidnight());
   const modal = $('modal-daily');
   if (modal) modal.classList.remove('hidden');
 
-  // Live timer
   if (window._dailyTimer) clearInterval(window._dailyTimer);
   window._dailyTimer = setInterval(() => {
     const el = $('daily-reset-timer');
@@ -2591,7 +2559,7 @@ function startDaily() {
       isGamePaused = false;
       showLevelIntro(levelConfig);
       sounds.startBGM();
-      spawnMonsterLoop();
+      startSpawnLoop();
       gameLoop();
     });
   }, 60);
@@ -2600,6 +2568,7 @@ function startDaily() {
 async function finalizeDaily(success) {
   isGameRunning = false;
   isGamePaused = false;
+  stopSpawnLoop();
   sounds.stopBGM();
   if (success) sounds.playWin();
   const todayKey = getTodayKey();
@@ -2607,9 +2576,7 @@ async function finalizeDaily(success) {
     DB.set('pahlawan_daily_done_' + todayKey, '1');
     saveDailyToGlobalLeaderboard(playerName, score, todayKey);
   }
-
   const lvl = getDailyLevel();
-  const levelConfig = levelsData[lvl - 1] || levelsData[0];
 
   const $ = id => document.getElementById(id);
   const rt = $('result-title'); if (rt) rt.innerText = success ? "DAILY CLEARED!" : "DAILY GAGAL";
@@ -2640,7 +2607,7 @@ async function finalizeDaily(success) {
 }
 
 // =============================================================
-// 21. FIREBASE LEADERBOARD
+// 21. FIREBASE LEADERBOARD — Struktur tidak berubah
 // =============================================================
 function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   const cleanName = (name || 'Pahlawan').trim();
@@ -2731,7 +2698,6 @@ function saveDailyToGlobalLeaderboard(name, scoreVal, dateKey) {
 function openLeaderboard() {
   const modal = document.getElementById('modal-leaderboard');
   if (modal) modal.classList.remove('hidden');
-  // Set default tab
   document.querySelectorAll('.lb-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.tab === currentLeaderboardTab);
   });
@@ -2960,5 +2926,5 @@ function openStickerAlbum() {
 }
 
 // =============================================================
-// END OF FILE
+// END OF FILE — v17.1
 // =============================================================
