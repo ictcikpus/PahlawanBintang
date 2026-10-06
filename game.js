@@ -1,4 +1,11 @@
 // =============================================================
+// PAHLAWAN BINTANG — game.js v16
+// Fitur: IndexedDB + Device ID, Enemy Telegraph, Boss Weak Point,
+//        Pre-Level Loadout, Narrative, 12 Tema Level, Boss Size Variatif
+// FIX: Bootstrap UI SEBELUM async init — tombol pasti berfungsi
+// =============================================================
+
+// =============================================================
 // 1. FIREBASE CONFIG
 // =============================================================
 const firebaseConfig = {
@@ -18,13 +25,11 @@ try {
   db = firebase.database();
   console.log("🔥 Firebase Realtime Database Terhubung Berhasil!");
 } catch(e) {
-  console.log("⚠️ Firebase Mode Offline");
+  console.log("⚠️ Firebase Mode Offline / Config Belum Diisi");
 }
 
 // =============================================================
 // 2. INDEXEDDB WRAPPER + DEVICE ID
-// Data disimpan di IndexedDB, tetap mirror ke localStorage
-// agar backward-compatible dengan pemain lama
 // =============================================================
 class GameDB {
   constructor() { this.db = null; this.ready = this._init(); }
@@ -32,7 +37,6 @@ class GameDB {
     return new Promise((resolve) => {
       let settled = false;
       const finish = (val) => { if (!settled) { settled = true; resolve(val); } };
-      // Safety: jika IndexedDB hang, tetap resolve dalam 2.5 detik
       setTimeout(() => finish(false), 2500);
       try {
         if (!window.indexedDB) return finish(false);
@@ -59,7 +63,6 @@ class GameDB {
     });
   }
   async set(key, value) {
-    // Mirror ke localStorage dulu (sync) supaya kode lama tidak breaking
     try { localStorage.setItem(key, value); } catch(e) {}
     if (!this.db) return;
     return new Promise((resolve) => {
@@ -123,7 +126,7 @@ async function setLoadout(arr) {
 }
 
 // =============================================================
-// 3. THEME PER LEVEL (12 variasi visual)
+// 3. TEMA LEVEL (12 variasi)
 // =============================================================
 const LEVEL_THEMES = [
   { id: 'cosmic', name: 'COSMIC SECTOR', bgTop: '#05061a', bgBottom: '#0e1035', accent: '#00d2ff', accentSoft: 'rgba(0,210,255,0.35)', stars: ['#ffffff','#70a1ff','#ffd700','#00d2d3'], ground: '#2f3640', groundLine: '#00d2ff', monsters: ['#ff4757','#2ed573','#ffa502','#1e90ff','#a55eea'] },
@@ -152,7 +155,6 @@ function getThemeForLevel(levelNum) {
 }
 
 const BOSS_SIZES = { 5: 62, 10: 80, 15: 96, 20: 112, 25: 128, 30: 148 };
-
 let currentTheme = LEVEL_THEMES[0];
 
 // =============================================================
@@ -177,7 +179,7 @@ const STORY = {
 };
 
 // =============================================================
-// 5. LEVEL GENERATOR (fallback jika levels.json gagal)
+// 5. LEVEL GENERATOR
 // =============================================================
 function generate30Levels() {
   const levels = [];
@@ -440,19 +442,16 @@ let lives = 3;
 let isGameRunning = false;
 let isGamePaused = false;
 
-// Koin & upgrade
 let coins = Number(localStorage.getItem('pahlawan_coins')) || 0;
 let upgradeFireRate = Number(localStorage.getItem('pahlawan_up_firerate')) || 1;
 let upgradeShield = Number(localStorage.getItem('pahlawan_up_shield')) || 1;
 let upgradeBomb = Number(localStorage.getItem('pahlawan_up_bomb')) || 2;
 let upgradeFreeze = Number(localStorage.getItem('pahlawan_up_freeze')) || 2;
 
-// Combo
 let combo = 1;
 let comboTimer = 0;
 const MAX_COMBO = 5;
 
-// Player
 let playerX = 0;
 let playerSpeed = 9;
 let playerPulse = 0;
@@ -464,7 +463,6 @@ let muzzleFlashes = [];
 let telegraphs = [];
 let lastShotTime = 0;
 
-// Powerup states
 let isSuperShot = false;
 let superShotTimer = 0;
 let isShieldActive = false;
@@ -472,15 +470,12 @@ let shieldTimer = 0;
 let isMagnetActive = false;
 let magnetTimer = 0;
 
-// Skill charges (di-set ulang tiap level berdasar loadout)
 let freezeCharges = 0;
 let shieldCharges = 0;
 let bombCharges = 0;
 
-// Loadout
 let playerLoadout = ['freeze', 'bomb'];
 
-// Monsters & effects
 let monsters = [];
 let particles = [];
 let stars = [];
@@ -508,7 +503,6 @@ const actorMap = {
   unicorn: { name: 'Unicorn Star',   color: '#a55eea' }
 };
 
-// Narrative runtime state
 let storyQueue = [];
 let storyOnDone = null;
 let storyTyping = false;
@@ -516,16 +510,12 @@ let storyTimer = null;
 let storyCurrentText = '';
 let storyCurrentIdx = 0;
 
-// Loadout modal state
 let loadoutCurrentSelection = [];
 let loadoutCallback = null;
 
 // =============================================================
-// 8. INIT ON LOAD
-// =============================================================
-// =============================================================
-// 8A. BOOTSTRAP — Pasang listener DULUAN sebelum async init
-//     Supaya tombol selalu berfungsi walau async init gagal
+// 8. BOOTSTRAP — Event listener DIPASANG SEBELUM async init
+//    Kunci perbaikan tombol "MULAI MISI"
 // =============================================================
 function bootstrapUI() {
   try {
@@ -536,7 +526,7 @@ function bootstrapUI() {
   }
 }
 
-// Script ada di akhir <body>, jadi DOM sudah diparse
+// Script ada di akhir <body>, DOM sudah diparse
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', bootstrapUI);
 } else {
@@ -544,10 +534,10 @@ if (document.readyState === 'loading') {
 }
 
 // =============================================================
-// 8B. ASYNC INIT — non-blocking, aman dari error
+// 9. ASYNC INIT — setiap fase dibungkus try/catch
 // =============================================================
 window.addEventListener('load', async () => {
-  // ---- Fase 1: async data (isolated, aman) ----
+  // FASE 1: Async data (isolated)
   try {
     await DB.ready;
     playerUUID = await initDeviceId();
@@ -561,10 +551,10 @@ window.addEventListener('load', async () => {
     playerLoadout = await getLoadout();
     console.log('✅ [Boot] Loadout:', playerLoadout);
   } catch (e) {
-    console.warn('⚠️ [Boot] Async data init partial failure (UI tetap jalan):', e);
+    console.warn('⚠️ [Boot] Async init partial failure (UI tetap jalan):', e);
   }
 
-  // ---- Fase 2: UI init (dengan try/catch masing-masing) ----
+  // FASE 2: UI init
   try {
     initStarfield();
     resizeCanvas();
@@ -580,7 +570,7 @@ window.addEventListener('load', async () => {
     console.error('❌ [Boot] UI init error:', e);
   }
 
-  // ---- Fase 3: load JSON (fallback sudah ada di fungsi) ----
+  // FASE 3: Load JSON
   try {
     await loadGameData();
     console.log('✅ [Boot] Level data loaded:', levelsData.length, 'levels');
@@ -590,14 +580,13 @@ window.addEventListener('load', async () => {
     stickersData = DEFAULT_STICKERS;
   }
 
-  // ---- Fase 4: sticker & service worker ----
+  // FASE 4: Sticker UI + SW
   try { updateStickerAlbumUI(); } catch (e) {}
-
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=15.1').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=16.0').catch(err => console.log('SW Fail:', err));
   }
 
-  // ---- Fase 5: SELALU sembunyikan loading screen ----
+  // FASE 5: Sembunyikan loader
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
     if (loader) {
@@ -667,25 +656,42 @@ function updateAudioButtonUI() {
 }
 
 // =============================================================
-// 9. EVENT LISTENERS
+// 10. EVENT LISTENERS
 // =============================================================
 function setupEventListeners() {
-  document.getElementById('btn-prepare-play').onclick = () => {
-    requestFullscreenAndLandscape();
-    startGame();
-  };
-  document.getElementById('btn-select-actor').onclick = () => document.getElementById('modal-actors').classList.remove('hidden');
-  document.getElementById('btn-close-actors').onclick = () => document.getElementById('modal-actors').classList.add('hidden');
+  const $ = id => document.getElementById(id);
 
-  document.getElementById('btn-shop').onclick = () => {
-    updateShopUI();
-    document.getElementById('modal-shop').classList.remove('hidden');
-  };
-  document.getElementById('btn-close-shop').onclick = () => document.getElementById('modal-shop').classList.add('hidden');
+  // --- TOMBOL MULAI MISI (perbaikan utama) ---
+  const btnPlay = $('btn-prepare-play');
+  if (btnPlay) {
+    btnPlay.onclick = (e) => {
+      e.preventDefault();
+      console.log('▶ [Click] MULAI MISI ditekan');
+      try { requestFullscreenAndLandscape(); } catch (err) { console.warn('Fullscreen err:', err); }
+      try { startGame(); } catch (err) { console.error('startGame error:', err); }
+    };
+  } else {
+    console.error('❌ btn-prepare-play tidak ditemukan di DOM');
+  }
 
-  document.getElementById('btn-leaderboard').onclick = openLeaderboard;
-  document.getElementById('btn-close-leaderboard').onclick = () => {
-    document.getElementById('modal-leaderboard').classList.add('hidden');
+  // --- HERO ---
+  const bActor = $('btn-select-actor');
+  if (bActor) bActor.onclick = () => $('modal-actors').classList.remove('hidden');
+  const bCloseActors = $('btn-close-actors');
+  if (bCloseActors) bCloseActors.onclick = () => $('modal-actors').classList.add('hidden');
+
+  // --- TOKO ---
+  const bShop = $('btn-shop');
+  if (bShop) bShop.onclick = () => { updateShopUI(); $('modal-shop').classList.remove('hidden'); };
+  const bCloseShop = $('btn-close-shop');
+  if (bCloseShop) bCloseShop.onclick = () => $('modal-shop').classList.add('hidden');
+
+  // --- LEADERBOARD ---
+  const bLB = $('btn-leaderboard');
+  if (bLB) bLB.onclick = openLeaderboard;
+  const bCloseLB = $('btn-close-leaderboard');
+  if (bCloseLB) bCloseLB.onclick = () => {
+    $('modal-leaderboard').classList.add('hidden');
     if (leaderboardRef && leaderboardHandler) {
       try { leaderboardRef.off('value', leaderboardHandler); } catch(e) {}
       leaderboardRef = null;
@@ -693,28 +699,39 @@ function setupEventListeners() {
     }
   };
 
-  document.getElementById('btn-stickers').onclick = openStickerAlbum;
-  document.getElementById('btn-close-stickers').onclick = () => document.getElementById('modal-stickers').classList.add('hidden');
+  // --- STICKER ---
+  const bStick = $('btn-stickers');
+  if (bStick) bStick.onclick = openStickerAlbum;
+  const bCloseStick = $('btn-close-stickers');
+  if (bCloseStick) bCloseStick.onclick = () => $('modal-stickers').classList.add('hidden');
 
-  document.getElementById('btn-pause').onclick = pauseGame;
-  document.getElementById('btn-resume-game').onclick = resumeGame;
-  document.getElementById('btn-pause-change-hero').onclick = () => document.getElementById('modal-actors').classList.remove('hidden');
-  document.getElementById('btn-pause-leaderboard').onclick = () => openLeaderboard();
-  document.getElementById('btn-pause-main-menu').onclick = () => {
-    document.getElementById('modal-pause').classList.add('hidden');
-    document.getElementById('hud-overlay').classList.add('hidden');
-    document.getElementById('screen-main-menu').classList.remove('hidden');
+  // --- PAUSE ---
+  const bPause = $('btn-pause');
+  if (bPause) bPause.onclick = pauseGame;
+  const bResume = $('btn-resume-game');
+  if (bResume) bResume.onclick = resumeGame;
+  const bPHero = $('btn-pause-change-hero');
+  if (bPHero) bPHero.onclick = () => $('modal-actors').classList.remove('hidden');
+  const bPLB = $('btn-pause-leaderboard');
+  if (bPLB) bPLB.onclick = () => openLeaderboard();
+  const bPMain = $('btn-pause-main-menu');
+  if (bPMain) bPMain.onclick = () => {
+    $('modal-pause').classList.add('hidden');
+    $('hud-overlay').classList.add('hidden');
+    $('screen-main-menu').classList.remove('hidden');
     sounds.stopBGM();
     isGameRunning = false;
     isGamePaused = false;
     applyThemeToDocument(LEVEL_THEMES[0]);
   };
 
-  document.getElementById('btn-buy-firerate').onclick = () => buyUpgrade('firerate');
-  document.getElementById('btn-buy-shield').onclick = () => buyUpgrade('shield');
-  document.getElementById('btn-buy-bomb').onclick = () => buyUpgrade('bomb');
-  document.getElementById('btn-buy-freeze').onclick = () => buyUpgrade('freeze');
+  // --- UPGRADES ---
+  const bFR = $('btn-buy-firerate'); if (bFR) bFR.onclick = () => buyUpgrade('firerate');
+  const bSH = $('btn-buy-shield'); if (bSH) bSH.onclick = () => buyUpgrade('shield');
+  const bBB = $('btn-buy-bomb'); if (bBB) bBB.onclick = () => buyUpgrade('bomb');
+  const bFZ = $('btn-buy-freeze'); if (bFZ) bFZ.onclick = () => buyUpgrade('freeze');
 
+  // --- ACTOR CARDS ---
   document.querySelectorAll('.actor-card').forEach(card => {
     card.onclick = () => {
       document.querySelectorAll('.actor-card').forEach(c => c.classList.remove('selected'));
@@ -725,13 +742,16 @@ function setupEventListeners() {
     };
   });
 
-  document.getElementById('btn-audio').onclick = () => {
+  // --- AUDIO ---
+  const bAudio = $('btn-audio');
+  if (bAudio) bAudio.onclick = () => {
     sounds.isMuted = !sounds.isMuted;
     if (!sounds.isMuted) sounds.init();
     updateAudioButtonUI();
   };
 
-  const btnInstall = document.getElementById('btn-pwa-install');
+  // --- PWA INSTALL ---
+  const btnInstall = $('btn-pwa-install');
   if (btnInstall) {
     btnInstall.onclick = async () => {
       if (!deferredPrompt) return;
@@ -742,14 +762,19 @@ function setupEventListeners() {
     };
   }
 
-  const btnLeft = document.getElementById('btn-move-left');
-  const btnRight = document.getElementById('btn-move-right');
-  btnLeft.addEventListener('pointerdown', (e) => { e.preventDefault(); isMovingLeft = true; });
-  btnLeft.addEventListener('pointerup', () => isMovingLeft = false);
-  btnLeft.addEventListener('pointerleave', () => isMovingLeft = false);
-  btnRight.addEventListener('pointerdown', (e) => { e.preventDefault(); isMovingRight = true; });
-  btnRight.addEventListener('pointerup', () => isMovingRight = false);
-  btnRight.addEventListener('pointerleave', () => isMovingRight = false);
+  // --- MOVEMENT ---
+  const btnLeft = $('btn-move-left');
+  const btnRight = $('btn-move-right');
+  if (btnLeft) {
+    btnLeft.addEventListener('pointerdown', (e) => { e.preventDefault(); isMovingLeft = true; });
+    btnLeft.addEventListener('pointerup', () => isMovingLeft = false);
+    btnLeft.addEventListener('pointerleave', () => isMovingLeft = false);
+  }
+  if (btnRight) {
+    btnRight.addEventListener('pointerdown', (e) => { e.preventDefault(); isMovingRight = true; });
+    btnRight.addEventListener('pointerup', () => isMovingRight = false);
+    btnRight.addEventListener('pointerleave', () => isMovingRight = false);
+  }
 
   window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isMovingLeft = true;
@@ -760,38 +785,45 @@ function setupEventListeners() {
     if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') isMovingRight = false;
   });
 
-  canvas.addEventListener('pointermove', (e) => {
-    if (!isGameRunning || isGamePaused) return;
-    if (e.buttons > 0 || e.pointerType === 'touch') {
-      const rect = canvas.getBoundingClientRect();
-      playerX = e.clientX - rect.left;
-    }
-  });
+  if (canvas) {
+    canvas.addEventListener('pointermove', (e) => {
+      if (!isGameRunning || isGamePaused) return;
+      if (e.buttons > 0 || e.pointerType === 'touch') {
+        const rect = canvas.getBoundingClientRect();
+        playerX = e.clientX - rect.left;
+      }
+    });
+  }
 
-  document.getElementById('btn-next-level').onclick = () => {
-    document.getElementById('modal-result').classList.add('hidden');
+  // --- NEXT LEVEL / RESTART / MENU ---
+  const bNext = $('btn-next-level');
+  if (bNext) bNext.onclick = () => {
+    $('modal-result').classList.add('hidden');
     currentLevelIndex++;
     if (currentLevelIndex >= levelsData.length) { restartGame(); return; }
     lives = 3;
     updateLivesDisplay();
     startCurrentLevel();
   };
-  document.getElementById('btn-restart').onclick = () => {
-    document.getElementById('modal-result').classList.add('hidden');
+  const bRestart = $('btn-restart');
+  if (bRestart) bRestart.onclick = () => {
+    $('modal-result').classList.add('hidden');
     restartGame();
   };
-  document.getElementById('btn-menu').onclick = () => {
-    document.getElementById('modal-result').classList.add('hidden');
-    document.getElementById('hud-overlay').classList.add('hidden');
-    document.getElementById('screen-main-menu').classList.remove('hidden');
+  const bMenu = $('btn-menu');
+  if (bMenu) bMenu.onclick = () => {
+    $('modal-result').classList.add('hidden');
+    $('hud-overlay').classList.add('hidden');
+    $('screen-main-menu').classList.remove('hidden');
     sounds.stopBGM();
     isGameRunning = false;
     isGamePaused = false;
     applyThemeToDocument(LEVEL_THEMES[0]);
   };
 
-  // FREEZE
-  document.getElementById('btn-freeze').onclick = () => {
+  // --- SKILL: FREEZE ---
+  const bFreeze = $('btn-freeze');
+  if (bFreeze) bFreeze.onclick = () => {
     if (freezeCharges <= 0 || isFrozen || isGamePaused || !isGameRunning) return;
     freezeCharges--;
     isFrozen = true;
@@ -803,20 +835,22 @@ function setupEventListeners() {
     screenShake = 6;
   };
 
-  // SHIELD (skill baru)
-  document.getElementById('btn-shield').onclick = () => {
+  // --- SKILL: SHIELD ---
+  const bShield = $('btn-shield');
+  if (bShield) bShield.onclick = () => {
     if (shieldCharges <= 0 || isShieldActive || isGamePaused || !isGameRunning) return;
     shieldCharges--;
     isShieldActive = true;
-    shieldTimer = 300; // 5 detik @ 60fps
+    shieldTimer = 300;
     sounds.playShield();
     triggerVibrate([30, 30, 60]);
     updateSkillButtonsUI();
     spawnFloatingText(playerX, canvas.height - 70, 'SHIELD!', '#39ff14');
   };
 
-  // BOMB
-  document.getElementById('btn-bomb').onclick = () => {
+  // --- SKILL: BOMB ---
+  const bBomb = $('btn-bomb');
+  if (bBomb) bBomb.onclick = () => {
     if (bombCharges <= 0 || isGamePaused || !isGameRunning) return;
     bombCharges--;
     screenShake = 22;
@@ -860,28 +894,27 @@ function setupEventListeners() {
     checkLevelObjectives();
   };
 
-  // Loadout modal start button
-  const loadoutBtn = document.getElementById('btn-start-loaded');
+  // --- LOADOUT MODAL START BUTTON ---
+  const loadoutBtn = $('btn-start-loaded');
   if (loadoutBtn) {
     loadoutBtn.addEventListener('click', async () => {
       if (loadoutCurrentSelection.length !== 2) return;
       playerLoadout = [...loadoutCurrentSelection];
       await setLoadout(playerLoadout);
-      document.getElementById('modal-loadout').classList.add('hidden');
+      $('modal-loadout').classList.add('hidden');
       sounds.playPowerup();
       if (loadoutCallback) { const cb = loadoutCallback; loadoutCallback = null; cb(); }
     });
   }
 
-  // Narrative tap-to-skip / next
+  // --- NARRATIVE TAP ---
   document.addEventListener('click', (e) => {
-    const overlay = document.getElementById('narrative-overlay');
+    const overlay = $('narrative-overlay');
     if (!overlay || overlay.classList.contains('hidden')) return;
     if (!overlay.contains(e.target) && e.target !== overlay) return;
-    // Also allow clicking inside box
     if (storyTyping) {
       if (storyTimer) { clearInterval(storyTimer); storyTimer = null; }
-      const body = document.getElementById('story-body');
+      const body = $('story-body');
       if (body) body.textContent = storyCurrentText;
       const caret = overlay.querySelector('.caret');
       if (caret) caret.remove();
@@ -893,7 +926,7 @@ function setupEventListeners() {
 }
 
 // =============================================================
-// 10. THEME
+// 11. THEME
 // =============================================================
 function applyThemeToDocument(theme) {
   const root = document.documentElement;
@@ -902,19 +935,24 @@ function applyThemeToDocument(theme) {
 }
 
 // =============================================================
-// 11. SHOP / UI HELPERS
+// 12. SHOP / UI
 // =============================================================
 function updateShopUI() {
-  document.getElementById('shop-coin-count').innerText = coins;
-  document.getElementById('shop-level-firerate').innerText = upgradeFireRate;
-  document.getElementById('shop-level-shield').innerText = upgradeShield;
-  document.getElementById('shop-level-bomb').innerText = upgradeBomb;
-  document.getElementById('shop-level-freeze').innerText = upgradeFreeze;
+  const $ = id => document.getElementById(id);
+  const sc = $('shop-coin-count'); if (sc) sc.innerText = coins;
+  const lf = $('shop-level-firerate'); if (lf) lf.innerText = upgradeFireRate;
+  const ls = $('shop-level-shield'); if (ls) ls.innerText = upgradeShield;
+  const lb = $('shop-level-bomb'); if (lb) lb.innerText = upgradeBomb;
+  const lz = $('shop-level-freeze'); if (lz) lz.innerText = upgradeFreeze;
 
-  document.getElementById('btn-buy-firerate').querySelector('span').innerText = upgradeFireRate >= 5 ? 'MAX' : `${upgradeFireRate * 50}`;
-  document.getElementById('btn-buy-shield').querySelector('span').innerText = upgradeShield >= 5 ? 'MAX' : `${upgradeShield * 60}`;
-  document.getElementById('btn-buy-bomb').querySelector('span').innerText = upgradeBomb >= 5 ? 'MAX' : `${upgradeBomb * 75}`;
-  document.getElementById('btn-buy-freeze').querySelector('span').innerText = upgradeFreeze >= 5 ? 'MAX' : `${upgradeFreeze * 75}`;
+  const bf = $('btn-buy-firerate');
+  if (bf && bf.querySelector('span')) bf.querySelector('span').innerText = upgradeFireRate >= 5 ? 'MAX' : `${upgradeFireRate * 50}`;
+  const bs = $('btn-buy-shield');
+  if (bs && bs.querySelector('span')) bs.querySelector('span').innerText = upgradeShield >= 5 ? 'MAX' : `${upgradeShield * 60}`;
+  const bb = $('btn-buy-bomb');
+  if (bb && bb.querySelector('span')) bb.querySelector('span').innerText = upgradeBomb >= 5 ? 'MAX' : `${upgradeBomb * 75}`;
+  const bz = $('btn-buy-freeze');
+  if (bz && bz.querySelector('span')) bz.querySelector('span').innerText = upgradeFreeze >= 5 ? 'MAX' : `${upgradeFreeze * 75}`;
 }
 
 function buyUpgrade(type) {
@@ -940,13 +978,15 @@ function pauseGame() {
   if (!isGameRunning) return;
   isGamePaused = true;
   sounds.stopBGM();
-  document.getElementById('modal-pause').classList.remove('hidden');
+  const p = document.getElementById('modal-pause');
+  if (p) p.classList.remove('hidden');
 }
 
 function resumeGame() {
   isGamePaused = false;
   sounds.startBGM();
-  document.getElementById('modal-pause').classList.add('hidden');
+  const p = document.getElementById('modal-pause');
+  if (p) p.classList.add('hidden');
   requestAnimationFrame(gameLoop);
 }
 
@@ -961,7 +1001,8 @@ function requestFullscreenAndLandscape() {
 
 function updateActorSelectionUI() {
   const name = actorMap[currentActor] ? actorMap[currentActor].name : 'Robot Cyber';
-  document.getElementById('selected-actor-name').innerText = name;
+  const el = document.getElementById('selected-actor-name');
+  if (el) el.innerText = name;
   const pauseHero = document.getElementById('pause-hero-name');
   if (pauseHero) pauseHero.innerText = name;
 }
@@ -970,6 +1011,7 @@ function updateSkillButtonsUI() {
   const btnFreeze = document.getElementById('btn-freeze');
   const btnShield = document.getElementById('btn-shield');
   const btnBomb = document.getElementById('btn-bomb');
+  if (!btnFreeze || !btnShield || !btnBomb) return;
 
   const hasFreeze = playerLoadout.includes('freeze');
   const hasShield = playerLoadout.includes('shield');
@@ -980,28 +1022,34 @@ function updateSkillButtonsUI() {
   btnBomb.style.display = hasBomb ? 'flex' : 'none';
 
   if (hasFreeze) {
-    document.getElementById('freeze-count').innerText = freezeCharges;
+    const fc = document.getElementById('freeze-count');
+    if (fc) fc.innerText = freezeCharges;
     btnFreeze.classList.toggle('disabled', freezeCharges <= 0);
   }
   if (hasShield) {
-    document.getElementById('shield-count').innerText = shieldCharges;
+    const sc = document.getElementById('shield-count');
+    if (sc) sc.innerText = shieldCharges;
     btnShield.classList.toggle('disabled', shieldCharges <= 0);
   }
   if (hasBomb) {
-    document.getElementById('bomb-count').innerText = bombCharges;
+    const bc = document.getElementById('bomb-count');
+    if (bc) bc.innerText = bombCharges;
     btnBomb.classList.toggle('disabled', bombCharges <= 0);
   }
 }
 
 // =============================================================
-// 12. GAME FLOW
+// 13. GAME FLOW
 // =============================================================
 function startGame() {
+  console.log('▶ [startGame] Beginning...');
   sounds.init();
-  const inputName = document.getElementById('player-name-input').value.trim();
+  const input = document.getElementById('player-name-input');
+  const inputName = input ? input.value.trim() : '';
   playerName = inputName || 'Pahlawan';
   DB.set('pahlawan_nama', playerName);
-  document.getElementById('player-name-display').innerText = playerName;
+  const pnd = document.getElementById('player-name-display');
+  if (pnd) pnd.innerText = playerName;
 
   currentLevelIndex = 0;
   score = 0;
@@ -1010,11 +1058,16 @@ function startGame() {
 
   if (!levelsData || levelsData.length === 0) levelsData = generate30Levels();
 
-  document.getElementById('screen-main-menu').classList.add('hidden');
-  document.getElementById('hud-overlay').classList.remove('hidden');
+  const mainMenu = document.getElementById('screen-main-menu');
+  const hud = document.getElementById('hud-overlay');
+  if (mainMenu) mainMenu.classList.add('hidden');
+  if (hud) hud.classList.remove('hidden');
 
   resizeCanvas();
-  setTimeout(() => { resizeCanvas(); startCurrentLevel(); }, 60);
+  setTimeout(() => {
+    resizeCanvas();
+    startCurrentLevel();
+  }, 60);
 }
 
 function restartGame() {
@@ -1031,12 +1084,12 @@ function showLevelIntro(levelConfig) {
   const banner = document.getElementById('level-intro');
   if (!banner) return;
   const numStr = String(levelConfig.level).padStart(2, '0');
-  document.getElementById('level-intro-number').innerText = numStr;
-  document.getElementById('level-intro-name').innerText = currentTheme.name;
-  document.getElementById('level-intro-mission').innerText =
-    levelConfig.algorithm.startsWith('boss_')
-      ? 'DEFEAT THE BOSS'
-      : `${levelConfig.targetKills} KILLS · TARGET ${levelConfig.targetScore}`;
+  const numEl = document.getElementById('level-intro-number'); if (numEl) numEl.innerText = numStr;
+  const nameEl = document.getElementById('level-intro-name'); if (nameEl) nameEl.innerText = currentTheme.name;
+  const misEl = document.getElementById('level-intro-mission');
+  if (misEl) misEl.innerText = levelConfig.algorithm.startsWith('boss_')
+    ? 'DEFEAT THE BOSS'
+    : `${levelConfig.targetKills} KILLS · TARGET ${levelConfig.targetScore}`;
   banner.classList.remove('hidden');
   banner.classList.remove('fade-out');
   void banner.offsetWidth;
@@ -1053,7 +1106,6 @@ async function startCurrentLevel() {
   applyThemeToDocument(currentTheme);
   recolorStars();
 
-  // Reset gameplay state
   levelKills = 0;
   levelCoinsEarned = 0;
   playerX = canvas.width / 2;
@@ -1072,10 +1124,10 @@ async function startCurrentLevel() {
   isGameRunning = false;
   isGamePaused = false;
 
-  // Check story
   const story = STORY[levelConfig.level];
   const storyKey = 'story_seen_' + levelConfig.level;
-  const alreadySawStory = await DB.get(storyKey);
+  let alreadySawStory = null;
+  try { alreadySawStory = await DB.get(storyKey); } catch(e) {}
   const runStory = story && story.before && !alreadySawStory;
 
   const proceed = () => {
@@ -1091,7 +1143,6 @@ async function startCurrentLevel() {
 }
 
 function actuallyStartLevel(levelConfig) {
-  // Set skill charges berdasar loadout
   freezeCharges = playerLoadout.includes('freeze') ? upgradeFreeze : 0;
   shieldCharges = playerLoadout.includes('shield') ? upgradeShield : 0;
   bombCharges   = playerLoadout.includes('bomb') ? upgradeBomb : 0;
@@ -1108,23 +1159,27 @@ function actuallyStartLevel(levelConfig) {
 
 function updateHUDValues() {
   const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
-  document.getElementById('hud-level').innerText = levelConfig.level;
-  document.getElementById('hud-score').innerText = score;
-  document.getElementById('hud-coins').innerText = coins;
-  document.getElementById('hud-mission').innerText = `${levelKills}/${levelConfig.targetKills}`;
+  const hl = document.getElementById('hud-level'); if (hl) hl.innerText = levelConfig.level;
+  const hs = document.getElementById('hud-score'); if (hs) hs.innerText = score;
+  const hc = document.getElementById('hud-coins'); if (hc) hc.innerText = coins;
+  const hm = document.getElementById('hud-mission'); if (hm) hm.innerText = `${levelKills}/${levelConfig.targetKills}`;
   const comboPill = document.getElementById('hud-combo-pill');
-  if (combo > 1) {
-    comboPill.classList.remove('hidden');
-    document.getElementById('hud-combo-text').innerText = `${combo}x COMBO`;
-  } else {
-    comboPill.classList.add('hidden');
+  if (comboPill) {
+    if (combo > 1) {
+      comboPill.classList.remove('hidden');
+      const ct = document.getElementById('hud-combo-text');
+      if (ct) ct.innerText = `${combo}x COMBO`;
+    } else {
+      comboPill.classList.add('hidden');
+    }
   }
 }
 
 function updateLivesDisplay() {
   const container = document.getElementById('hud-lives');
+  if (!container) return;
   let html = '';
-  for(let i=0; i<lives; i++) {
+  for (let i = 0; i < lives; i++) {
     html += `<svg class="heart-icon" viewBox="0 0 24 24"><use href="#i-heart"/></svg>`;
   }
   container.innerHTML = html;
@@ -1141,7 +1196,7 @@ function triggerBossSiren() {
 }
 
 // =============================================================
-// 13. SPAWNING
+// 14. SPAWNING
 // =============================================================
 function spawnMonsterLoop() {
   if (!isGameRunning) return;
@@ -1257,7 +1312,7 @@ function checkLevelObjectives() {
 }
 
 // =============================================================
-// 14. DRAW HERO
+// 15. DRAW HERO
 // =============================================================
 function drawHeroVector(ctx, x, y, type) {
   ctx.save();
@@ -1311,7 +1366,7 @@ function drawHeroVector(ctx, x, y, type) {
     for (let i = 0; i < 6; i++) {
       const a = (Math.PI / 3) * i + playerPulse * 0.05;
       const px = Math.cos(a) * 38, py = Math.sin(a) * 38 - 2;
-      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
     }
     ctx.closePath();
     ctx.fillStyle = 'rgba(0, 210, 211, 0.18)';
@@ -1338,7 +1393,7 @@ function drawHeroVector(ctx, x, y, type) {
 }
 
 // =============================================================
-// 15. GAME LOOP
+// 16. GAME LOOP
 // =============================================================
 function gameLoop() {
   if (!isGameRunning || isGamePaused) return;
@@ -1438,7 +1493,7 @@ function gameLoop() {
     if (flash.opacity <= 0) muzzleFlashes.splice(mf, 1);
   }
 
-  // TELEGRAPHS (render di atas bg, bawah bullets)
+  // TELEGRAPHS
   for (let t = telegraphs.length - 1; t >= 0; t--) {
     const tg = telegraphs[t];
     tg.progress++;
@@ -1510,7 +1565,6 @@ function gameLoop() {
         bullet.pierce--;
         if (bullet.pierce <= 0) { bullets.splice(b, 1); bulletConsumed = true; }
 
-        // Boss weak point logic
         let damage = 1;
         const isBossType = m.type.startsWith('boss');
         if (isBossType && !m.noWeakPoint) {
@@ -1705,7 +1759,7 @@ function gameLoop() {
     }
   }
 
-  // HERO ground aura
+  // HERO GROUND AURA
   ctx.save();
   const auraAlpha = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
   const auraGrad = ctx.createRadialGradient(playerX, heroPlayerY + 20, 4, playerX, heroPlayerY + 20, 55);
@@ -1734,7 +1788,6 @@ function gameLoop() {
         m.y = Math.min(100, m.y + m.speed);
         m.x = canvas.width / 2 + Math.sin(m.timeAlive * 2) * 140;
 
-        // Boss telegraph
         if (m.aimTimer > 0) {
           m.aimTimer--;
           if (m.aimTimer === 0) {
@@ -1754,7 +1807,6 @@ function gameLoop() {
           spawnTelegraph(m.x, m.y + m.size, playerX, heroPlayerY, 36, '#ff2e88');
         }
 
-        // Boss minion summon
         if (m.minionTimer > 300) {
           m.minionTimer = 0;
           monsters.push(
@@ -1764,7 +1816,6 @@ function gameLoop() {
           spawnFloatingText(m.x, m.y + 60, 'SUMMON!', '#ff4757');
         }
 
-        // Boss30 enrage
         if (m.type === 'boss30' && m.enrageTimer > 900) {
           m.enrageTimer = 0;
           let healVal = Math.floor(m.maxHp * 0.10);
@@ -1774,7 +1825,6 @@ function gameLoop() {
           spawnFloatingText(m.x, m.y - 20, `REGEN +${healVal}`, '#2ed573');
         }
 
-        // Boss weak point cycle
         if (!m.noWeakPoint) {
           m.coreTimer++;
           const cycle = 180;
@@ -1792,7 +1842,6 @@ function gameLoop() {
           default: m.y += m.speed; break;
         }
 
-        // Crystal shooter telegraph
         if (m.canShoot) {
           if (m.aimTimer > 0) {
             m.aimTimer--;
@@ -1817,7 +1866,6 @@ function gameLoop() {
       }
     }
 
-    // Draw monster
     ctx.save();
     ctx.globalAlpha = m.opacity || 1.0;
 
@@ -1828,7 +1876,6 @@ function gameLoop() {
 
     ctx.translate(m.x, m.y);
 
-    // Boss aura rings
     if (m.type.startsWith('boss')) {
       ctx.save();
       ctx.rotate((m.aura || 0));
@@ -1856,7 +1903,6 @@ function gameLoop() {
       ctx.globalAlpha = m.opacity || 1.0;
     }
 
-    // Body
     if (m.type.startsWith('boss')) {
       const bossGrad = ctx.createRadialGradient(0, 0, m.size * 0.2, 0, 0, m.size);
       bossGrad.addColorStop(0, '#ffffff');
@@ -1871,7 +1917,6 @@ function gameLoop() {
       ctx.strokeStyle = '#ffd700';
       ctx.stroke();
 
-      // Crown
       ctx.fillStyle = '#ffd700';
       ctx.beginPath();
       ctx.moveTo(-30, -m.size);
@@ -1881,7 +1926,6 @@ function gameLoop() {
       ctx.lineTo(30, -m.size);
       ctx.closePath(); ctx.fill();
 
-      // Eyes
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.arc(-m.size * 0.3, -10, m.size * 0.15, 0, Math.PI*2);
@@ -1893,7 +1937,6 @@ function gameLoop() {
       ctx.arc(m.size * 0.3, -10, m.size * 0.07, 0, Math.PI*2);
       ctx.fill();
 
-      // Weak point
       if (!m.noWeakPoint) {
         if (m.coreOpen) {
           const pulse = 1 + Math.sin(m.coreGlow || 0) * 0.15;
@@ -1949,7 +1992,6 @@ function gameLoop() {
       ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.stroke();
     }
 
-    // Hit flash
     if (m.hitFlash > 0) {
       ctx.save();
       ctx.globalAlpha = (m.hitFlash / 8) * 0.85;
@@ -1960,7 +2002,6 @@ function gameLoop() {
       ctx.restore();
     }
 
-    // HP bar tanky non-boss
     if (m.maxHp > 1 && !m.type.startsWith('boss')) {
       let widthBar = m.size * 1.5;
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -1971,7 +2012,6 @@ function gameLoop() {
 
     ctx.restore();
 
-    // Boss HP bar (drawn without translate)
     if (m.type.startsWith('boss')) {
       ctx.save();
       let barWidth = Math.min(400, canvas.width * 0.6);
@@ -1990,7 +2030,6 @@ function gameLoop() {
       const coreStatus = (!m.noWeakPoint) ? (m.coreOpen ? ' [CRITICAL]' : '') : '';
       ctx.fillText(`BOSS HP: ${Math.ceil(Math.max(0, m.hp))} / ${m.maxHp}${coreStatus}`, canvas.width / 2, 29);
 
-      // Weak point indicator
       if (!m.noWeakPoint) {
         const wpY = 38;
         const cycle = 180;
@@ -2003,7 +2042,6 @@ function gameLoop() {
       ctx.restore();
     }
 
-    // Non-boss escape
     if (m.y > canvas.height - 55 && !m.type.startsWith('boss')) {
       monsters.splice(i, 1);
       if (isShieldActive) {
@@ -2039,7 +2077,7 @@ function gameLoop() {
         const r = p.size * 1.6;
         const x1 = Math.cos(a) * r;
         const y1 = Math.sin(a) * r;
-        s === 0 ? ctx.moveTo(x1, y1) : ctx.lineTo(x1, y1);
+        if (s === 0) ctx.moveTo(x1, y1); else ctx.lineTo(x1, y1);
         const a2 = a + Math.PI / 5;
         const r2 = p.size * 0.7;
         ctx.lineTo(Math.cos(a2) * r2, Math.sin(a2) * r2);
@@ -2058,7 +2096,7 @@ function gameLoop() {
 }
 
 // =============================================================
-// 16. LEVEL COMPLETE / FAILED
+// 17. LEVEL COMPLETE / FAILED
 // =============================================================
 async function levelComplete() {
   isGameRunning = false;
@@ -2071,20 +2109,19 @@ async function levelComplete() {
   unlockSticker(levelConfig.level);
   saveScoreToGlobalLeaderboard(playerName, score, levelConfig.level);
 
-  // Hitung bintang
   const stars = (lives === 3 && combo >= 3) ? 3 : (lives === 3 ? 2 : 1);
-  await setStar(levelConfig.level, stars);
+  try { await setStar(levelConfig.level, stars); } catch(e) {}
 
   const showResult = () => {
-    document.getElementById('result-title').innerText = "MISI SELESAI";
-    document.getElementById('result-player-name').innerText = playerName;
-    document.getElementById('result-score').innerText = score;
-    document.getElementById('result-coins').innerText = `+${levelCoinsEarned}`;
-    document.getElementById('result-level').innerText = levelConfig.level;
-    document.getElementById('result-kills').innerText = `${levelKills} Target`;
+    const $ = id => document.getElementById(id);
+    const rt = $('result-title'); if (rt) rt.innerText = "MISI SELESAI";
+    const rpn = $('result-player-name'); if (rpn) rpn.innerText = playerName;
+    const rs = $('result-score'); if (rs) rs.innerText = score;
+    const rc = $('result-coins'); if (rc) rc.innerText = `+${levelCoinsEarned}`;
+    const rl = $('result-level'); if (rl) rl.innerText = levelConfig.level;
+    const rk = $('result-kills'); if (rk) rk.innerText = `${levelKills} Target`;
 
-    // Render stars
-    const starContainer = document.getElementById('result-stars');
+    const starContainer = $('result-stars');
     if (starContainer) {
       let html = '';
       for (let s = 0; s < 3; s++) {
@@ -2093,17 +2130,19 @@ async function levelComplete() {
       starContainer.innerHTML = html;
     }
 
-    const icon = document.getElementById('result-icon');
+    const icon = $('result-icon');
     if (icon) { icon.innerHTML = '<use href="#i-trophy"/>'; icon.classList.remove('fail'); }
 
-    document.getElementById('btn-next-level').classList.remove('hidden');
-    document.getElementById('modal-result').classList.remove('hidden');
+    const nextBtn = $('btn-next-level');
+    if (nextBtn) nextBtn.classList.remove('hidden');
+    const modal = $('modal-result');
+    if (modal) modal.classList.remove('hidden');
   };
 
-  // Story after
   const story = STORY[levelConfig.level];
   const storyKey = 'story_after_seen_' + levelConfig.level;
-  const alreadySawStory = await DB.get(storyKey);
+  let alreadySawStory = null;
+  try { alreadySawStory = await DB.get(storyKey); } catch(e) {}
   if (story && story.after && !alreadySawStory) {
     DB.set(storyKey, '1');
     showNarrative(story.after.lines, story.after.speaker, story.after.portrait, showResult);
@@ -2121,28 +2160,30 @@ function levelFailed(reasonTitle = "MISI GAGAL") {
   const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
   saveScoreToGlobalLeaderboard(playerName, score, levelConfig.level);
 
-  document.getElementById('result-title').innerText = reasonTitle;
-  document.getElementById('result-player-name').innerText = playerName;
-  document.getElementById('result-score').innerText = score;
-  document.getElementById('result-coins').innerText = `+${levelCoinsEarned}`;
-  document.getElementById('result-level').innerText = levelConfig.level;
-  document.getElementById('result-kills').innerText = `${levelKills} Target`;
+  const $ = id => document.getElementById(id);
+  const rt = $('result-title'); if (rt) rt.innerText = reasonTitle;
+  const rpn = $('result-player-name'); if (rpn) rpn.innerText = playerName;
+  const rs = $('result-score'); if (rs) rs.innerText = score;
+  const rc = $('result-coins'); if (rc) rc.innerText = `+${levelCoinsEarned}`;
+  const rl = $('result-level'); if (rl) rl.innerText = levelConfig.level;
+  const rk = $('result-kills'); if (rk) rk.innerText = `${levelKills} Target`;
 
-  const starContainer = document.getElementById('result-stars');
+  const starContainer = $('result-stars');
   if (starContainer) {
     starContainer.innerHTML = '<span style="color:#566a8c;font-size:12px;">—</span>';
   }
 
-  const icon = document.getElementById('result-icon');
+  const icon = $('result-icon');
   if (icon) { icon.innerHTML = '<use href="#i-skull"/>'; icon.classList.add('fail'); }
 
-  document.getElementById('btn-next-level').classList.add('hidden');
-  document.getElementById('modal-result').classList.remove('hidden');
+  const nextBtn = $('btn-next-level');
+  if (nextBtn) nextBtn.classList.add('hidden');
+  const modal = $('modal-result');
+  if (modal) modal.classList.remove('hidden');
 }
 
 // =============================================================
-// 17. FIREBASE LEADERBOARD
-// ⚠️ STRUKTUR TIDAK DIUBAH — backward-compatible
+// 18. FIREBASE LEADERBOARD — STRUKTUR TIDAK DIUBAH
 // =============================================================
 function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   const cleanName = (name || 'Pahlawan').trim();
@@ -2153,7 +2194,6 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   const numLevel = Number(levelVal) || 1;
   const sortValue = (numLevel * 100000000) + numScore;
 
-  // Local storage dedup (tetap pakai localStorage via DB mirror)
   let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
   let existingIndex = localScores.findIndex(s => (s.name || '').trim().toLowerCase() === cleanName.toLowerCase());
 
@@ -2180,7 +2220,6 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
     DB.set('pahlawan_scores', JSON.stringify(localScores.slice(0, 20)));
   }
 
-  // Firebase — struktur SAMA seperti sebelumnya
   if (db && playerKey) {
     const playerRef = db.ref('leaderboard/' + playerKey);
     playerRef.once('value').then(snapshot => {
@@ -2208,8 +2247,10 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
 }
 
 function openLeaderboard() {
-  document.getElementById('modal-leaderboard').classList.remove('hidden');
+  const modal = document.getElementById('modal-leaderboard');
+  if (modal) modal.classList.remove('hidden');
   const tbody = document.getElementById('leaderboard-body');
+  if (!tbody) return;
   tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Memuat Papan Peringkat Realtime...</td></tr>';
   if (!db) { showLocalScores(tbody); return; }
 
@@ -2297,16 +2338,19 @@ function escapeHtml(text) {
 }
 
 // =============================================================
-// 18. LOADOUT MODAL
+// 19. LOADOUT MODAL
 // =============================================================
 function showLoadoutModal(levelConfig, onDone) {
   loadoutCallback = onDone;
   loadoutCurrentSelection = [...playerLoadout];
 
-  document.getElementById('loadout-level').innerText = levelConfig.level;
-  document.getElementById('loadout-theme').innerText = currentTheme.name;
+  const lvlEl = document.getElementById('loadout-level');
+  if (lvlEl) lvlEl.innerText = levelConfig.level;
+  const themeEl = document.getElementById('loadout-theme');
+  if (themeEl) themeEl.innerText = currentTheme.name;
 
   const cards = document.querySelectorAll('.loadout-card');
+  const startBtn = document.getElementById('btn-start-loaded');
   const updateVisual = () => {
     cards.forEach(c => {
       const skill = c.dataset.skill;
@@ -2314,7 +2358,7 @@ function showLoadoutModal(levelConfig, onDone) {
       c.classList.toggle('selected', selected);
       c.classList.toggle('disabled', !selected && loadoutCurrentSelection.length >= 2);
     });
-    document.getElementById('btn-start-loaded').disabled = loadoutCurrentSelection.length !== 2;
+    if (startBtn) startBtn.disabled = loadoutCurrentSelection.length !== 2;
   };
 
   cards.forEach(card => {
@@ -2324,7 +2368,6 @@ function showLoadoutModal(levelConfig, onDone) {
         loadoutCurrentSelection = loadoutCurrentSelection.filter(s => s !== skill);
       } else {
         if (loadoutCurrentSelection.length >= 2) {
-          // Replace oldest
           loadoutCurrentSelection.shift();
         }
         loadoutCurrentSelection.push(skill);
@@ -2334,25 +2377,30 @@ function showLoadoutModal(levelConfig, onDone) {
   });
 
   updateVisual();
-  document.getElementById('modal-loadout').classList.remove('hidden');
+  const modal = document.getElementById('modal-loadout');
+  if (modal) modal.classList.remove('hidden');
 }
 
 // =============================================================
-// 19. NARRATIVE SYSTEM
+// 20. NARRATIVE SYSTEM
 // =============================================================
 function showNarrative(lines, speaker, portrait, onDone) {
   if (!lines || lines.length === 0) { if (onDone) onDone(); return; }
   storyQueue = lines.slice();
   storyOnDone = onDone || null;
-  document.getElementById('narrative-speaker').innerText = speaker || '';
-  document.getElementById('narrative-portrait-svg').innerHTML = `<use href="#${portrait || 'i-vega'}"/>`;
-  document.getElementById('narrative-overlay').classList.remove('hidden');
+  const spk = document.getElementById('narrative-speaker');
+  if (spk) spk.innerText = speaker || '';
+  const psvg = document.getElementById('narrative-portrait-svg');
+  if (psvg) psvg.innerHTML = `<use href="#${portrait || 'i-vega'}"/>`;
+  const overlay = document.getElementById('narrative-overlay');
+  if (overlay) overlay.classList.remove('hidden');
   playNextStoryLine();
 }
 
 function playNextStoryLine() {
   if (storyQueue.length === 0) {
-    document.getElementById('narrative-overlay').classList.add('hidden');
+    const overlay = document.getElementById('narrative-overlay');
+    if (overlay) overlay.classList.add('hidden');
     const cb = storyOnDone; storyOnDone = null;
     if (cb) cb();
     return;
@@ -2366,6 +2414,7 @@ function typeStoryLine(line) {
   storyCurrentText = line;
   storyCurrentIdx = 0;
   const el = document.getElementById('narrative-text');
+  if (!el) { storyTyping = false; playNextStoryLine(); return; }
   el.innerHTML = '<span id="story-body"></span><span class="caret">&nbsp;</span>';
   const body = document.getElementById('story-body');
   if (storyTimer) clearInterval(storyTimer);
@@ -2374,13 +2423,14 @@ function typeStoryLine(line) {
       clearInterval(storyTimer); storyTimer = null; storyTyping = false;
       return;
     }
-    body.textContent += storyCurrentText[storyCurrentIdx++];
+    if (body) body.textContent += storyCurrentText[storyCurrentIdx++];
+    else storyCurrentIdx++;
     if (storyCurrentIdx % 3 === 0) sounds.playType();
   }, 28);
 }
 
 // =============================================================
-// 20. STICKER ALBUM
+// 21. STICKER ALBUM
 // =============================================================
 function unlockSticker(id) {
   let unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
@@ -2400,6 +2450,7 @@ function updateStickerAlbumUI() {
 function openStickerAlbum() {
   const unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
   const grid = document.getElementById('sticker-grid');
+  if (!grid) return;
   grid.innerHTML = (stickersData || DEFAULT_STICKERS).map((sticker, idx) => {
     const isUnlocked = unlocked.includes(sticker.id);
     const delay = (idx * 0.03).toFixed(2);
@@ -2408,5 +2459,10 @@ function openStickerAlbum() {
         <div class="sticker-title">${isUnlocked ? sticker.title : 'Terkunci'}</div>
       </div>`;
   }).join('');
-  document.getElementById('modal-stickers').classList.remove('hidden');
+  const modal = document.getElementById('modal-stickers');
+  if (modal) modal.classList.remove('hidden');
 }
+
+// =============================================================
+// END OF FILE
+// =============================================================
