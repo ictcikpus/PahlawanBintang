@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Pahlawan Bintang</title>
   <link rel="manifest" href="./manifest.json" />
-  <link rel="stylesheet" href="./style.css?v=17.5" />
+  <link rel="stylesheet" href="./style.css?v=17.7" />
 </head>
 <body>
 
@@ -643,6 +643,46 @@
     <div class="modal-box">
       <h2><svg class="ico-lg gold"><use href="#i-trophy"/></svg> DAILY CHALLENGE</h2>
       <p class="daily-date" id="daily-date">Memuat...</p>
+
+      <!-- Preview 3 Bos -->
+      <div class="daily-boss-preview">
+        <div class="daily-boss-slot" data-slot="0">
+          <svg class="daily-boss-ico" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
+          <div class="daily-boss-num">BOS 1</div>
+          <div class="daily-boss-name" id="daily-boss-0-name">—</div>
+          <div class="daily-boss-check hidden" id="daily-boss-0-check">
+            <svg viewBox="0 0 24 24"><use href="#i-check"/></svg>
+          </div>
+        </div>
+        <div class="daily-boss-arrow">→</div>
+        <div class="daily-boss-slot" data-slot="1">
+          <svg class="daily-boss-ico" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
+          <div class="daily-boss-num">BOS 2</div>
+          <div class="daily-boss-name" id="daily-boss-1-name">—</div>
+          <div class="daily-boss-check hidden" id="daily-boss-1-check">
+            <svg viewBox="0 0 24 24"><use href="#i-check"/></svg>
+          </div>
+        </div>
+        <div class="daily-boss-arrow">→</div>
+        <div class="daily-boss-slot" data-slot="2">
+          <svg class="daily-boss-ico" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
+          <div class="daily-boss-num">BOS 3</div>
+          <div class="daily-boss-name" id="daily-boss-2-name">—</div>
+          <div class="daily-boss-check hidden" id="daily-boss-2-check">
+            <svg viewBox="0 0 24 24"><use href="#i-check"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress kalau sudah mulai -->
+      <div class="daily-progress hidden" id="daily-progress">
+        <div class="daily-progress-label">PROGRESS</div>
+        <div class="daily-progress-value">
+          <strong id="daily-progress-text">0/3 BOS</strong>
+        </div>
+      </div>
+
+      <!-- Modifier -->
       <div class="daily-modifier" id="daily-modifier">
         <div class="daily-mod-icon">
           <svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg>
@@ -652,20 +692,25 @@
           <small id="daily-mod-desc">Musuh bergerak 2&times; lebih cepat</small>
         </div>
       </div>
+
+      <!-- Reward -->
       <div class="daily-reward">
-        <div>&#129689; Reward: <strong>3&times; Koin</strong></div>
-        <div>&#11088; Bintang dihitung normal</div>
+        <div>&#129689; Reward: <strong>5&times; Koin</strong></div>
+        <div>&#127894; Badge: <strong>DAILY MASTER</strong></div>
         <div>&#9200; Reset dalam: <strong id="daily-reset-timer">--:--:--</strong></div>
       </div>
+
+      <!-- Status Done -->
       <div class="daily-status">
         <div class="daily-done-badge hidden" id="daily-done-badge">
           <svg viewBox="0 0 24 24" class="daily-check"><use href="#i-check"/></svg>
           <span>SELESAI HARI INI</span>
         </div>
       </div>
+
       <button id="btn-start-daily" class="btn-primary big" type="button">
         <svg class="ico"><use href="#i-play"/></svg>
-        <span>MULAI CHALLENGE</span>
+        <span>MULAI 3 BOS</span>
       </button>
       <button id="btn-close-daily" class="btn-secondary" type="button">TUTUP</button>
     </div>
@@ -690,6 +735,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <!-- ============ GAME SCRIPT ============ -->
-  <script src="./game.js?v=17.5"></script>
+  <script src="./game.js?v=17.7"></script>
 </body>
 </html>
