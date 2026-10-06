@@ -1,7 +1,11 @@
 // ============================================================
-// PAHLAWAN BINTANG — multiplayer.js v17.12
+// PAHLAWAN BINTANG — multiplayer.js v18.0
 // WebRTC P2P Engine untuk Co-op & PvP
 // Signaling via Firebase, DataChannel untuk game data
+//
+// Catatan: game.js mengirim STATE dengan koordinat TERNORMALISASI
+// (0..1) agar host & guest dengan ukuran layar berbeda tetap sinkron.
+// File ini hanya sebagai transport — tidak mengurus koordinat.
 // ============================================================
 
 (function() {
@@ -35,6 +39,7 @@ class MultiplayerEngine {
   constructor() {
     // State
     this.role = null;                 // 'host' | 'guest' | null
+    this.isHost = false;
     this.roomCode = null;
     this.mode = 'coop';               // 'coop' | 'pvp'
     this.playerName = null;
@@ -64,6 +69,7 @@ class MultiplayerEngine {
     this._pingTimer = null;
     this._pingCheckTimer = null;
     this._connectTimeout = null;
+    this._cleanupTimer = null;
     this._lastPingReceived = 0;
     this._lastInputSent = 0;
     this._lastStateSent = 0;
@@ -80,7 +86,7 @@ class MultiplayerEngine {
     this._onRoomJoined = null;
     this._onRoomFull = null;
 
-    console.log('🎮 [MP] MultiplayerEngine initialized');
+    console.log('🎮 [MP] MultiplayerEngine initialized (v18.0)');
   }
 
   // ============================================================
@@ -294,7 +300,9 @@ class MultiplayerEngine {
   }
 
   /**
-   * Kirim input (dari guest ke host, atau host local tidak perlu)
+   * Kirim input (dari guest ke host)
+   * NOTE: input hanya boolean (kiri/kanan/shoot/skill), tidak pakai koordinat.
+   * Host yang mengurus posisi guest di game loop-nya sendiri.
    */
   sendInput(input) {
     if (!this.isConnected) return;
@@ -315,6 +323,8 @@ class MultiplayerEngine {
 
   /**
    * Host: kirim state game ke guest
+   * NOTE: state sudah TERNORMALISASI (0..1) dari game.js
+   * File ini hanya forward data mentah via DataChannel.
    */
   sendState(state) {
     if (!this.isConnected || !this.isHost) return;
@@ -347,16 +357,16 @@ class MultiplayerEngine {
   // ============================================================
   // CALLBACKS
   // ============================================================
-  onState(cb) { this._onState = cb; }
-  onInput(cb) { this._onInput = cb; }
-  onConnect(cb) { this._onConnect = cb; }
-  onDisconnect(cb) { this._onDisconnect = cb; }
-  onStatusChange(cb) { this._onStatusChange = cb; }
-  onError(cb) { this._onError = cb; }
+  onState(cb)       { this._onState = cb; }
+  onInput(cb)       { this._onInput = cb; }
+  onConnect(cb)     { this._onConnect = cb; }
+  onDisconnect(cb)  { this._onDisconnect = cb; }
+  onStatusChange(cb){ this._onStatusChange = cb; }
+  onError(cb)       { this._onError = cb; }
   onRemoteReady(cb) { this._onRemoteReady = cb; }
-  onStart(cb) { this._onStart = cb; }
-  onRoomJoined(cb) { this._onRoomJoined = cb; }
-  onRoomFull(cb) { this._onRoomFull = cb; }
+  onStart(cb)       { this._onStart = cb; }
+  onRoomJoined(cb)  { this._onRoomJoined = cb; }
+  onRoomFull(cb)    { this._onRoomFull = cb; }
 
   // ============================================================
   // PRIVATE — ROOM MANAGEMENT
@@ -390,8 +400,8 @@ class MultiplayerEngine {
   }
 
   _scheduleRoomCleanup(code) {
-    // Cleanup otomatis di sisi client kalau ada yang tinggalkan room terbuka
-    setTimeout(() => {
+    if (this._cleanupTimer) clearTimeout(this._cleanupTimer);
+    this._cleanupTimer = setTimeout(() => {
       if (this.roomCode === code && this.isHost) {
         console.log('🧹 [MP] Room timeout, cleaning up...');
         this.leaveRoom();
@@ -416,7 +426,6 @@ class MultiplayerEngine {
 
     this._roomListener = this._roomRef.on('value', async (snapshot) => {
       if (!snapshot.exists()) {
-        // Room dihapus (expired)
         if (this.isHost) {
           this._emitError('Room kadaluarsa.');
           this.leaveRoom();
@@ -430,7 +439,6 @@ class MultiplayerEngine {
         this.remotePeerName = data.guestName;
         this.remotePeerKey = data.guestId;
 
-        // Trigger remote ready changes
         if (this._onRemoteReady) {
           try { this._onRemoteReady(!!data.guestReady); } catch(e) {}
         }
@@ -472,7 +480,8 @@ class MultiplayerEngine {
    * GUEST: listen untuk offer dari host
    */
   _listenForOffer(code) {
-    this._offerListener = db.ref('signaling/' + code + '/offer').on('value', async (snapshot) => {
+    this._signalRef = db.ref('signaling/' + code + '/offer');
+    this._offerListener = this._signalRef.on('value', async (snapshot) => {
       if (!snapshot.exists()) return;
       if (this.peerConnection) return; // sudah diproses
 
@@ -493,12 +502,17 @@ class MultiplayerEngine {
   }
 
   /**
-   * HOST: setup WebRTC peer connection + data channel
+   * Setup WebRTC peer connection + data channel
    */
   async _setupPeerConnection() {
     if (this.peerConnection) return;
 
     console.log('🔧 [MP] Setting up PeerConnection as', this.role);
+
+    if (typeof RTCPeerConnection === 'undefined') {
+      throw new Error('Browser tidak mendukung WebRTC.');
+    }
+
     this.peerConnection = new RTCPeerConnection({
       iceServers: MP_CONFIG.ICE_SERVERS,
       iceCandidatePoolSize: 10
@@ -629,13 +643,15 @@ class MultiplayerEngine {
       case 'input':
         // Host: terima input dari guest
         if (this.isHost && this._onInput) {
-          try { this._onInput({
-            left: !!msg.left,
-            right: !!msg.right,
-            shoot: !!msg.shoot,
-            skill1: !!msg.skill1,
-            skill2: !!msg.skill2
-          }); } catch(e) {}
+          try {
+            this._onInput({
+              left: !!msg.left,
+              right: !!msg.right,
+              shoot: !!msg.shoot,
+              skill1: !!msg.skill1,
+              skill2: !!msg.skill2
+            });
+          } catch(e) {}
         }
         break;
 
@@ -647,7 +663,6 @@ class MultiplayerEngine {
         break;
 
       case 'ready':
-        // Remote player ready status
         if (this._onRemoteReady) {
           try { this._onRemoteReady(!!msg.value); } catch(e) {}
         }
@@ -666,7 +681,6 @@ class MultiplayerEngine {
         break;
 
       default:
-        // Custom message — bisa diperluas nanti
         break;
     }
   }
@@ -812,9 +826,13 @@ class MultiplayerEngine {
    * @param {boolean} keepFirebaseListeners - true kalau leaveRoom(), false kalau restart
    */
   _cleanup(keepFirebaseListeners) {
-    // Stop timers
     this._stopPingLoop();
     this._clearConnectTimeout();
+
+    if (this._cleanupTimer) {
+      clearTimeout(this._cleanupTimer);
+      this._cleanupTimer = null;
+    }
 
     // Close data channel
     if (this.dataChannel) {
@@ -866,6 +884,7 @@ class MultiplayerEngine {
     } else {
       // Reset penuh (untuk leaveRoom)
       this.role = null;
+      this.isHost = false;
       this.roomCode = null;
       this.remotePeerName = null;
       this.remotePeerKey = null;
@@ -900,6 +919,6 @@ class MultiplayerEngine {
 window.MultiplayerEngine = MultiplayerEngine;
 window.MP = new MultiplayerEngine();
 
-console.log('✅ [MP] multiplayer.js loaded');
+console.log('✅ [MP] multiplayer.js loaded (v18.0)');
 
 })();
