@@ -8,15 +8,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Pahlawan Bintang</title>
   <link rel="manifest" href="./manifest.json" />
-  <link rel="stylesheet" href="./style.css?v=17.11" />
+  <link rel="stylesheet" href="./style.css?v=17.12" />
 </head>
 <body>
 
 <!-- ============================================================
-     SVG SPRITE
+     SVG SPRITE — Semua ikon game
      ============================================================ -->
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
   <defs>
+    <!-- HERO AVATARS -->
     <symbol id="i-robot" viewBox="0 0 40 40">
       <rect x="8" y="12" width="24" height="20" rx="3" fill="currentColor"/>
       <rect x="12" y="4" width="16" height="10" rx="3" fill="currentColor" opacity=".65"/>
@@ -56,6 +57,7 @@
       <path d="M17 28 Q20 30 23 28" stroke="#05061a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
     </symbol>
 
+    <!-- UI ICONS -->
     <symbol id="i-target" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
       <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -128,6 +130,28 @@
       <circle cx="12" cy="8" r="4" fill="currentColor"/>
       <path d="M4 20 C4 15.5 8 13 12 13 C16 13 20 15.5 20 20 Z" fill="currentColor"/>
     </symbol>
+    <symbol id="i-users" viewBox="0 0 24 24">
+      <circle cx="9" cy="8" r="3.5" fill="currentColor"/>
+      <path d="M2 20 C2 16 5 14 9 14 C13 14 16 16 16 20 Z" fill="currentColor"/>
+      <circle cx="17" cy="9" r="3" fill="currentColor" opacity=".65"/>
+      <path d="M13 20 C13 17 15 15.5 17.5 15.5 C20 15.5 22 17 22 20 Z" fill="currentColor" opacity=".65"/>
+    </symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24">
+      <path d="M12 20 L15 16.5 M2 8.5 A14 14 0 0 1 22 8.5 M5.5 12 A10 10 0 0 1 18.5 12 M9 15.5 A6 6 0 0 1 15 15.5"
+            stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24">
+      <rect x="8" y="8" width="12" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M16 8 V6 A2 2 0 0 0 14 4 H6 A2 2 0 0 0 4 6 V16 A2 2 0 0 0 6 18 H8"
+            stroke="currentColor" stroke-width="2" fill="none"/>
+    </symbol>
+    <symbol id="i-exit" viewBox="0 0 24 24">
+      <path d="M15 4 H6 A2 2 0 0 0 4 6 V18 A2 2 0 0 0 6 20 H15"
+            stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M10 12 H21 M18 9 L21 12 L18 15"
+            stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
     <symbol id="i-sound-on" viewBox="0 0 24 24">
       <path d="M4 9 H8 L13 5 V19 L8 15 H4 Z" fill="currentColor"/>
       <path d="M16 8 A5 5 0 0 1 16 16 M19 5 A9 9 0 0 1 19 19"
@@ -169,6 +193,7 @@
             stroke-linecap="round" stroke-linejoin="round"/>
     </symbol>
 
+    <!-- CHARACTER PORTRAITS -->
     <symbol id="i-vega" viewBox="0 0 100 100">
       <ellipse cx="50" cy="105" rx="38" ry="45" fill="#00d2ff"/>
       <circle cx="50" cy="42" r="28" fill="#ffd8b0"/>
@@ -239,10 +264,10 @@
   <!-- ============ CANVAS ============ -->
   <canvas id="gameCanvas"></canvas>
 
-   <!-- ============ MAIN MENU ============ -->
+  <!-- ============ MAIN MENU ============ -->
   <div id="screen-main-menu" class="screen">
 
-    <!-- Background Space Decoration -->
+    <!-- Space Background Decorations -->
     <div class="space-bg">
       <div class="nebula nebula-1"></div>
       <div class="nebula nebula-2"></div>
@@ -262,9 +287,8 @@
         <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
       </button>
 
-           <!-- ========== LOGO EMBLEM — COMPACT PROFESSIONAL ========== -->
+      <!-- ========== LOGO EMBLEM + TITLE ========== -->
       <div class="title-group">
-
         <!-- Badge Bintang Kecil -->
         <div class="title-badge">
           <div class="badge-orbit"></div>
@@ -316,7 +340,6 @@
           Bertahanlah dari Gelombang Monster Galaksi
           <span class="sub-deco">◆</span>
         </p>
-
       </div>
 
       <div class="input-wrap">
@@ -327,6 +350,11 @@
       <button id="btn-prepare-play" class="btn-primary big" type="button">
         <svg class="ico btn-play-ico"><use href="#i-play"/></svg>
         <span>MULAI MISI</span>
+      </button>
+
+      <button id="btn-multiplayer" class="btn-primary mp-btn" type="button">
+        <svg class="ico"><use href="#i-users"/></svg>
+        <span>MAIN BARENG TEMAN</span>
       </button>
 
       <div class="menu-row">
@@ -553,6 +581,7 @@
         <button class="lb-tab active" data-tab="global" type="button">GLOBAL</button>
         <button class="lb-tab" data-tab="endless" type="button">ENDLESS</button>
         <button class="lb-tab" data-tab="daily" type="button">DAILY</button>
+        <button class="lb-tab" data-tab="coop" type="button">CO-OP</button>
       </div>
       <table class="leaderboard-table">
         <thead>
@@ -712,7 +741,6 @@
       <h2><svg class="ico-lg gold"><use href="#i-trophy"/></svg> DAILY CHALLENGE</h2>
       <p class="daily-date" id="daily-date">Memuat...</p>
 
-      <!-- Preview 3 Bos -->
       <div class="daily-boss-preview">
         <div class="daily-boss-slot" data-slot="0">
           <svg class="daily-boss-ico" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
@@ -742,7 +770,6 @@
         </div>
       </div>
 
-      <!-- Progress kalau sudah mulai -->
       <div class="daily-progress hidden" id="daily-progress">
         <div class="daily-progress-label">PROGRESS</div>
         <div class="daily-progress-value">
@@ -750,7 +777,6 @@
         </div>
       </div>
 
-      <!-- Modifier -->
       <div class="daily-modifier" id="daily-modifier">
         <div class="daily-mod-icon">
           <svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg>
@@ -761,14 +787,12 @@
         </div>
       </div>
 
-      <!-- Reward -->
       <div class="daily-reward">
         <div>&#129689; Reward: <strong>5&times; Koin</strong></div>
         <div>&#127894; Badge: <strong>DAILY MASTER</strong></div>
         <div>&#9200; Reset dalam: <strong id="daily-reset-timer">--:--:--</strong></div>
       </div>
 
-      <!-- Status Done -->
       <div class="daily-status">
         <div class="daily-done-badge hidden" id="daily-done-badge">
           <svg viewBox="0 0 24 24" class="daily-check"><use href="#i-check"/></svg>
@@ -781,6 +805,127 @@
         <span>MULAI 3 BOS</span>
       </button>
       <button id="btn-close-daily" class="btn-secondary" type="button">TUTUP</button>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: MULTIPLAYER HUB ============ -->
+  <div id="modal-mp-hub" class="modal hidden">
+    <div class="modal-box">
+      <h2>
+        <svg class="ico-lg"><use href="#i-users"/></svg>
+        MAIN BARENG TEMAN
+      </h2>
+      <p class="mp-subtitle">Co-op 2 pemain · 1 vs 1 PvP · Gratis tanpa server</p>
+
+      <button id="btn-mp-create" class="btn-primary big mp-btn" type="button">
+        <svg class="ico"><use href="#i-play"/></svg>
+        <span>BUAT ROOM (HOST)</span>
+      </button>
+
+      <button id="btn-mp-join" class="btn-secondary mp-btn" type="button">
+        <svg class="ico"><use href="#i-wifi"/></svg>
+        <span>MASUK ROOM (GUEST)</span>
+      </button>
+
+      <div class="mp-mode-select">
+        <div class="mp-mode-label">MODE PERMAINAN:</div>
+        <div class="mp-mode-buttons">
+          <button id="mp-mode-coop" class="mp-mode-btn active" data-mode="coop" type="button">
+            🤝 CO-OP
+          </button>
+          <button id="mp-mode-pvp" class="mp-mode-btn" data-mode="pvp" type="button">
+            ⚔️ PVP
+          </button>
+        </div>
+      </div>
+
+      <div class="mp-info-box">
+        <div class="mp-info-row">
+          <svg viewBox="0 0 24 24" class="mp-info-ico"><use href="#i-wifi"/></svg>
+          <span>Koneksi P2P langsung (WebRTC)</span>
+        </div>
+        <div class="mp-info-row">
+          <svg viewBox="0 0 24 24" class="mp-info-ico"><use href="#i-users"/></svg>
+          <span>Butuh 2 pemain dengan HP berbeda</span>
+        </div>
+        <div class="mp-info-row">
+          <svg viewBox="0 0 24 24" class="mp-info-ico"><use href="#i-target"/></svg>
+          <span>Keduanya harus online bersamaan</span>
+        </div>
+      </div>
+
+      <button id="btn-mp-close-hub" class="btn-secondary" type="button">TUTUP</button>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: JOIN ROOM ============ -->
+  <div id="modal-mp-join" class="modal hidden">
+    <div class="modal-box">
+      <h2>MASUK ROOM</h2>
+      <p class="mp-subtitle">Masukkan kode 4 huruf dari temanmu</p>
+
+      <div class="mp-code-input-wrap">
+        <input id="mp-code-input" class="mp-code-input" type="text" maxlength="4"
+               placeholder="ABCD" autocapitalize="characters" autocomplete="off" spellcheck="false" />
+      </div>
+
+      <div id="mp-join-status" class="mp-status mp-status-hidden"></div>
+
+      <button id="btn-mp-do-join" class="btn-primary big" type="button">
+        <svg class="ico"><use href="#i-wifi"/></svg>
+        <span>GABUNG</span>
+      </button>
+      <button id="btn-mp-back-from-join" class="btn-secondary" type="button">KEMBALI</button>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: LOBBY (WAITING) ============ -->
+  <div id="modal-mp-lobby" class="modal hidden">
+    <div class="modal-box mp-lobby-box">
+      <h2 id="mp-lobby-title">ROOM DIBUAT</h2>
+
+      <div class="mp-room-code-display">
+        <div class="mp-room-code-label">KODE ROOM</div>
+        <div class="mp-room-code" id="mp-room-code">----</div>
+        <button id="btn-mp-copy-code" class="mp-copy-btn" type="button" title="Salin kode">
+          <svg viewBox="0 0 24 24"><use href="#i-copy"/></svg>
+        </button>
+      </div>
+
+      <div class="mp-players-list">
+        <div class="mp-player-slot" id="mp-slot-host">
+          <div class="mp-slot-avatar">🎮</div>
+          <div class="mp-slot-info">
+            <div class="mp-slot-name" id="mp-host-name">Menunggu...</div>
+            <div class="mp-slot-role">HOST</div>
+          </div>
+          <div class="mp-slot-status" id="mp-host-status">—</div>
+        </div>
+        <div class="mp-player-slot" id="mp-slot-guest">
+          <div class="mp-slot-avatar">🎯</div>
+          <div class="mp-slot-info">
+            <div class="mp-slot-name" id="mp-guest-name">Menunggu...</div>
+            <div class="mp-slot-role">GUEST</div>
+          </div>
+          <div class="mp-slot-status" id="mp-guest-status">—</div>
+        </div>
+      </div>
+
+      <div class="mp-mode-indicator">
+        <span>MODE:</span> <strong id="mp-lobby-mode">CO-OP</strong>
+      </div>
+
+      <div id="mp-connect-status" class="mp-status mp-status-hidden"></div>
+
+      <button id="btn-mp-start-game" class="btn-primary big" type="button" disabled>
+        <svg class="ico"><use href="#i-play"/></svg>
+        <span>MULAI PERMAINAN</span>
+      </button>
+
+      <button id="btn-mp-leave" class="btn-danger" type="button">
+        <svg class="ico"><use href="#i-exit"/></svg>
+        <span>KELUAR ROOM</span>
+      </button>
     </div>
   </div>
 
@@ -802,7 +947,10 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
+  <!-- ============ MULTIPLAYER ENGINE ============ -->
+  <script src="./multiplayer.js?v=17.12"></script>
+
   <!-- ============ GAME SCRIPT ============ -->
-  <script src="./game.js?v=17.11"></script>
+  <script src="./game.js?v=17.12"></script>
 </body>
 </html>
