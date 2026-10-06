@@ -1,5 +1,5 @@
 /* ============================================================
-   PAHLAWAN BINTANG — ELEGANT MODERN UI v15
+   PAHLAWAN BINTANG — ELEGANT MODERN UI v16
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap');
@@ -35,9 +35,6 @@ html, body {
 
 .hidden { display: none !important; }
 
-/* ============================================================
-   SVG ICON DEFAULT
-   ============================================================ */
 .ico, .ico-lg, .ico-inline, .input-ico, .hud-ico, .shop-ico, .skill-icon,
 .loader-core, .boss-warn-ico, .actor-avatar, .result-icon, .loadout-icon, .star-mini {
   display: inline-block;
@@ -50,9 +47,6 @@ html, body {
 .ico-inline { width: 14px; height: 14px; vertical-align: -2px; margin-left: 3px; }
 .gold { color: var(--neon-gold); }
 
-/* ============================================================
-   CANVAS
-   ============================================================ */
 #gameCanvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; touch-action: none; }
 
 body::after {
@@ -69,9 +63,6 @@ body::after {
   opacity: 0.4;
 }
 
-/* ============================================================
-   LOADING
-   ============================================================ */
 #loading-screen {
   position: fixed; inset: 0; z-index: 9999;
   display: flex; flex-direction: column;
@@ -137,9 +128,6 @@ body::after {
   font-family: 'Orbitron', sans-serif;
 }
 
-/* ============================================================
-   MENU BG
-   ============================================================ */
 .screen {
   position: fixed; inset: 0;
   display: flex; align-items: center; justify-content: center;
@@ -185,9 +173,6 @@ body::after {
   100% { transform: translateY(-20px) scale(1.02); opacity: 0.9; }
 }
 
-/* ============================================================
-   MENU BOX
-   ============================================================ */
 .menu-box {
   position: relative; z-index: 2;
   width: 100%; max-width: 440px;
@@ -247,7 +232,6 @@ body::after {
   font-weight: 500;
 }
 
-/* INPUT */
 .input-wrap { position: relative; margin-bottom: 14px; }
 .input-ico {
   position: absolute; left: 14px; top: 50%;
@@ -281,7 +265,6 @@ body::after {
   background: rgba(5, 6, 26, 0.95);
 }
 
-/* BUTTONS */
 .btn-primary, .btn-secondary, .btn-danger, .btn-pwa, .btn-buy {
   position: relative; width: 100%;
   padding: 13px 16px;
@@ -386,9 +369,6 @@ body::after {
   text-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
 }
 
-/* ============================================================
-   HUD
-   ============================================================ */
 #hud-overlay {
   position: fixed; inset: 0;
   pointer-events: none; z-index: 5;
@@ -493,7 +473,6 @@ body::after {
   to   { transform: translateX(-50%) scale(1.06) rotate(2deg); }
 }
 
-/* HUD BAWAH */
 .hud-bottom {
   position: absolute;
   bottom: max(10px, env(safe-area-inset-bottom));
@@ -569,9 +548,6 @@ body::after {
 }
 .btn-skill.disabled { opacity: 0.28; filter: grayscale(1); cursor: not-allowed; box-shadow: none; pointer-events: none; }
 
-/* ============================================================
-   BOSS WARNING
-   ============================================================ */
 #boss-warning-overlay {
   position: fixed; inset: 0; z-index: 20;
   display: flex; flex-direction: column;
@@ -614,9 +590,6 @@ body::after {
   to   { transform: scale(1.04) rotate(1deg); }
 }
 
-/* ============================================================
-   LEVEL INTRO
-   ============================================================ */
 #level-intro {
   position: fixed; inset: 0; z-index: 25;
   display: flex; align-items: center; justify-content: center;
@@ -691,9 +664,6 @@ body::after {
   color: #93a5c4;
 }
 
-/* ============================================================
-   FLOATING TEXT
-   ============================================================ */
 #popup-container { position: fixed; inset: 0; pointer-events: none; z-index: 15; }
 .floating-text {
   position: absolute;
@@ -712,9 +682,6 @@ body::after {
   100% { opacity: 0; transform: translate(-50%, -160%) scale(1.05); }
 }
 
-/* ============================================================
-   MODALS
-   ============================================================ */
 .modal {
   position: fixed; inset: 0; z-index: 30;
   display: flex; align-items: center; justify-content: center;
@@ -752,7 +719,6 @@ body::after {
   gap: 6px;
 }
 
-/* ACTOR */
 .actor-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
@@ -811,7 +777,6 @@ body::after {
   100% { transform: scale(1) rotate(0); }
 }
 
-/* SHOP */
 .shop-item {
   display: flex;
   justify-content: space-between;
@@ -855,7 +820,6 @@ body::after {
   font-size: 10px;
 }
 
-/* LEADERBOARD */
 .leaderboard-table {
   width: 100%;
   border-collapse: separate;
@@ -890,7 +854,6 @@ body::after {
 .leaderboard-table tbody tr td:last-child  { border-radius: 0 10px 10px 0; color: var(--neon-gold); }
 .loading-text { color: #93a5c4; font-style: italic; padding: 20px 0; }
 
-/* STICKER */
 .sticker-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
@@ -931,7 +894,6 @@ body::after {
   to   { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
-/* LOADOUT */
 .loadout-subtitle {
   font-size: 13px;
   color: #93a5c4;
@@ -976,6 +938,7 @@ body::after {
   background-position: center;
   background-repeat: no-repeat;
 }
+.loadout-card.disabled { opacity: 0.45; }
 .loadout-icon {
   width: 30px; height: 30px;
   stroke: currentColor; fill: none;
@@ -1000,7 +963,6 @@ body::after {
   margin-bottom: 12px;
 }
 
-/* RESULT */
 .result-icon-wrap { margin-bottom: 6px; display: flex; justify-content: center; }
 .result-icon {
   width: 54px; height: 54px;
@@ -1041,9 +1003,6 @@ body::after {
   filter: drop-shadow(0 0 6px var(--neon-gold));
 }
 
-/* ============================================================
-   NARRATIVE
-   ============================================================ */
 #narrative-overlay {
   position: fixed; inset: 0; z-index: 40;
   display: flex;
@@ -1125,9 +1084,6 @@ body::after {
 }
 @keyframes tapBlink { from { opacity: 0.4; } to { opacity: 1; } }
 
-/* ============================================================
-   RESPONSIVE
-   ============================================================ */
 @media (max-width: 380px) {
   :root {
     --ctrl-size: 56px;
