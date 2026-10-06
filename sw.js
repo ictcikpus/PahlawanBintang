@@ -1,9 +1,9 @@
-const CACHE_NAME = 'pahlawan-bintang-v11';
+const CACHE_NAME = 'pahlawan-bintang-v15';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=11.0',
-  './game.js?v=11.0',
+  './style.css?v=15.0',
+  './game.js?v=15.0',
   './levels.json?v=10.0',
   './stickers.json?v=8.0',
   './manifest.json'
@@ -27,7 +27,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
-  // Jangan cache Firebase / request eksternal
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
 
