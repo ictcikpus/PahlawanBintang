@@ -1,7 +1,12 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v18.0
-// Responsive Edition — DPR-aware + Virtual Dimensions
-// + Multiplayer Co-op (WebRTC P2P)
+// PAHLAWAN BINTANG — game.js v18.1
+// Responsive Edition + Authoritative Multiplayer Sync
+// ------------------------------------------------------------
+// Perubahan v18.1:
+//   - Host = authoritative (spawn, physics, logic)
+//   - Guest = render-only (kirim input, terima state)
+//   - Normalized coordinates (0..1) agar sinkron di semua layar
+//   - Sync theme, posisi hero host, bullet, monster, boss HP
 // =============================================================
 
 // =============================================================
@@ -543,7 +548,7 @@ let leaderboardRef = null;
 let leaderboardHandler = null;
 
 // =============================================================
-// 🔥 RESPONSIVE DIMENSIONS
+// RESPONSIVE DIMENSIONS
 // =============================================================
 const DPR = Math.min(window.devicePixelRatio || 1, 2);
 let VIRTUAL_WIDTH  = 0;
@@ -661,7 +666,7 @@ window.addEventListener('load', async () => {
   }
   try { updateStickerAlbumUI(); } catch (e) {}
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=18.0').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=18.1').catch(err => console.log('SW Fail:', err));
   }
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
@@ -676,7 +681,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 // =============================================================
-// 🔥 RESIZE + DPR HANDLING
+// RESIZE + DPR HANDLING
 // =============================================================
 function resizeCanvas() {
   if (!canvas || !ctx) return;
@@ -684,29 +689,23 @@ function resizeCanvas() {
   const cssW = Math.max(1, window.innerWidth);
   const cssH = Math.max(1, Math.floor(window.visualViewport ? window.visualViewport.height : window.innerHeight));
 
-  // Set internal resolution (device pixels) — batas 2× DPR agar tidak overkill
   canvas.width  = Math.floor(cssW * DPR);
   canvas.height = Math.floor(cssH * DPR);
 
-  // Set ukuran CSS (yang terlihat)
   canvas.style.width  = cssW + 'px';
   canvas.style.height = cssH + 'px';
 
-  // Scale context: semua koordinat game pakai CSS px (logis)
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
-  // Simpan dimensi virtual (logis)
   const prevW = VIRTUAL_WIDTH;
   const prevH = VIRTUAL_HEIGHT;
   VIRTUAL_WIDTH  = cssW;
   VIRTUAL_HEIGHT = cssH;
 
-  // Kalau player sudah ada, jaga posisinya (relatif)
   if (playerX === 0 || playerX > VIRTUAL_WIDTH) {
     playerX = VIRTUAL_WIDTH / 2;
     playerTargetX = playerX;
   } else if (prevW > 0 && prevW !== VIRTUAL_WIDTH) {
-    // Pertahankan posisi relatif saat lebar berubah
     const ratio = playerX / prevW;
     playerX = ratio * VIRTUAL_WIDTH;
     playerTargetX = ratio * VIRTUAL_WIDTH;
@@ -714,12 +713,10 @@ function resizeCanvas() {
 }
 
 function updateGameScale() {
-  // Base design: HP kecil portrait 360×640
   const baseW = 360;
   const baseH = 640;
   const scaleW = VIRTUAL_WIDTH  / baseW;
   const scaleH = VIRTUAL_HEIGHT / baseH;
-  // Pakai yang lebih kecil biar aman, clamp 0.75–1.8
   GAME_SCALE = Math.min(Math.max(Math.min(scaleW, scaleH), 0.75), 1.8);
 }
 
@@ -770,7 +767,7 @@ function recolorStars() {
 async function loadGameData() {
   try {
     const [rl, rs] = await Promise.all([
-      fetch('./levels.json?v=18.0'), fetch('./stickers.json?v=18.0')
+      fetch('./levels.json?v=18.1'), fetch('./stickers.json?v=18.1')
     ]);
     if (rl.ok) levelsData = await rl.json();
     if (rs.ok) stickersData = await rs.json();
@@ -1002,6 +999,11 @@ function setupEventListeners() {
   const bBomb = $('btn-bomb');
   if (bBomb) bBomb.onclick = () => {
     if (bombCharges <= 0 || isGamePaused || !isGameRunning) return;
+    // Guest: kirim signal ke host, jangan proses lokal
+    if (mpActive && mpRole === 'guest') {
+      mpSendGuestSkill(3);
+      return;
+    }
     bombCharges--; screenShake = 22;
     sounds.playBomb(); triggerVibrate([100, 50, 100]);
     updateSkillButtonsUI();
@@ -1240,7 +1242,8 @@ function updateSkillButtonsUI() {
 
 function goToMainMenu() {
   stopSpawnLoop();
-  if (mpActive) { try { MP.leaveRoom(); } catch(e) {} mpActive = false; }
+  mpStopHostSyncLoop();
+  if (mpActive) { try { MP.leaveRoom(); } catch(e) {} mpActive = false; mpRole = null; }
   const hud = document.getElementById('hud-overlay'); if (hud) hud.classList.add('hidden');
   const menu = document.getElementById('screen-main-menu'); if (menu) menu.classList.remove('hidden');
   sounds.stopBGM();
@@ -1413,7 +1416,9 @@ function mpSetupCallbacks() {
   });
 }
 
-// HOST: kirim state ke guest (NORMALIZED coordinates)
+// =============================================================
+// HOST: kirim state ke guest (NORMALIZED coordinates 0..1)
+// =============================================================
 function mpHostSendState() {
   if (!mpActive || mpRole !== 'host') return;
   if (!MP || !MP.isConnected) return;
@@ -1436,15 +1441,20 @@ function mpHostSendState() {
       coreOpen: m.coreOpen || false,
       algorithm: m.algorithm
     })),
-    bullets: bullets.filter(b => b.owner === 'host').map(b => ({
+    bullets: bullets.map(b => ({
       xNorm: b.x / W,
       yNorm: b.y / H,
       vxNorm: b.vx / W,
       vyNorm: b.vy / H,
       color: b.color,
-      size: b.size,
-      heroType: b.heroType
+      sizeNorm: b.size / baseSize,
+      heroType: b.heroType,
+      owner: b.owner
     })),
+    // Posisi HOST (untuk guest render)
+    hostXNorm: playerX / W,
+    hostHeroType: currentActor,
+    // Info GUEST (dari host authoritative)
     guestXNorm: mpGuestX / W,
     guestHP: mpGuestHP,
     guestScore: mpGuestScore,
@@ -1464,7 +1474,9 @@ function mpHostSendState() {
   MP.sendState(state);
 }
 
+// =============================================================
 // GUEST: terapkan state dari host
+// =============================================================
 function mpApplyHostState(state) {
   if (!state) return;
   if (!Array.isArray(state.monsters)) return;
@@ -1473,7 +1485,17 @@ function mpApplyHostState(state) {
   const H = VIRTUAL_HEIGHT || 1;
   const baseSize = Math.min(W, H);
 
-  mpRemoteMonsters = state.monsters.map((m, i) => ({
+  // Sync theme dari host
+  if (state.theme) {
+    const matchingTheme = LEVEL_THEMES.find(t => t.id === state.theme);
+    if (matchingTheme && matchingTheme.id !== currentTheme.id) {
+      currentTheme = matchingTheme;
+      applyThemeToDocument(currentTheme);
+      recolorStars();
+    }
+  }
+
+  mpRemoteMonsters = state.monsters.map((m) => ({
     x: m.xNorm * W,
     y: m.yNorm * H,
     hp: m.hp,
@@ -1493,9 +1515,13 @@ function mpApplyHostState(state) {
     vx: b.vxNorm * W,
     vy: b.vyNorm * H,
     color: b.color,
-    size: b.size,
-    heroType: b.heroType
+    size: b.sizeNorm * baseSize,
+    heroType: b.heroType,
+    owner: b.owner
   }));
+
+  if (state.hostXNorm !== undefined) mpRemoteX = state.hostXNorm * W;
+  if (state.hostHeroType) mpRemoteHeroType = state.hostHeroType;
 
   if (state.guestXNorm !== undefined) mpGuestX = state.guestXNorm * W;
   if (state.guestHP !== undefined) mpGuestHP = state.guestHP;
@@ -1518,6 +1544,7 @@ function mpSendGuestSkill(skillNum) {
   if (!mpActive || mpRole !== 'guest') return;
   if (skillNum === 1) mpGuestInput.skill1 = true;
   if (skillNum === 2) mpGuestInput.skill2 = true;
+  if (skillNum === 3) mpGuestInput.skill3 = true;
 }
 
 function mpHandleGuestDeath() {
@@ -1534,11 +1561,12 @@ function mpEndGame(win, reason) {
   isGameRunning = false;
   isGamePaused = false;
   stopSpawnLoop();
+  mpStopHostSyncLoop();
   sounds.stopBGM();
   if (win) sounds.playWin();
 
+  const wasRole = mpRole;
   mpActive = false;
-  mpStopHostSyncLoop();
 
   const $ = id => document.getElementById(id);
   const rt = $('result-title');
@@ -1584,11 +1612,18 @@ function mpEndGame(win, reason) {
 
   try { MP.leaveRoom(); } catch(e) {}
 
-  if (win && mpRole === 'host') {
+  if (win && wasRole === 'host') {
     saveCoopScoreToGlobalLeaderboard(playerName, mpRemoteName || 'Guest', score, currentLevelIndex + 1);
   }
+
+  mpRole = null;
 }
 
+// =============================================================
+// AUTHORITATIVE COOP START
+// - HOST: jalanin spawn + physics + sync loop
+// - GUEST: render-only, kirim input, tidak spawn apa-apa
+// =============================================================
 function mpActuallyStartCoop() {
   console.log('🎮 [MP] Starting Co-op game...');
   mpActive = true;
@@ -1603,7 +1638,7 @@ function mpActuallyStartCoop() {
   levelKills = 0;
   levelCoinsEarned = 0;
 
-  mpGuestInput = { left: false, right: false, shoot: false, skill1: false, skill2: false };
+  mpGuestInput = { left: false, right: false, shoot: false, skill1: false, skill2: false, skill3: false };
   mpGuestX = VIRTUAL_WIDTH * 0.75;
   mpGuestTargetX = mpGuestX;
   mpGuestHP = PLAYER_MAX_HIT_POINTS;
@@ -1613,6 +1648,7 @@ function mpActuallyStartCoop() {
   mpRemoteX = VIRTUAL_WIDTH * 0.25;
   mpRemoteTargetX = mpRemoteX;
   mpRemoteName = MP.remotePeerName || 'Teman';
+  mpRemoteHeroType = 'robot';
 
   if (mpRole === 'host') {
     playerX = VIRTUAL_WIDTH * 0.25;
@@ -1657,12 +1693,16 @@ function mpActuallyStartCoop() {
   }
 
   sounds.startBGM();
-  startSpawnLoop();
-  gameLoop();
 
   if (mpRole === 'host') {
+    startSpawnLoop();
     mpStartHostSyncLoop();
+    console.log('👑 [MP] Host mode — authoritative');
+  } else {
+    console.log('👤 [MP] Guest mode — render-only');
   }
+
+  gameLoop();
 }
 
 function mpStartHostSyncLoop() {
@@ -1873,9 +1913,12 @@ function triggerBossSiren() {
 }
 
 // =============================================================
-// 16. SPAWN LOOP
+// 16. SPAWN LOOP (HOST only)
 // =============================================================
 function spawnMonsterLoop(token) {
+  // GUARD: hanya host yang spawn di coop
+  if (gameMode === 'coop' && mpActive && mpRole !== 'host') return;
+
   if (token !== undefined && token !== spawnLoopToken) return;
   if (isGameRunning && !isGamePaused && !isFrozen) {
     let levelConfig;
@@ -2091,6 +2134,9 @@ function showKillStreak(title, count) {
 }
 
 function checkLevelObjectives() {
+  // GUARD: hanya host yang cek objectives di coop
+  if (gameMode === 'coop' && mpActive && mpRole !== 'host') return;
+
   if (gameMode === 'endless') {
     if (endlessKillsThisWave >= ENDLESS_KILLS_PER_WAVE && monsters.length === 0) {
       endlessWave++; endlessKillsThisWave = 0;
@@ -2191,6 +2237,12 @@ function gameLoop() {
   if (!isGameRunning || isGamePaused) return;
   if (!ctx || !canvas) return;
 
+  // ====== GUEST RENDER-ONLY MODE ======
+  if (mpActive && mpRole === 'guest') {
+    return gameLoopGuest();
+  }
+
+  // ====== HOST / SINGLE PLAYER LOOP ======
   const W = VIRTUAL_WIDTH;
   const H = VIRTUAL_HEIGHT;
   const S = GAME_SCALE;
@@ -2253,7 +2305,7 @@ function gameLoop() {
 
   const heroPlayerY = H - 45 * S;
 
-  // HOST: update guest
+  // HOST: update guest posisi berdasarkan input yang diterima
   if (mpActive && mpRole === 'host') {
     if (mpGuestInput.left) mpGuestTargetX -= playerSpeed;
     if (mpGuestInput.right) mpGuestTargetX += playerSpeed;
@@ -2263,6 +2315,7 @@ function gameLoop() {
     else mpGuestX = mpGuestTargetX;
     if (mpGuestShootCd > 0) mpGuestShootCd--;
 
+    // Guest auto shoot
     if (mpGuestInput.shoot && mpGuestShootCd <= 0 && mpGuestAlive) {
       const interval = Math.max(70, 160 - (upgradeFireRate - 1) * 15);
       mpGuestShootCd = Math.round(interval / 16);
@@ -2272,6 +2325,7 @@ function gameLoop() {
       });
     }
 
+    // Guest skills
     if (mpGuestInput.skill1) {
       isFrozen = true; freezeFramesRemaining = 210;
       sounds.playFreeze();
@@ -2282,29 +2336,26 @@ function gameLoop() {
       sounds.playShield();
       mpGuestInput.skill2 = false;
     }
-  }
-
-  // GUEST: own movement + send input
-  if (mpActive && mpRole === 'guest') {
-    if (isMovingLeft) mpGuestTargetX -= playerSpeed;
-    if (isMovingRight) mpGuestTargetX += playerSpeed;
-    mpGuestTargetX = Math.max(40 * S, Math.min(W - 40 * S, mpGuestTargetX));
-    const gdx2 = mpGuestTargetX - mpGuestX;
-    if (Math.abs(gdx2) > 0.5) mpGuestX += gdx2 * PLAYER_LERP;
-    else mpGuestX = mpGuestTargetX;
-
-    if (MP && MP.isConnected) {
-      MP.sendInput({
-        left: isMovingLeft,
-        right: isMovingRight,
-        shoot: true,
-        skill1: false,
-        skill2: false
-      });
+    if (mpGuestInput.skill3) {
+      mpGuestInput.skill3 = false;
+      // Bomb dari guest — host proses
+      screenShake = 22;
+      sounds.playBomb();
+      let total = 0;
+      for (let i = monsters.length - 1; i >= 0; i--) {
+        let m = monsters[i];
+        createBurstParticles3D(m.x, m.y, m.color, 25);
+        total += (ENEMY_SCORE_TABLE[m.type] || 150) * combo;
+        levelKills++;
+        monsters.splice(i, 1);
+      }
+      score += total;
+      if (total > 0) spawnFloatingText(W/2, H/2, `BOOM +${total}`, '#ff4757');
+      updateHUDValues(); checkLevelObjectives();
     }
   }
 
-  // Shooting
+  // Shooting (host / single player)
   let baseInterval = 160;
   if (currentActor === 'cat') baseInterval = 110;
   else if (currentActor === 'cannon') baseInterval = 210;
@@ -2585,39 +2636,27 @@ function gameLoop() {
 
   drawHeroVector(ctx, playerX, heroPlayerY, currentActor, false);
 
-  // MP: draw remote player
-  if (mpActive) {
-    if (mpRole === 'host') {
-      if (mpGuestAlive) {
-        ctx.save();
-        const gG = ctx.createRadialGradient(mpGuestX, heroPlayerY + 20 * S, 4 * S, mpGuestX, heroPlayerY + 20 * S, 55 * S);
-        gG.addColorStop(0, `rgba(255,215,0,${aA})`);
-        gG.addColorStop(1, 'rgba(255,215,0,0)');
-        ctx.fillStyle = gG;
-        ctx.beginPath();
-        ctx.ellipse(mpGuestX, heroPlayerY + 20 * S, 55 * S, 14 * S, 0, 0, Math.PI*2);
-        ctx.fill();
-        ctx.restore();
+  // MP: draw guest
+  if (mpActive && mpRole === 'host') {
+    if (mpGuestAlive) {
+      ctx.save();
+      const gG = ctx.createRadialGradient(mpGuestX, heroPlayerY + 20 * S, 4 * S, mpGuestX, heroPlayerY + 20 * S, 55 * S);
+      gG.addColorStop(0, `rgba(255,215,0,${aA})`);
+      gG.addColorStop(1, 'rgba(255,215,0,0)');
+      ctx.fillStyle = gG;
+      ctx.beginPath();
+      ctx.ellipse(mpGuestX, heroPlayerY + 20 * S, 55 * S, 14 * S, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
 
-        drawHeroVector(ctx, mpGuestX, heroPlayerY, mpRemoteHeroType, true);
+      drawHeroVector(ctx, mpGuestX, heroPlayerY, mpRemoteHeroType, true);
 
-        ctx.save();
-        ctx.font = `bold ${11 * S}px Orbitron, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#ffd700';
-        ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
-        ctx.fillText(mpRemoteName || 'Guest', mpGuestX, heroPlayerY - 50 * S);
-        ctx.restore();
-      }
-    } else {
-      const hostX = W - mpRemoteX;
-      drawHeroVector(ctx, hostX, heroPlayerY, mpRemoteHeroType, true);
       ctx.save();
       ctx.font = `bold ${11 * S}px Orbitron, sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillStyle = '#00d2ff';
+      ctx.fillStyle = '#ffd700';
       ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
-      ctx.fillText(mpRemoteName || 'Host', hostX, heroPlayerY - 50 * S);
+      ctx.fillText(mpRemoteName || 'Guest', mpGuestX, heroPlayerY - 50 * S);
       ctx.restore();
     }
   }
@@ -2879,6 +2918,315 @@ function gameLoop() {
 
   ctx.restore();
   requestAnimationFrame(gameLoop);
+}
+
+// =============================================================
+// 19b. GUEST RENDER-ONLY LOOP
+// Tidak ada physics, spawn, atau AI — hanya menggambar
+// =============================================================
+function gameLoopGuest() {
+  const W = VIRTUAL_WIDTH;
+  const H = VIRTUAL_HEIGHT;
+  const S = GAME_SCALE;
+
+  playerPulse += 0.08;
+  const theme = currentTheme;
+
+  ctx.save();
+
+  // Background
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+  bgGrad.addColorStop(0, theme.bgTop);
+  bgGrad.addColorStop(1, theme.bgBottom);
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars (efek lokal)
+  stars.forEach(s => {
+    s.y += s.speed;
+    s.twinkle += 0.05;
+    if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
+    const a = s.opacity * (0.7 + Math.sin(s.twinkle) * 0.3);
+    ctx.fillStyle = s.color;
+    ctx.globalAlpha = a;
+    ctx.fillRect(s.x, s.y, s.size, s.size);
+  });
+  ctx.globalAlpha = 1;
+
+  // Ground
+  const groundH = 40 * S;
+  ctx.fillStyle = theme.ground;
+  ctx.fillRect(0, H - groundH, W, groundH);
+  ctx.fillStyle = theme.groundLine;
+  ctx.globalAlpha = 0.6 + Math.sin(playerPulse * 0.5) * 0.2;
+  ctx.fillRect(0, H - groundH - 5, W, 5);
+  ctx.globalAlpha = 1;
+
+  const heroPlayerY = H - 45 * S;
+
+  // Kirim input ke host (30Hz throttle ada di MP engine)
+  if (MP && MP.isConnected) {
+    MP.sendInput({
+      left: isMovingLeft,
+      right: isMovingRight,
+      shoot: true,
+      skill1: false,
+      skill2: false,
+      skill3: false
+    });
+  }
+
+  // Interpolasi posisi sendiri (dari host)
+  const gdx = mpGuestX - playerX;
+  if (Math.abs(gdx) > 0.5) playerX += gdx * 0.35;
+  else playerX = mpGuestX;
+
+  // ====== Draw host dulu (di belakang) ======
+  if (mpRemoteAlive !== false) {
+    const hostX = mpRemoteX;
+    ctx.save();
+    const aA = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
+    const gG = ctx.createRadialGradient(hostX, heroPlayerY + 20 * S, 4 * S, hostX, heroPlayerY + 20 * S, 55 * S);
+    gG.addColorStop(0, `rgba(255,215,0,${aA})`);
+    gG.addColorStop(1, 'rgba(255,215,0,0)');
+    ctx.fillStyle = gG;
+    ctx.beginPath();
+    ctx.ellipse(hostX, heroPlayerY + 20 * S, 55 * S, 14 * S, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    drawHeroVector(ctx, hostX, heroPlayerY, mpRemoteHeroType, true);
+
+    // Host name tag
+    ctx.save();
+    ctx.font = `bold ${11 * S}px Orbitron, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#00d2ff';
+    ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+    ctx.fillText(mpRemoteName || 'Host', hostX, heroPlayerY - 50 * S);
+    ctx.restore();
+  }
+
+  // ====== Draw monster dari host ======
+  drawRemoteMonsters(ctx, W, H, S, heroPlayerY);
+
+  // ====== Draw bullets dari host ======
+  drawRemoteBullets(ctx, S);
+
+  // ====== Draw hero sendiri (guest) ======
+  ctx.save();
+  const aA2 = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
+  const aG2 = ctx.createRadialGradient(playerX, heroPlayerY + 20 * S, 4 * S, playerX, heroPlayerY + 20 * S, 55 * S);
+  aG2.addColorStop(0, `rgba(0,210,255,${aA2})`);
+  aG2.addColorStop(1, 'rgba(0,210,255,0)');
+  ctx.fillStyle = aG2;
+  ctx.beginPath();
+  ctx.ellipse(playerX, heroPlayerY + 20 * S, 55 * S, 14 * S, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  drawHeroVector(ctx, playerX, heroPlayerY, currentActor, false);
+
+  // Name tag sendiri
+  ctx.save();
+  ctx.font = `bold ${11 * S}px Orbitron, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffd700';
+  ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+  ctx.fillText(playerName + ' (Kamu)', playerX, heroPlayerY - 50 * S);
+  ctx.restore();
+
+  // ====== Particles lokal ======
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.life -= 0.04;
+    p.vx *= 0.97; p.vy *= 0.97;
+    if (p.rot !== undefined) p.rot += p.spin || 0;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+  requestAnimationFrame(gameLoop);
+}
+
+// =============================================================
+// 19c. DRAW HELPERS — monster & bullet dari host
+// =============================================================
+function drawRemoteMonsters(ctx, W, H, S, heroPlayerY) {
+  for (let i = 0; i < mpRemoteMonsters.length; i++) {
+    const m = mpRemoteMonsters[i];
+    if (!m) continue;
+
+    // Shadow
+    ctx.save();
+    ctx.globalAlpha = m.opacity || 1.0;
+    ctx.beginPath();
+    ctx.ellipse(m.x, H - 38 * S, m.size * 0.7, m.size * 0.25, 0, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fill();
+
+    ctx.translate(m.x, m.y);
+
+    if (m.type && m.type.startsWith('boss')) {
+      ctx.save();
+      ctx.beginPath(); ctx.arc(0, 0, m.size + 15 * S, 0, Math.PI*2);
+      ctx.setLineDash([10, 14]); ctx.lineWidth = 4 * S;
+      ctx.strokeStyle = currentTheme.accent; ctx.globalAlpha = 0.55;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      ctx.globalAlpha = m.opacity || 1.0;
+
+      const bg = ctx.createRadialGradient(0, 0, m.size*0.2, 0, 0, m.size);
+      bg.addColorStop(0, '#ffffff');
+      bg.addColorStop(0.4, m.color);
+      bg.addColorStop(1, '#000000');
+      ctx.beginPath(); ctx.arc(0, 0, m.size, 0, Math.PI*2);
+      ctx.fillStyle = bg; ctx.fill();
+      ctx.lineWidth = 5 * S; ctx.strokeStyle = '#ffd700'; ctx.stroke();
+
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath();
+      ctx.moveTo(-30 * S, -m.size);
+      ctx.lineTo(-15 * S, -m.size - 25 * S);
+      ctx.lineTo(0, -m.size - 10 * S);
+      ctx.lineTo(15 * S, -m.size - 25 * S);
+      ctx.lineTo(30 * S, -m.size);
+      ctx.closePath(); ctx.fill();
+
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(-m.size*0.3, -10 * S, m.size*0.15, 0, Math.PI*2);
+      ctx.arc(m.size*0.3, -10 * S, m.size*0.15, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#ff4757';
+      ctx.beginPath();
+      ctx.arc(-m.size*0.3, -10 * S, m.size*0.07, 0, Math.PI*2);
+      ctx.arc(m.size*0.3, -10 * S, m.size*0.07, 0, Math.PI*2);
+      ctx.fill();
+
+      if (m.coreOpen) {
+        ctx.save();
+        const cg = ctx.createRadialGradient(0, 0, 4 * S, 0, 0, m.size*0.55);
+        cg.addColorStop(0, 'rgba(255,50,50,0.95)');
+        cg.addColorStop(0.5, 'rgba(255,200,0,0.7)');
+        cg.addColorStop(1, 'rgba(255,50,50,0)');
+        ctx.beginPath(); ctx.arc(0, 0, m.size*0.55, 0, Math.PI*2);
+        ctx.fillStyle = cg; ctx.fill();
+        ctx.restore();
+      }
+    } else if (m.type === 'donut') {
+      ctx.beginPath(); ctx.arc(0, 0, m.size, 0, Math.PI*2); ctx.fillStyle = '#fa8231'; ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, m.size*0.8, 0, Math.PI*2); ctx.fillStyle = '#ff78ae'; ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, m.size*0.35, 0, Math.PI*2); ctx.fillStyle = currentTheme.bgTop; ctx.fill();
+    } else if (m.type === 'cloud') {
+      ctx.fillStyle = '#f1f2f6';
+      ctx.beginPath();
+      ctx.arc(-12 * S, 0, m.size*0.6, 0, Math.PI*2);
+      ctx.arc(12 * S, 0, m.size*0.6, 0, Math.PI*2);
+      ctx.arc(0, -10 * S, m.size*0.7, 0, Math.PI*2);
+      ctx.fill();
+    } else if (m.type === 'crystal') {
+      ctx.beginPath();
+      ctx.moveTo(0, -m.size);
+      ctx.lineTo(m.size, 0);
+      ctx.lineTo(0, m.size);
+      ctx.lineTo(-m.size, 0);
+      ctx.closePath();
+      ctx.fillStyle = '#00d2d3'; ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.stroke();
+    } else {
+      const rg = ctx.createRadialGradient(-m.size*0.3, -m.size*0.3, m.size*0.1, 0, 0, m.size);
+      rg.addColorStop(0, '#ffffff');
+      rg.addColorStop(0.3, m.color);
+      rg.addColorStop(1, '#000000');
+      ctx.beginPath(); ctx.arc(0, 0, m.size, 0, Math.PI*2);
+      ctx.fillStyle = rg; ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.stroke();
+    }
+
+    if (m.hitFlash > 0) {
+      ctx.save();
+      ctx.globalAlpha = (m.hitFlash / 8) * 0.85;
+      ctx.beginPath(); ctx.arc(0, 0, m.size*1.05, 0, Math.PI*2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.restore();
+    }
+    if (m.maxHp > 1 && m.type && !m.type.startsWith('boss')) {
+      const wb = m.size * 1.5;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(-wb/2, -m.size - 18 * S, wb, 8 * S);
+      ctx.fillStyle = '#2ed573';
+      ctx.fillRect(-wb/2, -m.size - 18 * S, (m.hp/m.maxHp)*wb, 8 * S);
+    }
+
+    ctx.restore();
+  }
+
+  // Boss HP bar (global)
+  const boss = mpRemoteMonsters.find(x => x.type && x.type.startsWith('boss'));
+  if (boss) {
+    ctx.save();
+    const bw = Math.min(400 * S, W * 0.6);
+    const bx = (W - bw) / 2;
+    const by = 15 * S;
+    const bh = 18 * S;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = '#ff4757';
+    ctx.fillRect(bx, by, (Math.max(0, boss.hp)/boss.maxHp)*bw, bh);
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${12 * S}px Orbitron, sans-serif`;
+    ctx.textAlign = 'center';
+    const cs = boss.coreOpen ? ' [CRITICAL]' : '';
+    ctx.fillText(`BOSS HP: ${Math.ceil(Math.max(0, boss.hp))} / ${boss.maxHp}${cs}`, W/2, by + bh - 5 * S);
+    ctx.restore();
+  }
+}
+
+function drawRemoteBullets(ctx, S) {
+  for (let i = 0; i < mpRemoteBullets.length; i++) {
+    const b = mpRemoteBullets[i];
+    if (!b) continue;
+
+    ctx.save();
+    ctx.translate(b.x, b.y);
+
+    if (b.heroType === 'cat') {
+      ctx.rotate((Date.now() * 0.01) % (Math.PI * 2));
+      ctx.fillStyle = b.color;
+      ctx.fillRect(-6 * S, -2 * S, 12 * S, 4 * S);
+      ctx.fillRect(-2 * S, -6 * S, 4 * S, 12 * S);
+    } else if (b.heroType === 'cannon') {
+      ctx.beginPath(); ctx.arc(0, 0, b.size, 0, Math.PI*2);
+      ctx.fillStyle = '#ffd700'; ctx.fill();
+      ctx.lineWidth = 3 * S; ctx.strokeStyle = '#ff4757'; ctx.stroke();
+    } else if (b.heroType === 'unicorn') {
+      ctx.fillStyle = '#a55eea';
+      ctx.beginPath(); ctx.arc(0, 0, b.size, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(0, 0, b.size * 0.4, 0, Math.PI*2); ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(0, 10 * S);
+      ctx.lineTo(0, -10 * S);
+      ctx.lineWidth = b.size;
+      ctx.strokeStyle = b.color;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
 }
 
 // =============================================================
@@ -3576,5 +3924,5 @@ window.addEventListener('load', () => {
 });
 
 // =============================================================
-// END OF FILE — v18.0
+// END OF FILE — v18.1
 // =============================================================
