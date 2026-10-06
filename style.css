@@ -2007,3 +2007,325 @@ body::after {
     opacity: 0.3;
   }
 }
+/* ============================================================
+   v17.11 — TITLE GROUP COMPACT PROFESSIONAL
+   Bintang kecil bergabung dengan judul, orbit tidak terpotong
+   ============================================================ */
+
+/* Hide emblem lama (kalau masih ada) */
+.game-emblem { display: none !important; }
+
+/* ---------- TITLE GROUP (Wrapper) ---------- */
+.title-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 1.2vw, 8px);
+  margin-bottom: clamp(10px, 2.8vw, 16px);
+  position: relative;
+}
+
+/* ============================================================
+   BADGE BINTANG (Kecil, Compact)
+   ============================================================ */
+.title-badge {
+  position: relative;
+  width: clamp(52px, 14vw, 72px);
+  height: clamp(52px, 14vw, 72px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: clamp(2px, 0.8vw, 4px);
+}
+
+/* Orbit dekoratif — kecil, tidak keluar box */
+.badge-orbit {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1px dashed rgba(0, 210, 255, 0.4);
+  transform: translate(-50%, -50%);
+  animation: badgeOrbitSpin 8s linear infinite;
+  pointer-events: none;
+}
+.badge-orbit::before {
+  content: '';
+  position: absolute;
+  top: -3px; left: 50%;
+  width: 6px; height: 6px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: #00d2ff;
+  box-shadow: 0 0 6px #00d2ff, 0 0 12px #00d2ff;
+}
+
+.badge-orbit-ring {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 140%;
+  height: 140%;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 215, 0, 0.25);
+  transform: translate(-50%, -50%);
+  animation: badgeOrbitSpin 14s linear infinite reverse;
+  pointer-events: none;
+}
+.badge-orbit-ring::before {
+  content: '';
+  position: absolute;
+  top: 50%; right: -3px;
+  width: 5px; height: 5px;
+  margin-top: -2.5px;
+  border-radius: 50%;
+  background: #ffd700;
+  box-shadow: 0 0 6px #ffd700, 0 0 12px #ffd700;
+}
+
+@keyframes badgeOrbitSpin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Bintang utama badge */
+.badge-star {
+  position: relative;
+  width: 70%;
+  height: 70%;
+  z-index: 2;
+  animation: badgeStarFloat 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.8));
+}
+@keyframes badgeStarFloat {
+  0%, 100% { transform: translateY(0) scale(1) rotate(0deg); }
+  50%      { transform: translateY(-2px) scale(1.05) rotate(4deg); }
+}
+
+/* Sparkle kecil di badge */
+.badge-sparkle {
+  position: absolute;
+  color: #ffd700;
+  font-size: clamp(7px, 1.8vw, 10px);
+  text-shadow: 0 0 6px currentColor, 0 0 12px currentColor;
+  animation: badgeSparkle 2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 3;
+}
+.badge-sparkle.s1 { top: 5%; left: 8%; animation-delay: 0s; }
+.badge-sparkle.s2 { bottom: 5%; right: 8%; animation-delay: 1s; color: #00d2ff; }
+@keyframes badgeSparkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.7) rotate(0deg); }
+  50%      { opacity: 1; transform: scale(1.2) rotate(180deg); }
+}
+
+/* ============================================================
+   JUDUL TERPADU
+   ============================================================ */
+.title-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(1px, 0.4vw, 3px);
+  width: 100%;
+}
+
+.title-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 1.2vw, 8px);
+  width: 100%;
+}
+
+.title-word {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-size: clamp(18px, 5.8vw, 28px);
+  letter-spacing: clamp(1.5px, 0.8vw, 4px);
+  background: linear-gradient(180deg, #ffffff 0%, #cfd8ff 60%, #70a1ff 100%);
+  background-size: 100% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow:
+    0 0 8px rgba(0, 210, 255, 0.5),
+    0 2px 0 rgba(0, 0, 0, 0.4);
+  filter: drop-shadow(0 0 4px rgba(0, 210, 255, 0.6));
+  line-height: 1;
+}
+
+.title-word.highlight {
+  background: linear-gradient(180deg, #fff8dc 0%, #ffd700 50%, #ff8a00 100%);
+  background-size: 100% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow:
+    0 0 12px rgba(255, 215, 0, 0.6),
+    0 0 24px rgba(255, 138, 0, 0.4);
+  filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.8));
+  animation: titleShineFlow 3s ease-in-out infinite;
+}
+@keyframes titleShineFlow {
+  0%, 100% { background-position: 0% 0%; }
+  50%      { background-position: 0% 100%; }
+}
+
+/* Divider antara PAHLAWAN dan BINTANG */
+.title-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 1vw, 8px);
+  width: 70%;
+  max-width: 220px;
+  margin: clamp(1px, 0.5vw, 3px) 0;
+}
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.5), transparent);
+  position: relative;
+}
+.divider-line::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: #ffd700;
+  box-shadow: 0 0 4px #ffd700;
+  transform: translateY(-50%);
+}
+.divider-line:first-child::before { right: 0; }
+.divider-line:last-child::before { left: 0; }
+
+.divider-star {
+  color: #ffd700;
+  font-size: clamp(8px, 2.2vw, 12px);
+  text-shadow: 0 0 6px #ffd700, 0 0 12px #ff8a00;
+  animation: dividerSpin 3s ease-in-out infinite;
+  line-height: 1;
+}
+@keyframes dividerSpin {
+  0%, 100% { transform: rotate(0deg) scale(1); opacity: 0.8; }
+  50%      { transform: rotate(180deg) scale(1.2); opacity: 1; }
+}
+
+/* ============================================================
+   SUBTITLE dengan diamond decoration
+   ============================================================ */
+.game-subtitle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 1.2vw, 8px);
+  font-size: clamp(9px, 2.5vw, 12px);
+  color: #93a5c4;
+  margin-bottom: clamp(10px, 3vw, 16px);
+  letter-spacing: clamp(0.5px, 0.2vw, 1px);
+  font-weight: 500;
+  padding: 0 clamp(4px, 1.2vw, 8px);
+  text-align: center;
+  line-height: 1.3;
+}
+.sub-deco {
+  color: #00d2ff;
+  font-size: clamp(6px, 1.6vw, 9px);
+  text-shadow: 0 0 6px #00d2ff;
+  animation: subDecoPulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.game-subtitle .sub-deco:last-child { animation-delay: 1s; }
+@keyframes subDecoPulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.9); }
+  50%      { opacity: 1; transform: scale(1.15); }
+}
+
+/* ============================================================
+   BACKGROUND SPACE — Kurangi intensitas agar tidak bentrok
+   ============================================================ */
+.space-bg .orbit-ring-outer,
+.space-bg .orbit-ring-inner {
+  opacity: 0.15;
+}
+
+.nebula {
+  opacity: 0.22;
+}
+
+/* ============================================================
+   RESPONSIVE — HP KECIL
+   ============================================================ */
+@media (max-width: 360px) {
+  .title-badge {
+    width: clamp(46px, 12vw, 58px);
+    height: clamp(46px, 12vw, 58px);
+  }
+  .title-word {
+    font-size: clamp(16px, 5.2vw, 22px);
+    letter-spacing: 1.2px;
+  }
+  .game-subtitle {
+    font-size: 9px;
+    letter-spacing: 0.3px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — LANDSCAPE PENDEK
+   ============================================================ */
+@media (orientation: landscape) and (max-height: 500px) {
+  .title-group {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(6px, 2vw, 14px);
+    margin-bottom: 6px;
+  }
+  .title-badge {
+    width: clamp(40px, 9vh, 56px);
+    height: clamp(40px, 9vh, 56px);
+    margin-bottom: 0;
+  }
+  .title-main {
+    width: auto;
+    flex-direction: column;
+  }
+  .title-word {
+    font-size: clamp(14px, 3vh, 20px);
+    letter-spacing: 2px;
+  }
+  .title-divider {
+    width: 100%;
+    max-width: 140px;
+    margin: 1px 0;
+  }
+  .game-subtitle {
+    font-size: 9px;
+    margin-bottom: 6px;
+    flex-basis: 100%;
+  }
+  .nebula {
+    filter: blur(30px);
+    opacity: 0.15;
+  }
+  .shooting-star {
+    opacity: 0.5;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — LANDSCAPE BESAR
+   ============================================================ */
+@media (orientation: landscape) and (min-height: 501px) {
+  .title-badge {
+    width: clamp(60px, 10vw, 78px);
+    height: clamp(60px, 10vw, 78px);
+  }
+  .title-word {
+    font-size: clamp(20px, 4vw, 26px);
+  }
+}
