@@ -8,7 +8,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Pahlawan Bintang</title>
   <link rel="manifest" href="./manifest.json" />
-  <link rel="stylesheet" href="./style.css?v=17.12" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css?v=17.13" />
 </head>
 <body>
 
@@ -239,6 +242,7 @@
       <ellipse cx="50" cy="105" rx="38" ry="45" fill="#00d2ff"/>
       <circle cx="50" cy="44" r="28" fill="#ffd8b0"/>
       <path d="M20 38 Q50 -5 80 38 L80 48 Q50 40 20 48 Z" fill="#1e90ff"/>
+      
       <rect x="20" y="34" width="60" height="6" fill="#0a0d24" opacity="0.7"/>
       <path d="M26 40 L42 40 M58 40 L74 40" stroke="#00d2ff" stroke-width="2.5" stroke-linecap="round"/>
       <circle cx="34" cy="40" r="2.5" fill="#00d2ff"/>
@@ -264,10 +268,10 @@
   <!-- ============ CANVAS ============ -->
   <canvas id="gameCanvas"></canvas>
 
-  <!-- ============ MAIN MENU ============ -->
+   <!-- ============ MAIN MENU ============ -->
   <div id="screen-main-menu" class="screen">
 
-    <!-- Space Background Decorations -->
+    <!-- Space Background -->
     <div class="space-bg">
       <div class="nebula nebula-1"></div>
       <div class="nebula nebula-2"></div>
@@ -280,120 +284,208 @@
       </div>
       <div class="orbit-ring orbit-ring-outer"></div>
       <div class="orbit-ring orbit-ring-inner"></div>
+      <div class="stars-dust"></div>
     </div>
 
     <div class="menu-box">
-      <button id="btn-audio" class="btn-audio" title="Suara" type="button">
-        <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
-      </button>
 
-      <!-- ========== LOGO EMBLEM + TITLE ========== -->
-      <div class="title-group">
-        <!-- Badge Bintang Kecil -->
-        <div class="title-badge">
-          <div class="badge-orbit"></div>
-          <div class="badge-orbit-ring"></div>
-          <svg class="badge-star" viewBox="0 0 100 100">
+      <!-- Top bar -->
+      <div class="menu-topbar">
+        <div class="version-badge">v17.13</div>
+        <button id="btn-audio" class="btn-audio" title="Suara" type="button">
+          <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
+        </button>
+      </div>
+
+      <!-- ========== HERO LOGO ========== -->
+      <div class="hero-logo">
+        <!-- Halo glow background -->
+        <div class="logo-halo"></div>
+
+        <!-- Outer ring rotating -->
+        <div class="logo-ring logo-ring-1"></div>
+        <div class="logo-ring logo-ring-2"></div>
+        <div class="logo-ring logo-ring-3"></div>
+
+        <!-- Orbiting planets -->
+        <div class="logo-orbit logo-orbit-1">
+          <div class="planet planet-cyan"></div>
+        </div>
+        <div class="logo-orbit logo-orbit-2">
+          <div class="planet planet-gold"></div>
+        </div>
+        <div class="logo-orbit logo-orbit-3">
+          <div class="planet planet-pink"></div>
+        </div>
+
+        <!-- Central star emblem -->
+        <div class="logo-star-wrap">
+          <svg class="logo-star" viewBox="0 0 100 100">
             <defs>
-              <radialGradient id="badgeGlow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#fff8dc" stop-opacity="1"/>
-                <stop offset="60%" stop-color="#ffd700" stop-opacity="0.8"/>
-                <stop offset="100%" stop-color="#ffd700" stop-opacity="0"/>
+              <radialGradient id="starCoreGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+                <stop offset="25%" stop-color="#fff8dc" stop-opacity="0.9"/>
+                <stop offset="55%" stop-color="#ffd700" stop-opacity="0.6"/>
+                <stop offset="100%" stop-color="#ff8a00" stop-opacity="0"/>
               </radialGradient>
-              <linearGradient id="badgeBody" x1="0%" y1="0%" x2="0%" y2="100%">
+              <linearGradient id="starCoreBody" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stop-color="#ffffff"/>
-                <stop offset="50%" stop-color="#ffd700"/>
+                <stop offset="40%" stop-color="#ffe680"/>
+                <stop offset="75%" stop-color="#ffd700"/>
                 <stop offset="100%" stop-color="#ff8a00"/>
               </linearGradient>
+              <linearGradient id="starCoreInner" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="100%" stop-color="#fff8dc"/>
+              </linearGradient>
             </defs>
-            <circle cx="50" cy="50" r="48" fill="url(#badgeGlow)" opacity="0.5"/>
-            <path d="M50 12 L60 40 L90 40 L66 58 L75 86 L50 70 L25 86 L34 58 L10 40 L40 40 Z"
-                  fill="url(#badgeBody)"
+            <!-- Outer glow circle -->
+            <circle cx="50" cy="50" r="48" fill="url(#starCoreGlow)"/>
+            <!-- Star outline (back glow) -->
+            <path d="M50 6 L61.8 38.2 L96 38.2 L68.1 58.9 L79.9 91.1 L50 70.4 L20.1 91.1 L31.9 58.9 L4 38.2 L38.2 38.2 Z"
+                  fill="#ff8a00" opacity="0.5" filter="blur(3px)"/>
+            <!-- Main star -->
+            <path d="M50 10 L60.5 39.3 L91 39.3 L66 57.6 L76.5 87 L50 68.7 L23.5 87 L34 57.6 L9 39.3 L39.5 39.3 Z"
+                  fill="url(#starCoreBody)"
                   stroke="#ffffff"
-                  stroke-width="1.5"
-                  stroke-linejoin="round"
-                  filter="drop-shadow(0 0 4px #ffd700) drop-shadow(0 0 10px #ff8a00)"/>
-            <circle cx="50" cy="50" r="3.5" fill="#ffffff"/>
+                  stroke-width="1.2"
+                  stroke-linejoin="round"/>
+            <!-- Inner highlight -->
+            <path d="M50 22 L55 38 L71 38 L58 47 L63 63 L50 54 L37 63 L42 47 L29 38 L45 38 Z"
+                  fill="url(#starCoreInner)"
+                  opacity="0.5"/>
+            <!-- Center bright core -->
+            <circle cx="50" cy="46" r="5" fill="#ffffff" opacity="0.95"/>
+            <circle cx="50" cy="46" r="2.5" fill="#fff8dc"/>
           </svg>
-          <div class="badge-sparkle s1">✦</div>
-          <div class="badge-sparkle s2">✦</div>
+          <!-- Sparkle bursts -->
+          <div class="sparkle-burst burst-1">✦</div>
+          <div class="sparkle-burst burst-2">✦</div>
+          <div class="sparkle-burst burst-3">✦</div>
+          <div class="sparkle-burst burst-4">✦</div>
         </div>
-
-        <!-- Judul Bergabung -->
-        <div class="title-main">
-          <div class="title-line">
-            <span class="title-word">PAHLAWAN</span>
-          </div>
-          <div class="title-divider">
-            <div class="divider-line"></div>
-            <div class="divider-star">★</div>
-            <div class="divider-line"></div>
-          </div>
-          <div class="title-line">
-            <span class="title-word highlight">BINTANG</span>
-          </div>
-        </div>
-
-        <!-- Subtitle -->
-        <p class="game-subtitle">
-          <span class="sub-deco">◆</span>
-          Bertahanlah dari Gelombang Monster Galaksi
-          <span class="sub-deco">◆</span>
-        </p>
       </div>
 
+      <!-- ========== TITLE ========== -->
+      <div class="title-stack">
+        <h1 class="title-row">
+          <span class="title-char">P</span><span class="title-char">A</span><span class="title-char">H</span><span class="title-char">L</span><span class="title-char">A</span><span class="title-char">W</span><span class="title-char">A</span><span class="title-char">N</span>
+        </h1>
+        <div class="title-separator">
+          <div class="sep-line"></div>
+          <svg class="sep-star" viewBox="0 0 24 24"><use href="#i-star"/></svg>
+          <div class="sep-line"></div>
+        </div>
+        <h1 class="title-row highlight">
+          <span class="title-char">B</span><span class="title-char">I</span><span class="title-char">N</span><span class="title-char">T</span><span class="title-char">A</span><span class="title-char">N</span><span class="title-char">G</span>
+        </h1>
+      </div>
+
+      <!-- ========== SUBTITLE ========== -->
+      <p class="tagline">
+        <svg class="tagline-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
+        <span>Selamatkan Galaksi dari Invasi Monster</span>
+        <svg class="tagline-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
+      </p>
+
+      <!-- ========== NAME INPUT ========== -->
       <div class="input-wrap">
         <svg class="input-ico" viewBox="0 0 24 24"><use href="#i-user"/></svg>
-        <input id="player-name-input" type="text" placeholder="Nama Pahlawan" maxlength="14" />
+        <input id="player-name-input" type="text" placeholder="Masukkan Nama Pahlawan" maxlength="14" />
       </div>
 
-      <button id="btn-prepare-play" class="btn-primary big" type="button">
-        <svg class="ico btn-play-ico"><use href="#i-play"/></svg>
-        <span>MULAI MISI</span>
+      <!-- ========== PRIMARY CTA ========== -->
+      <button id="btn-prepare-play" class="btn-hero" type="button">
+        <div class="btn-hero-bg"></div>
+        <div class="btn-hero-shine"></div>
+        <div class="btn-hero-content">
+          <svg class="btn-hero-icon" viewBox="0 0 24 24"><use href="#i-play"/></svg>
+          <span class="btn-hero-text">MULAI MISI</span>
+        </div>
+        <div class="btn-hero-glow"></div>
       </button>
 
-      <button id="btn-multiplayer" class="btn-primary mp-btn" type="button">
-        <svg class="ico"><use href="#i-users"/></svg>
-        <span>MAIN BARENG TEMAN</span>
+      <!-- ========== MULTIPLAYER CTA ========== -->
+      <button id="btn-multiplayer" class="btn-mp" type="button">
+        <div class="btn-mp-bg"></div>
+        <div class="btn-mp-shine"></div>
+        <div class="btn-mp-content">
+          <svg class="btn-mp-icon" viewBox="0 0 24 24"><use href="#i-users"/></svg>
+          <span class="btn-mp-text">MAIN BARENG TEMAN</span>
+        </div>
+        <div class="btn-mp-badge">2P</div>
       </button>
 
-      <div class="menu-row">
-        <button id="btn-select-actor" class="btn-secondary" type="button">
-          <svg class="ico btn-hero-ico"><use href="#i-mask"/></svg>
-          <span>HERO</span>
+      <!-- ========== MENU GRID ========== -->
+      <div class="menu-grid">
+        <button id="btn-select-actor" class="menu-card" type="button">
+          <div class="menu-card-inner">
+            <div class="menu-card-icon-wrap c-blue">
+              <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-mask"/></svg>
+            </div>
+            <span class="menu-card-label">HERO</span>
+          </div>
         </button>
-        <button id="btn-shop" class="btn-secondary" type="button">
-          <svg class="ico btn-shop-ico"><use href="#i-shop"/></svg>
-          <span>TOKO</span>
+
+        <button id="btn-shop" class="menu-card" type="button">
+          <div class="menu-card-inner">
+            <div class="menu-card-icon-wrap c-gold">
+              <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-shop"/></svg>
+            </div>
+            <span class="menu-card-label">TOKO</span>
+          </div>
         </button>
-      </div>
-      <div class="menu-row">
-        <button id="btn-leaderboard" class="btn-secondary" type="button">
-          <svg class="ico btn-trophy-ico"><use href="#i-trophy"/></svg>
-          <span>PERINGKAT</span>
+
+        <button id="btn-leaderboard" class="menu-card" type="button">
+          <div class="menu-card-inner">
+            <div class="menu-card-icon-wrap c-purple">
+              <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg>
+            </div>
+            <span class="menu-card-label">PERINGKAT</span>
+          </div>
         </button>
-        <button id="btn-stickers" class="btn-secondary" type="button">
-          <svg class="ico btn-star-ico"><use href="#i-star"/></svg>
-          <span>STIKER</span>
+
+        <button id="btn-stickers" class="menu-card" type="button">
+          <div class="menu-card-inner">
+            <div class="menu-card-icon-wrap c-pink">
+              <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
+            </div>
+            <span class="menu-card-label">STIKER</span>
+          </div>
         </button>
-      </div>
-      <div class="menu-row">
-        <button id="btn-endless" class="btn-secondary" type="button">
-          <svg class="ico btn-endless-ico"><use href="#i-star"/></svg>
-          <span>ENDLESS</span>
+
+        <button id="btn-endless" class="menu-card" type="button">
+          <div class="menu-card-inner">
+            <div class="menu-card-icon-wrap c-green">
+              <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
+            </div>
+            <span class="menu-card-label">ENDLESS</span>
+          </div>
         </button>
-        <button id="btn-daily" class="btn-secondary" type="button">
-          <svg class="ico btn-daily-ico"><use href="#i-trophy"/></svg>
-          <span>DAILY</span>
+
+        <button id="btn-daily" class="menu-card" type="button">
+          <div class="menu-card-inner">
+            <div class="menu-card-icon-wrap c-red">
+              <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg>
+            </div>
+            <span class="menu-card-label">DAILY</span>
+          </div>
         </button>
       </div>
 
-      <button id="btn-pwa-install" class="btn-pwa hidden" type="button">
+      <!-- ========== INSTALL PWA ========== -->
+      <button id="btn-pwa-install" class="btn-install hidden" type="button">
         <svg class="ico"><use href="#i-download"/></svg>
         <span>INSTALL APLIKASI</span>
       </button>
 
-      <p class="selected-actor-line">Hero Aktif: <strong id="selected-actor-name">Robot Cyber</strong></p>
+      <!-- ========== FOOTER ========== -->
+      <div class="menu-footer">
+        <span class="footer-dot"></span>
+        <span>Hero: <strong id="selected-actor-name">Robot Cyber</strong></span>
+        <span class="footer-dot"></span>
+      </div>
+
     </div>
   </div>
 
