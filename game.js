@@ -1,8 +1,7 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v17.4
-// Fitur: Top 50 Leaderboard + Auto-Migration sortValue
-//        Fullscreen di semua mode (Normal/Endless/Daily)
-//        Narrative transparan, Revive, Kill Streak, 12 Tema
+// PAHLAWAN BINTANG — game.js v17.5
+// Fix: Leaderboard tampil 50 peserta (migration on-demand, no dedup)
+// Fitur: Top 50 real-time, Fullscreen semua mode, Narrative transparan
 // =============================================================
 
 // =============================================================
@@ -113,7 +112,7 @@ async function getLoadout() {
 async function setLoadout(arr) { await DB.set('pahlawan_loadout', JSON.stringify(arr)); }
 
 // =============================================================
-// 3. TEMA LEVEL (12 variasi)
+// 3. TEMA LEVEL
 // =============================================================
 const LEVEL_THEMES = [
   { id:'cosmic', name:'COSMIC SECTOR', bgTop:'#05061a', bgBottom:'#0e1035', accent:'#00d2ff', accentSoft:'rgba(0,210,255,0.35)', stars:['#ffffff','#70a1ff','#ffd700','#00d2d3'], ground:'#2f3640', groundLine:'#00d2ff', monsters:['#ff4757','#2ed573','#ffa502','#1e90ff','#a55eea'] },
@@ -562,6 +561,9 @@ let loadoutCallback = null;
 let spawnLoopToken = 0;
 let isReviveModalOpen = false;
 
+// [v17.5] Flag migration on-demand per tab
+let lbMigratedThisSession = { global: false, endless: false, daily: false };
+
 // =============================================================
 // 9. BOOTSTRAP
 // =============================================================
@@ -593,9 +595,6 @@ window.addEventListener('load', async () => {
     const todayKey = getTodayKey();
     reviveQuota = await getReviveQuota(todayKey);
     console.log('✅ [Boot] Loadout:', playerLoadout, '| Revive quota:', reviveQuota);
-
-    // Jalankan migration di background (silent)
-    setTimeout(() => { migrateSortValues(); }, 3000);
   } catch (e) {
     console.warn('⚠️ [Boot] Async init partial failure:', e);
   }
@@ -620,7 +619,7 @@ window.addEventListener('load', async () => {
   }
   try { updateStickerAlbumUI(); } catch (e) {}
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=17.4').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=17.5').catch(err => console.log('SW Fail:', err));
   }
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
@@ -746,82 +745,6 @@ async function setEndlessBest(wave, scoreVal) {
   const best = await getEndlessBest();
   if (wave > best.wave || (wave === best.wave && scoreVal > best.score)) {
     await DB.set('pahlawan_endless_best', JSON.stringify({ wave: wave, score: scoreVal }));
-  }
-}
-
-// =============================================================
-// 10b. AUTO-MIGRATION — Backfill sortValue ke data lama (v17.4)
-// =============================================================
-async function migrateSortValues() {
-  if (!db) return;
-  try {
-    const migrated = await DB.get('pahlawan_migrated_v2');
-    if (migrated === '1') {
-      console.log('✅ [Migration] Sudah pernah dijalankan');
-      return;
-    }
-
-    console.log('🔄 [Migration] Memulai migrasi sortValue...');
-
-    // Migrasi leaderboard
-    try {
-      const lbSnap = await db.ref('leaderboard').once('value');
-      const lbUpdates = {};
-      lbSnap.forEach(child => {
-        const val = child.val();
-        if (val && val.name && (val.sortValue === undefined || val.sortValue === null)) {
-          const numLevel = Number(val.level) || 1;
-          const numScore = Number(val.score) || 0;
-          lbUpdates[child.key + '/sortValue'] = (numLevel * 100000000) + numScore;
-        }
-      });
-      if (Object.keys(lbUpdates).length > 0) {
-        await db.ref('leaderboard').update(lbUpdates);
-        console.log('✅ [Migration] Leaderboard:', Object.keys(lbUpdates).length, 'records updated');
-      }
-    } catch(e) { console.warn('[Migration] leaderboard error:', e); }
-
-    // Migrasi endless
-    try {
-      const enSnap = await db.ref('endless').once('value');
-      const enUpdates = {};
-      enSnap.forEach(child => {
-        const val = child.val();
-        if (val && val.name && (val.sortValue === undefined || val.sortValue === null)) {
-          const numWave = Number(val.wave) || 1;
-          const numScore = Number(val.score) || 0;
-          enUpdates[child.key + '/sortValue'] = (numWave * 100000000) + numScore;
-        }
-      });
-      if (Object.keys(enUpdates).length > 0) {
-        await db.ref('endless').update(enUpdates);
-        console.log('✅ [Migration] Endless:', Object.keys(enUpdates).length, 'records updated');
-      }
-    } catch(e) { console.warn('[Migration] endless error:', e); }
-
-    // Migrasi daily (semua tanggal)
-    try {
-      const dailySnap = await db.ref('daily').once('value');
-      dailySnap.forEach(dateChild => {
-        const dateKey = dateChild.key;
-        const updates = {};
-        dateChild.forEach(playerChild => {
-          const val = playerChild.val();
-          if (val && val.name && (val.sortValue === undefined || val.sortValue === null)) {
-            updates[playerChild.key + '/sortValue'] = Number(val.score) || 0;
-          }
-        });
-        if (Object.keys(updates).length > 0) {
-          db.ref('daily/' + dateKey).update(updates).catch(() => {});
-        }
-      });
-      console.log('✅ [Migration] Daily: selesai');
-    } catch(e) { console.warn('[Migration] daily error:', e); }
-
-    await DB.set('pahlawan_migrated_v2', '1');
-    console.log('✅ [Migration] Selesai! Data lama sekarang muncul di leaderboard.');
-  } catch (e) {
-    console.warn('⚠️ [Migration] Gagal (fallback tetap jalan):', e);
   }
 }
 
@@ -2710,7 +2633,7 @@ async function finalizeDaily(success) {
 }
 
 // =============================================================
-// 21. LEADERBOARD v17.4 — Top 50 + Fallback + Auto-Migration
+// 21. LEADERBOARD v17.5 — Top 50 + migration on-demand + no dedup
 // =============================================================
 function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   const cleanName = (name || 'Pahlawan').trim();
@@ -2825,11 +2748,11 @@ function openLeaderboard() {
   loadLeaderboardData();
 }
 
-// [v17.4] Load leaderboard dengan fallback otomatis
-function loadLeaderboardData() {
+// [v17.5] Load leaderboard dengan migration on-demand
+async function loadLeaderboardData() {
   const tbody = document.getElementById('leaderboard-body');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Memuat Papan Peringkat Realtime...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Memuat Papan Peringkat...</td></tr>';
 
   if (leaderboardRef && leaderboardHandler) {
     try { leaderboardRef.off('value', leaderboardHandler); } catch(e) {}
@@ -2839,29 +2762,57 @@ function loadLeaderboardData() {
   if (!db) { showLocalScores(tbody); return; }
 
   let path = 'leaderboard';
-  if (currentLeaderboardTab === 'endless') path = 'endless';
-  else if (currentLeaderboardTab === 'daily') path = 'daily/' + getTodayKey();
+  let tabKey = 'global';
+  if (currentLeaderboardTab === 'endless') { path = 'endless'; tabKey = 'endless'; }
+  else if (currentLeaderboardTab === 'daily') { path = 'daily/' + getTodayKey(); tabKey = 'daily'; }
 
-  // Coba query baru dulu (orderByChild sortValue, limit 50)
+  // [v17.5] MIGRATION ON-DEMAND
+  if (!lbMigratedThisSession[tabKey]) {
+    try {
+      console.log(`🔄 [LB] Cek migration untuk ${path}...`);
+      const allSnap = await db.ref(path).once('value');
+      const updates = {};
+      let total = 0, missing = 0;
+
+      allSnap.forEach(child => {
+        total++;
+        const val = child.val();
+        if (val && val.name && (val.sortValue === undefined || val.sortValue === null)) {
+          missing++;
+          const numLevel = Number(val.level) || Number(val.wave) || 1;
+          const numScore = Number(val.score) || 0;
+          updates[child.key + '/sortValue'] = (numLevel * 100000000) + numScore;
+        }
+      });
+
+      console.log(`📊 [LB] ${path}: Total=${total}, Tanpa sortValue=${missing}`);
+
+      if (missing > 0 && Object.keys(updates).length > 0) {
+        await db.ref(path).update(updates);
+        console.log(`✅ [LB] Migrated ${Object.keys(updates).length} records untuk ${path}`);
+      }
+      lbMigratedThisSession[tabKey] = true;
+    } catch(e) {
+      console.warn('⚠️ [LB] Migration gagal:', e);
+    }
+  }
+
+  // Load top 50 dengan query
   leaderboardRef = db.ref(path).orderByChild('sortValue').limitToLast(50);
 
   let lastRenderTime = 0;
   let pendingSnapshot = null;
   let renderTimer = null;
-  let fallbackDone = false;
-  let emptySince = 0;
-  let hasRenderedOnce = false;
 
   const doRender = () => {
     if (!pendingSnapshot) return;
     const snap = pendingSnapshot;
     pendingSnapshot = null;
     lastRenderTime = Date.now();
-    hasRenderedOnce = true;
     renderLeaderboardRows(snap, tbody);
   };
 
-  const processSnapshot = (snapshot) => {
+  leaderboardHandler = (snapshot) => {
     pendingSnapshot = snapshot;
     const now = Date.now();
     const sinceLast = now - lastRenderTime;
@@ -2875,97 +2826,52 @@ function loadLeaderboardData() {
     }
   };
 
-  leaderboardHandler = (snapshot) => {
-    // Cek apakah data kosong
-    let count = 0;
-    if (snapshot.exists()) {
-      snapshot.forEach(() => count++);
-    }
-
-    if (count === 0) {
-      if (emptySince === 0) emptySince = Date.now();
-      // Kalau 1.5 detik query baru kosong → fallback ke query lama (ambil semua)
-      if ((Date.now() - emptySince) > 1500 && !fallbackDone) {
-        fallbackDone = true;
-        console.log('⚠️ [LB] Data kosong di query baru → fallback ke mode kompatibilitas');
-        try { leaderboardRef.off('value', leaderboardHandler); } catch(e) {}
-
-        // Ambil SEMUA data tanpa orderBy (kompatibel dengan data lama)
-        leaderboardRef = db.ref(path);
-        leaderboardHandler = (snap2) => {
-          processSnapshot(snap2);
-        };
-        leaderboardRef.on('value', leaderboardHandler, (err) => {
-          console.error("Firebase Listener Error (fallback):", err);
-          showLocalScores(tbody);
-        });
-        return;
-      }
-    } else {
-      emptySince = 0;
-    }
-
-    processSnapshot(snapshot);
-  };
-
   leaderboardRef.on('value', leaderboardHandler, (err) => {
     console.error("Firebase Listener Error:", err);
     showLocalScores(tbody);
   });
 }
 
-// [v17.4] Render — sort client-side kalau sortValue belum ada
+// [v17.5] Render tanpa dedup — Firebase key sudah unik per pemain
 function renderLeaderboardRows(snapshot, tbody) {
   if (!snapshot.exists()) { showLocalScores(tbody); return; }
 
   let rawArr = [];
-  snapshot.forEach((child) => { rawArr.push(child.val()); });
 
-  // Sort pakai sortValue kalau ada, fallback hitung dari level + score
+  snapshot.forEach((child) => {
+    const val = child.val();
+    if (!val || !val.name) return;
+    const cleanName = String(val.name).trim();
+    if (!cleanName) return;
+
+    rawArr.push({
+      key: child.key,
+      name: cleanName,
+      level: Number(val.level) || Number(val.wave) || 1,
+      score: Number(val.score) || 0,
+      sortValue: val.sortValue
+    });
+  });
+
+  if (rawArr.length === 0) { showLocalScores(tbody); return; }
+
+  // Sort: pakai sortValue kalau ada, fallback hitung dari level + score
   rawArr.sort((a, b) => {
-    const aLevel = Number(a.level) || Number(a.wave) || 1;
-    const bLevel = Number(b.level) || Number(b.wave) || 1;
-    const aScore = Number(a.score) || 0;
-    const bScore = Number(b.score) || 0;
     const aSV = (a.sortValue !== undefined && a.sortValue !== null)
-      ? Number(a.sortValue) : ((aLevel * 100000000) + aScore);
+      ? Number(a.sortValue) : ((a.level * 100000000) + a.score);
     const bSV = (b.sortValue !== undefined && b.sortValue !== null)
-      ? Number(b.sortValue) : ((bLevel * 100000000) + bScore);
+      ? Number(b.sortValue) : ((b.level * 100000000) + b.score);
     return bSV - aSV;
   });
 
-  // Dedup nama (ambil terbaik per pemain)
-  let bestMap = new Map();
-  rawArr.forEach(val => {
-    if (!val || !val.name) return;
-    let cleanName = val.name.trim();
-    let key = cleanName.toLowerCase();
-    let curLevel = Number(val.level) || Number(val.wave) || 1;
-    let curScore = Number(val.score) || 0;
-    if (!bestMap.has(key)) {
-      bestMap.set(key, { name: cleanName, level: curLevel, score: curScore });
-    } else {
-      let ex = bestMap.get(key);
-      if (curLevel > ex.level || (curLevel === ex.level && curScore > ex.score)) {
-        bestMap.set(key, { name: cleanName, level: curLevel, score: curScore });
-      }
-    }
-  });
+  const top = rawArr.slice(0, 50);
 
-  let list = Array.from(bestMap.values());
-  list.sort((a, b) => {
-    if (b.level !== a.level) return b.level - a.level;
-    return b.score - a.score;
-  });
-
-  const top = list.slice(0, 50);
-  if (top.length === 0) { showLocalScores(tbody); return; }
-
-  const myKey = (playerName || '').trim().toLowerCase();
+  const myKey = (playerName || '').trim().toLowerCase().replace(/[^a-z0-9]/g, "_");
   let foundYou = false;
 
   tbody.innerHTML = top.map((s, i) => {
-    const isYou = (s.name || '').trim().toLowerCase() === myKey;
+    const sKey = (s.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, "_");
+    const isYou = sKey === myKey;
     if (isYou) foundYou = true;
     const medal = i === 0 ? '🥇 1' : i === 1 ? '🥈 2' : i === 2 ? '🥉 3' : i + 1;
     return `
@@ -2978,15 +2884,16 @@ function renderLeaderboardRows(snapshot, tbody) {
   }).join('');
 
   if (!foundYou && myKey) {
-    const youData = bestMap.get(myKey);
-    if (youData) {
-      const rank = list.findIndex(s => (s.name || '').trim().toLowerCase() === myKey) + 1;
+    const youIndex = rawArr.findIndex(s => (s.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, "_") === myKey);
+    if (youIndex !== -1) {
+      const s = rawArr[youIndex];
+      const rank = youIndex + 1;
       tbody.innerHTML += `
         <tr class="you-row you-outside">
           <td>...${rank > 50 ? rank : '?'}</td>
-          <td><strong>${escapeHtml(youData.name)}</strong></td>
-          <td>${currentLeaderboardTab === 'endless' ? 'Wave ' + (youData.level||1) : 'Lvl ' + (youData.level||1)}</td>
-          <td><strong>${youData.score || 0}</strong></td>
+          <td><strong>${escapeHtml(s.name)}</strong></td>
+          <td>${currentLeaderboardTab === 'endless' ? 'Wave ' + (s.level||1) : 'Lvl ' + (s.level||1)}</td>
+          <td><strong>${s.score || 0}</strong></td>
         </tr>`;
     }
   }
@@ -2994,21 +2901,20 @@ function renderLeaderboardRows(snapshot, tbody) {
 
 function showLocalScores(tbody) {
   let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
-  let bestMap = new Map();
+  let list = [];
+  let seen = new Set();
   localScores.forEach(s => {
     if (!s || !s.name) return;
-    let cleanName = s.name.trim();
-    let key = cleanName.toLowerCase();
-    let curLevel = Number(s.level) || 1;
-    let curScore = Number(s.score) || 0;
-    if (!bestMap.has(key)) bestMap.set(key, { name: cleanName, level: curLevel, score: curScore });
-    else {
-      let ex = bestMap.get(key);
-      if (curLevel > ex.level || (curLevel === ex.level && curScore > ex.score))
-        bestMap.set(key, { name: cleanName, level: curLevel, score: curScore });
-    }
+    const cleanName = s.name.trim();
+    const key = cleanName.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    list.push({
+      name: cleanName,
+      level: Number(s.level) || 1,
+      score: Number(s.score) || 0
+    });
   });
-  let list = Array.from(bestMap.values());
   list.sort((a, b) => {
     if (b.level !== a.level) return b.level - a.level;
     return b.score - a.score;
@@ -3155,5 +3061,5 @@ function openStickerAlbum() {
 }
 
 // =============================================================
-// END OF FILE — v17.4
+// END OF FILE — v17.5
 // =============================================================
