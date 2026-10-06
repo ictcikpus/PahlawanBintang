@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Pahlawan Bintang</title>
   <link rel="manifest" href="./manifest.json" />
-  <link rel="stylesheet" href="./style.css?v=16.0" />
+  <link rel="stylesheet" href="./style.css?v=17.0" />
 </head>
 <body>
 
@@ -242,7 +242,7 @@
   <!-- ============ MAIN MENU ============ -->
   <div id="screen-main-menu" class="screen">
     <div class="menu-box">
-      <button id="btn-audio" class="btn-audio" title="Suara">
+      <button id="btn-audio" class="btn-audio" title="Suara" type="button">
         <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
       </button>
 
@@ -279,6 +279,16 @@
         <button id="btn-stickers" class="btn-secondary" type="button">
           <svg class="ico"><use href="#i-star"/></svg>
           <span>STIKER</span>
+        </button>
+      </div>
+      <div class="menu-row">
+        <button id="btn-endless" class="btn-secondary" type="button">
+          <svg class="ico"><use href="#i-star"/></svg>
+          <span>ENDLESS</span>
+        </button>
+        <button id="btn-daily" class="btn-secondary" type="button">
+          <svg class="ico"><use href="#i-trophy"/></svg>
+          <span>DAILY</span>
         </button>
       </div>
 
@@ -369,6 +379,12 @@
     </div>
   </div>
 
+  <!-- ============ KILL STREAK POPUP ============ -->
+  <div id="killstreak-overlay" class="hidden">
+    <div class="killstreak-text" id="killstreak-text">KILLING SPREE!</div>
+    <div class="killstreak-sub" id="killstreak-sub">10 KILLS</div>
+  </div>
+
   <!-- ============ FLOATING TEXT ============ -->
   <div id="popup-container"></div>
 
@@ -429,51 +445,34 @@
       <p style="margin-bottom:16px">Koin: <strong id="shop-coin-count">0</strong>
         <svg class="ico-inline gold" viewBox="0 0 24 24"><use href="#i-coin"/></svg>
       </p>
-
       <div class="shop-item">
         <div class="shop-item-label">
           <svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-bolt"/></svg>
-          <div>
-            <strong>Fire Rate</strong>
-            <small>Lv <span id="shop-level-firerate">1</span></small>
-          </div>
+          <div><strong>Fire Rate</strong><small>Lv <span id="shop-level-firerate">1</span></small></div>
         </div>
         <button id="btn-buy-firerate" class="btn-buy" type="button">BELI <span>50</span></button>
       </div>
-
       <div class="shop-item">
         <div class="shop-item-label">
           <svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-shield"/></svg>
-          <div>
-            <strong>Shield</strong>
-            <small>Lv <span id="shop-level-shield">1</span></small>
-          </div>
+          <div><strong>Shield</strong><small>Lv <span id="shop-level-shield">1</span></small></div>
         </div>
         <button id="btn-buy-shield" class="btn-buy" type="button">BELI <span>60</span></button>
       </div>
-
       <div class="shop-item">
         <div class="shop-item-label">
           <svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-bomb"/></svg>
-          <div>
-            <strong>Bomb</strong>
-            <small>Lv <span id="shop-level-bomb">2</span></small>
-          </div>
+          <div><strong>Bomb</strong><small>Lv <span id="shop-level-bomb">2</span></small></div>
         </div>
         <button id="btn-buy-bomb" class="btn-buy" type="button">BELI <span>150</span></button>
       </div>
-
       <div class="shop-item">
         <div class="shop-item-label">
           <svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-snow"/></svg>
-          <div>
-            <strong>Freeze</strong>
-            <small>Lv <span id="shop-level-freeze">2</span></small>
-          </div>
+          <div><strong>Freeze</strong><small>Lv <span id="shop-level-freeze">2</span></small></div>
         </div>
         <button id="btn-buy-freeze" class="btn-buy" type="button">BELI <span>150</span></button>
       </div>
-
       <button id="btn-close-shop" class="btn-secondary" type="button">TUTUP</button>
     </div>
   </div>
@@ -481,9 +480,12 @@
   <!-- ============ MODAL: LEADERBOARD ============ -->
   <div id="modal-leaderboard" class="modal hidden">
     <div class="modal-box">
-      <h2>
-        <svg class="ico-lg gold"><use href="#i-trophy"/></svg> PAPAN PERINGKAT
-      </h2>
+      <h2><svg class="ico-lg gold"><use href="#i-trophy"/></svg> PAPAN PERINGKAT</h2>
+      <div class="lb-tabs">
+        <button class="lb-tab active" data-tab="global" type="button">GLOBAL</button>
+        <button class="lb-tab" data-tab="endless" type="button">ENDLESS</button>
+        <button class="lb-tab" data-tab="daily" type="button">DAILY</button>
+      </div>
       <table class="leaderboard-table">
         <thead>
           <tr><th>#</th><th>NAMA</th><th>LVL</th><th>SKOR</th></tr>
@@ -499,9 +501,7 @@
   <!-- ============ MODAL: STIKER ============ -->
   <div id="modal-stickers" class="modal hidden">
     <div class="modal-box">
-      <h2>
-        <svg class="ico-lg gold"><use href="#i-star"/></svg> ALBUM STIKER
-      </h2>
+      <h2><svg class="ico-lg gold"><use href="#i-star"/></svg> ALBUM STIKER</h2>
       <p style="margin-bottom:14px">Terbuka: <strong id="unlocked-count">0</strong></p>
       <div id="sticker-grid" class="sticker-grid"></div>
       <button id="btn-close-stickers" class="btn-secondary" type="button">TUTUP</button>
@@ -516,7 +516,6 @@
         Level <strong id="loadout-level">1</strong> ·
         <span id="loadout-theme">COSMIC SECTOR</span>
       </p>
-
       <div class="loadout-grid">
         <div class="loadout-card" data-skill="freeze">
           <svg class="loadout-icon" viewBox="0 0 24 24"><use href="#i-snow"/></svg>
@@ -534,7 +533,6 @@
           <small>Ledakan area 50 HP</small>
         </div>
       </div>
-
       <p class="loadout-hint">Pilih 2 dari 3 skill</p>
       <button id="btn-start-loaded" class="btn-primary" type="button" disabled>
         <svg class="ico"><use href="#i-play"/></svg>
@@ -576,6 +574,103 @@
     </div>
   </div>
 
+  <!-- ============ MODAL: REVIVE ============ -->
+  <div id="modal-revive" class="modal hidden">
+    <div class="modal-box revive-box">
+      <div class="revive-icon-wrap">
+        <svg class="revive-icon" viewBox="0 0 24 24"><use href="#i-heart"/></svg>
+      </div>
+      <h2>NYAWA HABIS</h2>
+      <p class="revive-subtitle">Lanjutkan misi dengan menonton iklan singkat?</p>
+      <button id="btn-revive-ad" class="btn-primary big" type="button">
+        <svg class="ico"><use href="#i-play"/></svg>
+        <span>TONTON IKLAN &rarr; REVIVE</span>
+      </button>
+      <button id="btn-revive-give-up" class="btn-secondary" type="button">
+        <svg class="ico"><use href="#i-skull"/></svg>
+        <span>MENYERAH</span>
+      </button>
+      <p class="revive-quota">Revive hari ini: <strong id="revive-quota">3</strong>/3</p>
+    </div>
+  </div>
+
+  <!-- ============ REWARDED AD OVERLAY ============ -->
+  <div id="ad-overlay" class="hidden">
+    <div class="ad-box">
+      <div class="ad-label">IKLAN REWARDED</div>
+      <div class="ad-content">
+        <div class="ad-pulse">
+          <svg viewBox="0 0 24 24" class="ad-play-icon"><use href="#i-play"/></svg>
+        </div>
+        <div class="ad-message">Menyiapkan iklan untuk revive...</div>
+        <div class="ad-countdown" id="ad-countdown">5</div>
+      </div>
+      <div class="ad-note">HADIAH: +1 NYAWA + 2 DETIK KEKEBALAN</div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: ENDLESS ============ -->
+  <div id="modal-endless" class="modal hidden">
+    <div class="modal-box">
+      <h2><svg class="ico-lg"><use href="#i-star"/></svg> ENDLESS MODE</h2>
+      <p class="endless-subtitle">Bertahan selama mungkin. Difficulty naik terus. Skor infinite.</p>
+      <div class="endless-stats">
+        <div class="endless-stat">
+          <div class="endless-stat-label">BEST WAVE</div>
+          <div class="endless-stat-value" id="endless-best-wave">0</div>
+        </div>
+        <div class="endless-stat">
+          <div class="endless-stat-label">BEST SCORE</div>
+          <div class="endless-stat-value" id="endless-best-score">0</div>
+        </div>
+      </div>
+      <div class="endless-info">
+        <div>&#9889; Musuh makin cepat &amp; kuat tiap 10 wave</div>
+        <div>&#128081; Boss muncul setiap 5 wave</div>
+        <div>&#129689; Koin 2&times; lebih banyak</div>
+        <div>&#127942; Skor masuk leaderboard Endless</div>
+      </div>
+      <button id="btn-start-endless" class="btn-primary big" type="button">
+        <svg class="ico"><use href="#i-play"/></svg>
+        <span>MULAI ENDLESS</span>
+      </button>
+      <button id="btn-close-endless" class="btn-secondary" type="button">TUTUP</button>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: DAILY ============ -->
+  <div id="modal-daily" class="modal hidden">
+    <div class="modal-box">
+      <h2><svg class="ico-lg gold"><use href="#i-trophy"/></svg> DAILY CHALLENGE</h2>
+      <p class="daily-date" id="daily-date">Memuat...</p>
+      <div class="daily-modifier" id="daily-modifier">
+        <div class="daily-mod-icon">
+          <svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg>
+        </div>
+        <div class="daily-mod-info">
+          <strong id="daily-mod-name">DOUBLE SPEED</strong>
+          <small id="daily-mod-desc">Musuh bergerak 2&times; lebih cepat</small>
+        </div>
+      </div>
+      <div class="daily-reward">
+        <div>&#129689; Reward: <strong>3&times; Koin</strong></div>
+        <div>&#11088; Bintang dihitung normal</div>
+        <div>&#9200; Reset dalam: <strong id="daily-reset-timer">--:--:--</strong></div>
+      </div>
+      <div class="daily-status">
+        <div class="daily-done-badge hidden" id="daily-done-badge">
+          <svg viewBox="0 0 24 24" class="daily-check"><use href="#i-check"/></svg>
+          <span>SELESAI HARI INI</span>
+        </div>
+      </div>
+      <button id="btn-start-daily" class="btn-primary big" type="button">
+        <svg class="ico"><use href="#i-play"/></svg>
+        <span>MULAI CHALLENGE</span>
+      </button>
+      <button id="btn-close-daily" class="btn-secondary" type="button">TUTUP</button>
+    </div>
+  </div>
+
   <!-- ============ NARRATIVE OVERLAY ============ -->
   <div id="narrative-overlay" class="hidden">
     <div class="narrative-box">
@@ -586,7 +681,7 @@
         <div id="narrative-speaker" class="narrative-speaker">VEGA</div>
         <div id="narrative-text" class="narrative-text"></div>
       </div>
-      <div class="narrative-tap-hint">Tap untuk lanjut ▸</div>
+      <div class="narrative-tap-hint">Tap untuk lanjut &#9656;</div>
     </div>
   </div>
 
@@ -595,6 +690,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <!-- ============ GAME SCRIPT ============ -->
-  <script src="./game.js?v=16.0"></script>
+  <script src="./game.js?v=17.0"></script>
 </body>
 </html>
