@@ -2,18 +2,21 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#05061a" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="format-detection" content="telephone=no" />
   <title>Pahlawan Bintang</title>
   <link rel="manifest" href="./manifest.json" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css?v=17.13" />
+  <link rel="stylesheet" href="./style.css?v=18.0" />
 </head>
-<body>
+<body class="no-select">
 
 <!-- ============================================================
      SVG SPRITE — Semua ikon game
@@ -242,7 +245,6 @@
       <ellipse cx="50" cy="105" rx="38" ry="45" fill="#00d2ff"/>
       <circle cx="50" cy="44" r="28" fill="#ffd8b0"/>
       <path d="M20 38 Q50 -5 80 38 L80 48 Q50 40 20 48 Z" fill="#1e90ff"/>
-      
       <rect x="20" y="34" width="60" height="6" fill="#0a0d24" opacity="0.7"/>
       <path d="M26 40 L42 40 M58 40 L74 40" stroke="#00d2ff" stroke-width="2.5" stroke-linecap="round"/>
       <circle cx="34" cy="40" r="2.5" fill="#00d2ff"/>
@@ -252,797 +254,761 @@
   </defs>
 </svg>
 
-  <!-- ============ LOADING SCREEN ============ -->
-  <div id="loading-screen">
-    <div class="loader-emblem">
-      <svg viewBox="0 0 100 100" class="loader-ring">
-        <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="70 30" />
-      </svg>
-      <svg viewBox="0 0 24 24" class="loader-core"><use href="#i-star"/></svg>
+<!-- ============ LOADING SCREEN ============ -->
+<div id="loading-screen">
+  <div class="loader-emblem">
+    <svg viewBox="0 0 100 100" class="loader-ring">
+      <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="70 30" />
+    </svg>
+    <svg viewBox="0 0 24 24" class="loader-core"><use href="#i-star"/></svg>
+  </div>
+  <div class="loader-logo">PAHLAWAN BINTANG</div>
+  <div class="loader-bar"></div>
+  <div class="loader-text">MEMUAT GALAKSI</div>
+</div>
+
+<!-- ============ CANVAS ============ -->
+<canvas id="gameCanvas" aria-label="Game Canvas"></canvas>
+
+<!-- ============ MAIN MENU ============ -->
+<div id="screen-main-menu" class="screen">
+
+  <div class="space-bg">
+    <div class="nebula nebula-1"></div>
+    <div class="nebula nebula-2"></div>
+    <div class="nebula nebula-3"></div>
+    <div class="shooting-stars">
+      <div class="shooting-star ss-1"></div>
+      <div class="shooting-star ss-2"></div>
+      <div class="shooting-star ss-3"></div>
+      <div class="shooting-star ss-4"></div>
     </div>
-    <div class="loader-logo">PAHLAWAN BINTANG</div>
-    <div class="loader-bar"></div>
-    <div class="loader-text">MEMUAT GALAKSI</div>
+    <div class="orbit-ring orbit-ring-outer"></div>
+    <div class="orbit-ring orbit-ring-inner"></div>
+    <div class="stars-dust"></div>
   </div>
 
-  <!-- ============ CANVAS ============ -->
-  <canvas id="gameCanvas"></canvas>
+  <div class="menu-box">
 
-   <!-- ============ MAIN MENU ============ -->
-  <div id="screen-main-menu" class="screen">
-
-    <!-- Space Background -->
-    <div class="space-bg">
-      <div class="nebula nebula-1"></div>
-      <div class="nebula nebula-2"></div>
-      <div class="nebula nebula-3"></div>
-      <div class="shooting-stars">
-        <div class="shooting-star ss-1"></div>
-        <div class="shooting-star ss-2"></div>
-        <div class="shooting-star ss-3"></div>
-        <div class="shooting-star ss-4"></div>
-      </div>
-      <div class="orbit-ring orbit-ring-outer"></div>
-      <div class="orbit-ring orbit-ring-inner"></div>
-      <div class="stars-dust"></div>
+    <div class="menu-topbar">
+      <div class="version-badge">v18.0</div>
+      <button id="btn-audio" class="btn-audio" title="Suara" type="button">
+        <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
+      </button>
     </div>
 
-    <div class="menu-box">
+    <div class="hero-logo">
+      <div class="logo-halo"></div>
+      <div class="logo-ring logo-ring-1"></div>
+      <div class="logo-ring logo-ring-2"></div>
+      <div class="logo-ring logo-ring-3"></div>
 
-      <!-- Top bar -->
-      <div class="menu-topbar">
-        <div class="version-badge">v17.13</div>
-        <button id="btn-audio" class="btn-audio" title="Suara" type="button">
-          <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
-        </button>
+      <div class="logo-orbit logo-orbit-1"><div class="planet planet-cyan"></div></div>
+      <div class="logo-orbit logo-orbit-2"><div class="planet planet-gold"></div></div>
+      <div class="logo-orbit logo-orbit-3"><div class="planet planet-pink"></div></div>
+
+      <div class="logo-star-wrap">
+        <svg class="logo-star" viewBox="0 0 100 100">
+          <defs>
+            <radialGradient id="starCoreGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+              <stop offset="25%" stop-color="#fff8dc" stop-opacity="0.9"/>
+              <stop offset="55%" stop-color="#ffd700" stop-opacity="0.6"/>
+              <stop offset="100%" stop-color="#ff8a00" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="starCoreBody" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="40%" stop-color="#ffe680"/>
+              <stop offset="75%" stop-color="#ffd700"/>
+              <stop offset="100%" stop-color="#ff8a00"/>
+            </linearGradient>
+            <linearGradient id="starCoreInner" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="100%" stop-color="#fff8dc"/>
+            </linearGradient>
+          </defs>
+          <circle cx="50" cy="50" r="48" fill="url(#starCoreGlow)"/>
+          <path d="M50 6 L61.8 38.2 L96 38.2 L68.1 58.9 L79.9 91.1 L50 70.4 L20.1 91.1 L31.9 58.9 L4 38.2 L38.2 38.2 Z"
+                fill="#ff8a00" opacity="0.5" filter="blur(3px)"/>
+          <path d="M50 10 L60.5 39.3 L91 39.3 L66 57.6 L76.5 87 L50 68.7 L23.5 87 L34 57.6 L9 39.3 L39.5 39.3 Z"
+                fill="url(#starCoreBody)"
+                stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round"/>
+          <path d="M50 22 L55 38 L71 38 L58 47 L63 63 L50 54 L37 63 L42 47 L29 38 L45 38 Z"
+                fill="url(#starCoreInner)" opacity="0.5"/>
+          <circle cx="50" cy="46" r="5" fill="#ffffff" opacity="0.95"/>
+          <circle cx="50" cy="46" r="2.5" fill="#fff8dc"/>
+        </svg>
+        <div class="sparkle-burst burst-1">✦</div>
+        <div class="sparkle-burst burst-2">✦</div>
+        <div class="sparkle-burst burst-3">✦</div>
+        <div class="sparkle-burst burst-4">✦</div>
       </div>
+    </div>
 
-      <!-- ========== HERO LOGO ========== -->
-      <div class="hero-logo">
-        <!-- Halo glow background -->
-        <div class="logo-halo"></div>
-
-        <!-- Outer ring rotating -->
-        <div class="logo-ring logo-ring-1"></div>
-        <div class="logo-ring logo-ring-2"></div>
-        <div class="logo-ring logo-ring-3"></div>
-
-        <!-- Orbiting planets -->
-        <div class="logo-orbit logo-orbit-1">
-          <div class="planet planet-cyan"></div>
-        </div>
-        <div class="logo-orbit logo-orbit-2">
-          <div class="planet planet-gold"></div>
-        </div>
-        <div class="logo-orbit logo-orbit-3">
-          <div class="planet planet-pink"></div>
-        </div>
-
-        <!-- Central star emblem -->
-        <div class="logo-star-wrap">
-          <svg class="logo-star" viewBox="0 0 100 100">
-            <defs>
-              <radialGradient id="starCoreGlow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
-                <stop offset="25%" stop-color="#fff8dc" stop-opacity="0.9"/>
-                <stop offset="55%" stop-color="#ffd700" stop-opacity="0.6"/>
-                <stop offset="100%" stop-color="#ff8a00" stop-opacity="0"/>
-              </radialGradient>
-              <linearGradient id="starCoreBody" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#ffffff"/>
-                <stop offset="40%" stop-color="#ffe680"/>
-                <stop offset="75%" stop-color="#ffd700"/>
-                <stop offset="100%" stop-color="#ff8a00"/>
-              </linearGradient>
-              <linearGradient id="starCoreInner" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#ffffff"/>
-                <stop offset="100%" stop-color="#fff8dc"/>
-              </linearGradient>
-            </defs>
-            <!-- Outer glow circle -->
-            <circle cx="50" cy="50" r="48" fill="url(#starCoreGlow)"/>
-            <!-- Star outline (back glow) -->
-            <path d="M50 6 L61.8 38.2 L96 38.2 L68.1 58.9 L79.9 91.1 L50 70.4 L20.1 91.1 L31.9 58.9 L4 38.2 L38.2 38.2 Z"
-                  fill="#ff8a00" opacity="0.5" filter="blur(3px)"/>
-            <!-- Main star -->
-            <path d="M50 10 L60.5 39.3 L91 39.3 L66 57.6 L76.5 87 L50 68.7 L23.5 87 L34 57.6 L9 39.3 L39.5 39.3 Z"
-                  fill="url(#starCoreBody)"
-                  stroke="#ffffff"
-                  stroke-width="1.2"
-                  stroke-linejoin="round"/>
-            <!-- Inner highlight -->
-            <path d="M50 22 L55 38 L71 38 L58 47 L63 63 L50 54 L37 63 L42 47 L29 38 L45 38 Z"
-                  fill="url(#starCoreInner)"
-                  opacity="0.5"/>
-            <!-- Center bright core -->
-            <circle cx="50" cy="46" r="5" fill="#ffffff" opacity="0.95"/>
-            <circle cx="50" cy="46" r="2.5" fill="#fff8dc"/>
-          </svg>
-          <!-- Sparkle bursts -->
-          <div class="sparkle-burst burst-1">✦</div>
-          <div class="sparkle-burst burst-2">✦</div>
-          <div class="sparkle-burst burst-3">✦</div>
-          <div class="sparkle-burst burst-4">✦</div>
-        </div>
+    <div class="title-stack">
+      <h1 class="title-row">
+        <span class="title-char">P</span><span class="title-char">A</span><span class="title-char">H</span><span class="title-char">L</span><span class="title-char">A</span><span class="title-char">W</span><span class="title-char">A</span><span class="title-char">N</span>
+      </h1>
+      <div class="title-separator">
+        <div class="sep-line"></div>
+        <svg class="sep-star" viewBox="0 0 24 24"><use href="#i-star"/></svg>
+        <div class="sep-line"></div>
       </div>
+      <h1 class="title-row highlight">
+        <span class="title-char">B</span><span class="title-char">I</span><span class="title-char">N</span><span class="title-char">T</span><span class="title-char">A</span><span class="title-char">N</span><span class="title-char">G</span>
+      </h1>
+    </div>
 
-      <!-- ========== TITLE ========== -->
-      <div class="title-stack">
-        <h1 class="title-row">
-          <span class="title-char">P</span><span class="title-char">A</span><span class="title-char">H</span><span class="title-char">L</span><span class="title-char">A</span><span class="title-char">W</span><span class="title-char">A</span><span class="title-char">N</span>
-        </h1>
-        <div class="title-separator">
-          <div class="sep-line"></div>
-          <svg class="sep-star" viewBox="0 0 24 24"><use href="#i-star"/></svg>
-          <div class="sep-line"></div>
-        </div>
-        <h1 class="title-row highlight">
-          <span class="title-char">B</span><span class="title-char">I</span><span class="title-char">N</span><span class="title-char">T</span><span class="title-char">A</span><span class="title-char">N</span><span class="title-char">G</span>
-        </h1>
+    <p class="tagline">
+      <svg class="tagline-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
+      <span>Selamatkan Galaksi dari Invasi Monster</span>
+      <svg class="tagline-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
+    </p>
+
+    <div class="input-wrap">
+      <svg class="input-ico" viewBox="0 0 24 24"><use href="#i-user"/></svg>
+      <input id="player-name-input" type="text" placeholder="Masukkan Nama Pahlawan" maxlength="14" />
+    </div>
+
+    <button id="btn-prepare-play" class="btn-hero" type="button">
+      <div class="btn-hero-bg"></div>
+      <div class="btn-hero-shine"></div>
+      <div class="btn-hero-content">
+        <svg class="btn-hero-icon" viewBox="0 0 24 24"><use href="#i-play"/></svg>
+        <span class="btn-hero-text">MULAI MISI</span>
       </div>
+      <div class="btn-hero-glow"></div>
+    </button>
 
-      <!-- ========== SUBTITLE ========== -->
-      <p class="tagline">
-        <svg class="tagline-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
-        <span>Selamatkan Galaksi dari Invasi Monster</span>
-        <svg class="tagline-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
-      </p>
-
-      <!-- ========== NAME INPUT ========== -->
-      <div class="input-wrap">
-        <svg class="input-ico" viewBox="0 0 24 24"><use href="#i-user"/></svg>
-        <input id="player-name-input" type="text" placeholder="Masukkan Nama Pahlawan" maxlength="14" />
+    <button id="btn-multiplayer" class="btn-mp" type="button">
+      <div class="btn-mp-bg"></div>
+      <div class="btn-mp-shine"></div>
+      <div class="btn-mp-content">
+        <svg class="btn-mp-icon" viewBox="0 0 24 24"><use href="#i-users"/></svg>
+        <span class="btn-mp-text">MAIN BARENG TEMAN</span>
       </div>
+      <div class="btn-mp-badge">2P</div>
+    </button>
 
-      <!-- ========== PRIMARY CTA ========== -->
-      <button id="btn-prepare-play" class="btn-hero" type="button">
-        <div class="btn-hero-bg"></div>
-        <div class="btn-hero-shine"></div>
-        <div class="btn-hero-content">
-          <svg class="btn-hero-icon" viewBox="0 0 24 24"><use href="#i-play"/></svg>
-          <span class="btn-hero-text">MULAI MISI</span>
-        </div>
-        <div class="btn-hero-glow"></div>
-      </button>
-
-      <!-- ========== MULTIPLAYER CTA ========== -->
-      <button id="btn-multiplayer" class="btn-mp" type="button">
-        <div class="btn-mp-bg"></div>
-        <div class="btn-mp-shine"></div>
-        <div class="btn-mp-content">
-          <svg class="btn-mp-icon" viewBox="0 0 24 24"><use href="#i-users"/></svg>
-          <span class="btn-mp-text">MAIN BARENG TEMAN</span>
-        </div>
-        <div class="btn-mp-badge">2P</div>
-      </button>
-
-      <!-- ========== MENU GRID ========== -->
-      <div class="menu-grid">
-        <button id="btn-select-actor" class="menu-card" type="button">
-          <div class="menu-card-inner">
-            <div class="menu-card-icon-wrap c-blue">
-              <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-mask"/></svg>
-            </div>
-            <span class="menu-card-label">HERO</span>
+    <div class="menu-grid">
+      <button id="btn-select-actor" class="menu-card" type="button">
+        <div class="menu-card-inner">
+          <div class="menu-card-icon-wrap c-blue">
+            <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-mask"/></svg>
           </div>
-        </button>
-
-        <button id="btn-shop" class="menu-card" type="button">
-          <div class="menu-card-inner">
-            <div class="menu-card-icon-wrap c-gold">
-              <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-shop"/></svg>
-            </div>
-            <span class="menu-card-label">TOKO</span>
+          <span class="menu-card-label">HERO</span>
+        </div>
+      </button>
+      <button id="btn-shop" class="menu-card" type="button">
+        <div class="menu-card-inner">
+          <div class="menu-card-icon-wrap c-gold">
+            <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-shop"/></svg>
           </div>
-        </button>
-
-        <button id="btn-leaderboard" class="menu-card" type="button">
-          <div class="menu-card-inner">
-            <div class="menu-card-icon-wrap c-purple">
-              <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg>
-            </div>
-            <span class="menu-card-label">PERINGKAT</span>
+          <span class="menu-card-label">TOKO</span>
+        </div>
+      </button>
+      <button id="btn-leaderboard" class="menu-card" type="button">
+        <div class="menu-card-inner">
+          <div class="menu-card-icon-wrap c-purple">
+            <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg>
           </div>
-        </button>
-
-        <button id="btn-stickers" class="menu-card" type="button">
-          <div class="menu-card-inner">
-            <div class="menu-card-icon-wrap c-pink">
-              <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
-            </div>
-            <span class="menu-card-label">STIKER</span>
+          <span class="menu-card-label">PERINGKAT</span>
+        </div>
+      </button>
+      <button id="btn-stickers" class="menu-card" type="button">
+        <div class="menu-card-inner">
+          <div class="menu-card-icon-wrap c-pink">
+            <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
           </div>
-        </button>
-
-        <button id="btn-endless" class="menu-card" type="button">
-          <div class="menu-card-inner">
-            <div class="menu-card-icon-wrap c-green">
-              <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
-            </div>
-            <span class="menu-card-label">ENDLESS</span>
+          <span class="menu-card-label">STIKER</span>
+        </div>
+      </button>
+      <button id="btn-endless" class="menu-card" type="button">
+        <div class="menu-card-inner">
+          <div class="menu-card-icon-wrap c-green">
+            <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
           </div>
-        </button>
-
-        <button id="btn-daily" class="menu-card" type="button">
-          <div class="menu-card-inner">
-            <div class="menu-card-icon-wrap c-red">
-              <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg>
-            </div>
-            <span class="menu-card-label">DAILY</span>
+          <span class="menu-card-label">ENDLESS</span>
+        </div>
+      </button>
+      <button id="btn-daily" class="menu-card" type="button">
+        <div class="menu-card-inner">
+          <div class="menu-card-icon-wrap c-red">
+            <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg>
           </div>
+          <span class="menu-card-label">DAILY</span>
+        </div>
+      </button>
+    </div>
+
+    <button id="btn-pwa-install" class="btn-install hidden" type="button">
+      <svg class="ico"><use href="#i-download"/></svg>
+      <span>INSTALL APLIKASI</span>
+    </button>
+
+    <div class="menu-footer">
+      <span class="footer-dot"></span>
+      <span>Hero: <strong id="selected-actor-name">Robot Cyber</strong></span>
+      <span class="footer-dot"></span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============ HUD OVERLAY ============ -->
+<div id="hud-overlay" class="hidden">
+  <div class="hud-top">
+    <div class="hud-left">
+      <div class="hud-pill">
+        <span class="hud-label">LV</span>
+        <span id="hud-level" class="hud-value">1</span>
+      </div>
+      <div class="hud-pill">
+        <svg class="hud-ico" viewBox="0 0 24 24"><use href="#i-target"/></svg>
+        <span id="hud-mission" class="hud-value">0/0</span>
+      </div>
+      <div class="hud-pill">
+        <svg class="hud-ico gold" viewBox="0 0 24 24"><use href="#i-star"/></svg>
+        <span id="hud-score" class="hud-value">0</span>
+      </div>
+      <div class="hud-pill">
+        <svg class="hud-ico gold" viewBox="0 0 24 24"><use href="#i-coin"/></svg>
+        <span id="hud-coins" class="hud-value">0</span>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <div id="hud-lives" class="hud-lives"></div>
+      <button id="btn-pause" class="btn-pause" aria-label="Pause" type="button">
+        <svg class="ico" viewBox="0 0 24 24"><use href="#i-pause"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="hud-combo-pill" class="hidden">
+    <span id="hud-combo-text">2x COMBO</span>
+  </div>
+
+  <div class="hud-bottom">
+    <div class="ctrl-cluster ctrl-left">
+      <button id="btn-move-left" class="btn-ctrl" aria-label="Kiri" type="button">
+        <svg class="ico" viewBox="0 0 24 24"><use href="#i-chev-left"/></svg>
+      </button>
+      <button id="btn-move-right" class="btn-ctrl" aria-label="Kanan" type="button">
+        <svg class="ico" viewBox="0 0 24 24"><use href="#i-chev-right"/></svg>
+      </button>
+    </div>
+
+    <div class="ctrl-cluster ctrl-right skill-row">
+      <button id="btn-freeze" class="btn-skill skill-freeze" aria-label="Freeze" type="button">
+        <svg class="skill-icon" viewBox="0 0 24 24"><use href="#i-snow"/></svg>
+        <span id="freeze-count" class="skill-count">0</span>
+      </button>
+      <button id="btn-shield" class="btn-skill skill-shield" aria-label="Shield" type="button">
+        <svg class="skill-icon" viewBox="0 0 24 24"><use href="#i-shield"/></svg>
+        <span id="shield-count" class="skill-count">0</span>
+      </button>
+      <button id="btn-bomb" class="btn-skill skill-bomb" aria-label="Bomb" type="button">
+        <svg class="skill-icon" viewBox="0 0 24 24"><use href="#i-bomb"/></svg>
+        <span id="bomb-count" class="skill-count">0</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BOSS WARNING ============ -->
+<div id="boss-warning-overlay" class="hidden">
+  <svg class="boss-warn-ico" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
+  <div class="boss-warning-text">BOSS MUNCUL</div>
+</div>
+
+<!-- ============ LEVEL INTRO BANNER ============ -->
+<div id="level-intro" class="hidden">
+  <div class="level-intro-inner">
+    <div class="level-intro-label">STAGE</div>
+    <div class="level-intro-number" id="level-intro-number">01</div>
+    <div class="level-intro-divider"></div>
+    <div class="level-intro-name" id="level-intro-name">COSMIC SECTOR</div>
+    <div class="level-intro-mission" id="level-intro-mission">10 KILLS · TARGET 1500</div>
+  </div>
+</div>
+
+<!-- ============ KILL STREAK POPUP ============ -->
+<div id="killstreak-overlay" class="hidden">
+  <div class="killstreak-text" id="killstreak-text">KILLING SPREE!</div>
+  <div class="killstreak-sub" id="killstreak-sub">10 KILLS</div>
+</div>
+
+<!-- ============ FLOATING TEXT ============ -->
+<div id="popup-container"></div>
+
+<!-- ============ MODAL: PAUSE ============ -->
+<div id="modal-pause" class="modal hidden">
+  <div class="modal-box">
+    <h2><svg class="ico-lg"><use href="#i-pause"/></svg> GAME PAUSED</h2>
+    <p style="margin-bottom:14px">Hero: <strong id="pause-hero-name">Robot Cyber</strong></p>
+    <button id="btn-resume-game" class="btn-primary" type="button">
+      <svg class="ico"><use href="#i-play"/></svg> <span>LANJUTKAN</span>
+    </button>
+    <button id="btn-pause-change-hero" class="btn-secondary" type="button">
+      <svg class="ico"><use href="#i-mask"/></svg> <span>GANTI HERO</span>
+    </button>
+    <button id="btn-pause-leaderboard" class="btn-secondary" type="button">
+      <svg class="ico"><use href="#i-trophy"/></svg> <span>PERINGKAT</span>
+    </button>
+    <button id="btn-pause-main-menu" class="btn-danger" type="button">
+      <svg class="ico"><use href="#i-home"/></svg> <span>MENU UTAMA</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============ MODAL: PILIH HERO ============ -->
+<div id="modal-actors" class="modal hidden">
+  <div class="modal-box">
+    <h2>PILIH HERO</h2>
+    <div class="actor-grid">
+      <div class="actor-card selected" data-actor="robot">
+        <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-robot"/></svg>
+        <span>Robot Cyber</span>
+      </div>
+      <div class="actor-card" data-actor="cannon">
+        <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-cannon"/></svg>
+        <span>Meriam Bintang</span>
+      </div>
+      <div class="actor-card" data-actor="dragon">
+        <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-dragon"/></svg>
+        <span>Cyber Dragon</span>
+      </div>
+      <div class="actor-card" data-actor="cat">
+        <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-cat"/></svg>
+        <span>Ninja Cat</span>
+      </div>
+      <div class="actor-card" data-actor="unicorn">
+        <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-unicorn"/></svg>
+        <span>Unicorn Star</span>
+      </div>
+    </div>
+    <button id="btn-close-actors" class="btn-secondary" type="button">TUTUP</button>
+  </div>
+</div>
+
+<!-- ============ MODAL: TOKO ============ -->
+<div id="modal-shop" class="modal hidden">
+  <div class="modal-box">
+    <h2>TOKO UPGRADE</h2>
+    <p style="margin-bottom:16px">Koin: <strong id="shop-coin-count">0</strong>
+      <svg class="ico-inline gold" viewBox="0 0 24 24"><use href="#i-coin"/></svg>
+    </p>
+    <div class="shop-item">
+      <div class="shop-item-label">
+        <svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-bolt"/></svg>
+        <div><strong>Fire Rate</strong><small>Lv <span id="shop-level-firerate">1</span></small></div>
+      </div>
+      <button id="btn-buy-firerate" class="btn-buy" type="button">BELI <span>50</span></button>
+    </div>
+    <div class="shop-item">
+      <div class="shop-item-label">
+        <svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-shield"/></svg>
+        <div><strong>Shield</strong><small>Lv <span id="shop-level-shield">1</span></small></div>
+      </div>
+      <button id="btn-buy-shield" class="btn-buy" type="button">BELI <span>60</span></button>
+    </div>
+    <div class="shop-item">
+      <div class="shop-item-label">
+        <svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-bomb"/></svg>
+        <div><strong>Bomb</strong><small>Lv <span id="shop-level-bomb">2</span></small></div>
+      </div>
+      <button id="btn-buy-bomb" class="btn-buy" type="button">BELI <span>150</span></button>
+    </div>
+    <div class="shop-item">
+      <div class="shop-item-label">
+        <svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-snow"/></svg>
+        <div><strong>Freeze</strong><small>Lv <span id="shop-level-freeze">2</span></small></div>
+      </div>
+      <button id="btn-buy-freeze" class="btn-buy" type="button">BELI <span>150</span></button>
+    </div>
+    <button id="btn-close-shop" class="btn-secondary" type="button">TUTUP</button>
+  </div>
+</div>
+
+<!-- ============ MODAL: LEADERBOARD ============ -->
+<div id="modal-leaderboard" class="modal hidden">
+  <div class="modal-box">
+    <h2><svg class="ico-lg gold"><use href="#i-trophy"/></svg> PAPAN PERINGKAT</h2>
+    <div class="lb-tabs">
+      <button class="lb-tab active" data-tab="global" type="button">GLOBAL</button>
+      <button class="lb-tab" data-tab="endless" type="button">ENDLESS</button>
+      <button class="lb-tab" data-tab="daily" type="button">DAILY</button>
+      <button class="lb-tab" data-tab="coop" type="button">CO-OP</button>
+    </div>
+    <table class="leaderboard-table">
+      <thead>
+        <tr><th>#</th><th>NAMA</th><th>LVL</th><th>SKOR</th></tr>
+      </thead>
+      <tbody id="leaderboard-body">
+        <tr><td colspan="4" class="loading-text">Memuat...</td></tr>
+      </tbody>
+    </table>
+    <button id="btn-close-leaderboard" class="btn-secondary" type="button">TUTUP</button>
+  </div>
+</div>
+
+<!-- ============ MODAL: STIKER ============ -->
+<div id="modal-stickers" class="modal hidden">
+  <div class="modal-box">
+    <h2><svg class="ico-lg gold"><use href="#i-star"/></svg> ALBUM STIKER</h2>
+    <p style="margin-bottom:14px">Terbuka: <strong id="unlocked-count">0</strong></p>
+    <div id="sticker-grid" class="sticker-grid"></div>
+    <button id="btn-close-stickers" class="btn-secondary" type="button">TUTUP</button>
+  </div>
+</div>
+
+<!-- ============ MODAL: LOADOUT ============ -->
+<div id="modal-loadout" class="modal hidden">
+  <div class="modal-box">
+    <h2>PILIH 2 SKILL</h2>
+    <p class="loadout-subtitle">
+      Level <strong id="loadout-level">1</strong> ·
+      <span id="loadout-theme">COSMIC SECTOR</span>
+    </p>
+    <div class="loadout-grid">
+      <div class="loadout-card" data-skill="freeze">
+        <svg class="loadout-icon" viewBox="0 0 24 24"><use href="#i-snow"/></svg>
+        <strong>Freeze</strong>
+        <small>Bekukan musuh 3.5 detik</small>
+      </div>
+      <div class="loadout-card" data-skill="shield">
+        <svg class="loadout-icon" viewBox="0 0 24 24"><use href="#i-shield"/></svg>
+        <strong>Shield</strong>
+        <small>Immun damage sementara</small>
+      </div>
+      <div class="loadout-card" data-skill="bomb">
+        <svg class="loadout-icon" viewBox="0 0 24 24"><use href="#i-bomb"/></svg>
+        <strong>Bomb</strong>
+        <small>Ledakan area 50 HP</small>
+      </div>
+    </div>
+    <p class="loadout-hint">Pilih 2 dari 3 skill</p>
+    <button id="btn-start-loaded" class="btn-primary" type="button" disabled>
+      <svg class="ico"><use href="#i-play"/></svg>
+      <span>MULAI LEVEL</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============ MODAL: HASIL ============ -->
+<div id="modal-result" class="modal hidden">
+  <div class="modal-box">
+    <div class="result-icon-wrap">
+      <svg id="result-icon" class="result-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg>
+    </div>
+    <h2 id="result-title">MISI SELESAI</h2>
+    <div class="result-rows">
+      <div>Pahlawan: <strong id="result-player-name">-</strong></div>
+      <div>Skor: <strong id="result-score">0</strong></div>
+      <div>Koin: <strong id="result-coins">+0</strong></div>
+      <div>Level: <strong id="result-level">1</strong></div>
+      <div>Kill: <strong id="result-kills">0 Target</strong></div>
+      <div>Rating:
+        <strong id="result-stars">
+          <svg class="star-mini" viewBox="0 0 24 24"><use href="#i-star"/></svg>
+          <svg class="star-mini" viewBox="0 0 24 24"><use href="#i-star"/></svg>
+          <svg class="star-mini" viewBox="0 0 24 24"><use href="#i-star"/></svg>
+        </strong>
+      </div>
+    </div>
+    <button id="btn-next-level" class="btn-primary" type="button">
+      <svg class="ico"><use href="#i-play"/></svg> <span>LEVEL BERIKUTNYA</span>
+    </button>
+    <button id="btn-restart" class="btn-secondary" type="button">
+      <svg class="ico"><use href="#i-refresh"/></svg> <span>ULANG</span>
+    </button>
+    <button id="btn-menu" class="btn-danger" type="button">
+      <svg class="ico"><use href="#i-home"/></svg> <span>MENU UTAMA</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============ MODAL: REVIVE ============ -->
+<div id="modal-revive" class="modal hidden">
+  <div class="modal-box revive-box">
+    <div class="revive-icon-wrap">
+      <svg class="revive-icon" viewBox="0 0 24 24"><use href="#i-heart"/></svg>
+    </div>
+    <h2>NYAWA HABIS</h2>
+    <p class="revive-subtitle">Lanjutkan misi dengan menonton iklan singkat?</p>
+    <button id="btn-revive-ad" class="btn-primary big" type="button">
+      <svg class="ico"><use href="#i-play"/></svg>
+      <span>TONTON IKLAN &rarr; REVIVE</span>
+    </button>
+    <button id="btn-revive-give-up" class="btn-secondary" type="button">
+      <svg class="ico"><use href="#i-skull"/></svg>
+      <span>MENYERAH</span>
+    </button>
+    <p class="revive-quota">Revive hari ini: <strong id="revive-quota">3</strong>/3</p>
+  </div>
+</div>
+
+<!-- ============ REWARDED AD OVERLAY ============ -->
+<div id="ad-overlay" class="hidden">
+  <div class="ad-box">
+    <div class="ad-label">IKLAN REWARDED</div>
+    <div class="ad-content">
+      <div class="ad-pulse">
+        <svg viewBox="0 0 24 24" class="ad-play-icon"><use href="#i-play"/></svg>
+      </div>
+      <div class="ad-message">Menyiapkan iklan untuk revive...</div>
+      <div class="ad-countdown" id="ad-countdown">5</div>
+    </div>
+    <div class="ad-note">HADIAH: +1 NYAWA + 2 DETIK KEKEBALAN</div>
+  </div>
+</div>
+
+<!-- ============ MODAL: ENDLESS ============ -->
+<div id="modal-endless" class="modal hidden">
+  <div class="modal-box">
+    <h2><svg class="ico-lg"><use href="#i-star"/></svg> ENDLESS MODE</h2>
+    <p class="endless-subtitle">Bertahan selama mungkin. Difficulty naik terus. Skor infinite.</p>
+    <div class="endless-stats">
+      <div class="endless-stat">
+        <div class="endless-stat-label">BEST WAVE</div>
+        <div class="endless-stat-value" id="endless-best-wave">0</div>
+      </div>
+      <div class="endless-stat">
+        <div class="endless-stat-label">BEST SCORE</div>
+        <div class="endless-stat-value" id="endless-best-score">0</div>
+      </div>
+    </div>
+    <div class="endless-info">
+      <div>&#9889; Musuh makin cepat &amp; kuat tiap 10 wave</div>
+      <div>&#128081; Boss muncul setiap 5 wave</div>
+      <div>&#129689; Koin 2&times; lebih banyak</div>
+      <div>&#127942; Skor masuk leaderboard Endless</div>
+    </div>
+    <button id="btn-start-endless" class="btn-primary big" type="button">
+      <svg class="ico"><use href="#i-play"/></svg>
+      <span>MULAI ENDLESS</span>
+    </button>
+    <button id="btn-close-endless" class="btn-secondary" type="button">TUTUP</button>
+  </div>
+</div>
+
+<!-- ============ MODAL: DAILY ============ -->
+<div id="modal-daily" class="modal hidden">
+  <div class="modal-box">
+    <h2><svg class="ico-lg gold"><use href="#i-trophy"/></svg> DAILY CHALLENGE</h2>
+    <p class="daily-date" id="daily-date">Memuat...</p>
+
+    <div class="daily-boss-preview">
+      <div class="daily-boss-slot" data-slot="0">
+        <svg class="daily-boss-ico" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
+        <div class="daily-boss-num">BOS 1</div>
+        <div class="daily-boss-name" id="daily-boss-0-name">—</div>
+        <div class="daily-boss-check hidden" id="daily-boss-0-check">
+          <svg viewBox="0 0 24 24"><use href="#i-check"/></svg>
+        </div>
+      </div>
+      <div class="daily-boss-arrow">→</div>
+      <div class="daily-boss-slot" data-slot="1">
+        <svg class="daily-boss-ico" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
+        <div class="daily-boss-num">BOS 2</div>
+        <div class="daily-boss-name" id="daily-boss-1-name">—</div>
+        <div class="daily-boss-check hidden" id="daily-boss-1-check">
+          <svg viewBox="0 0 24 24"><use href="#i-check"/></svg>
+        </div>
+      </div>
+      <div class="daily-boss-arrow">→</div>
+      <div class="daily-boss-slot" data-slot="2">
+        <svg class="daily-boss-ico" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
+        <div class="daily-boss-num">BOS 3</div>
+        <div class="daily-boss-name" id="daily-boss-2-name">—</div>
+        <div class="daily-boss-check hidden" id="daily-boss-2-check">
+          <svg viewBox="0 0 24 24"><use href="#i-check"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="daily-progress hidden" id="daily-progress">
+      <div class="daily-progress-label">PROGRESS</div>
+      <div class="daily-progress-value">
+        <strong id="daily-progress-text">0/3 BOS</strong>
+      </div>
+    </div>
+
+    <div class="daily-modifier" id="daily-modifier">
+      <div class="daily-mod-icon">
+        <svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg>
+      </div>
+      <div class="daily-mod-info">
+        <strong id="daily-mod-name">DOUBLE SPEED</strong>
+        <small id="daily-mod-desc">Musuh bergerak 2&times; lebih cepat</small>
+      </div>
+    </div>
+
+    <div class="daily-reward">
+      <div>&#129689; Reward: <strong>5&times; Koin</strong></div>
+      <div>&#127894; Badge: <strong>DAILY MASTER</strong></div>
+      <div>&#9200; Reset dalam: <strong id="daily-reset-timer">--:--:--</strong></div>
+    </div>
+
+    <div class="daily-status">
+      <div class="daily-done-badge hidden" id="daily-done-badge">
+        <svg viewBox="0 0 24 24" class="daily-check"><use href="#i-check"/></svg>
+        <span>SELESAI HARI INI</span>
+      </div>
+    </div>
+
+    <button id="btn-start-daily" class="btn-primary big" type="button">
+      <svg class="ico"><use href="#i-play"/></svg>
+      <span>MULAI 3 BOS</span>
+    </button>
+    <button id="btn-close-daily" class="btn-secondary" type="button">TUTUP</button>
+  </div>
+</div>
+
+<!-- ============ MODAL: MULTIPLAYER HUB ============ -->
+<div id="modal-mp-hub" class="modal hidden">
+  <div class="modal-box">
+    <h2>
+      <svg class="ico-lg"><use href="#i-users"/></svg>
+      MAIN BARENG TEMAN
+    </h2>
+    <p class="mp-subtitle">Co-op 2 pemain · 1 vs 1 PvP · Gratis tanpa server</p>
+
+    <button id="btn-mp-create" class="btn-primary big mp-btn" type="button">
+      <svg class="ico"><use href="#i-play"/></svg>
+      <span>BUAT ROOM (HOST)</span>
+    </button>
+
+    <button id="btn-mp-join" class="btn-secondary mp-btn" type="button">
+      <svg class="ico"><use href="#i-wifi"/></svg>
+      <span>MASUK ROOM (GUEST)</span>
+    </button>
+
+    <div class="mp-mode-select">
+      <div class="mp-mode-label">MODE PERMAINAN:</div>
+      <div class="mp-mode-buttons">
+        <button id="mp-mode-coop" class="mp-mode-btn active" data-mode="coop" type="button">
+          🤝 CO-OP
+        </button>
+        <button id="mp-mode-pvp" class="mp-mode-btn" data-mode="pvp" type="button">
+          ⚔️ PVP
         </button>
       </div>
-
-      <!-- ========== INSTALL PWA ========== -->
-      <button id="btn-pwa-install" class="btn-install hidden" type="button">
-        <svg class="ico"><use href="#i-download"/></svg>
-        <span>INSTALL APLIKASI</span>
-      </button>
-
-      <!-- ========== FOOTER ========== -->
-      <div class="menu-footer">
-        <span class="footer-dot"></span>
-        <span>Hero: <strong id="selected-actor-name">Robot Cyber</strong></span>
-        <span class="footer-dot"></span>
-      </div>
-
     </div>
-  </div>
 
-  <!-- ============ HUD OVERLAY ============ -->
-  <div id="hud-overlay" class="hidden">
-    <div class="hud-top">
-      <div class="hud-left">
-        <div class="hud-pill">
-          <span class="hud-label">LV</span>
-          <span id="hud-level" class="hud-value">1</span>
-        </div>
-        <div class="hud-pill">
-          <svg class="hud-ico" viewBox="0 0 24 24"><use href="#i-target"/></svg>
-          <span id="hud-mission" class="hud-value">0/0</span>
-        </div>
-        <div class="hud-pill">
-          <svg class="hud-ico gold" viewBox="0 0 24 24"><use href="#i-star"/></svg>
-          <span id="hud-score" class="hud-value">0</span>
-        </div>
-        <div class="hud-pill">
-          <svg class="hud-ico gold" viewBox="0 0 24 24"><use href="#i-coin"/></svg>
-          <span id="hud-coins" class="hud-value">0</span>
-        </div>
+    <div class="mp-info-box">
+      <div class="mp-info-row">
+        <svg viewBox="0 0 24 24" class="mp-info-ico"><use href="#i-wifi"/></svg>
+        <span>Koneksi P2P langsung (WebRTC)</span>
       </div>
-
-      <div class="hud-right">
-        <div id="hud-lives" class="hud-lives"></div>
-        <button id="btn-pause" class="btn-pause" aria-label="Pause" type="button">
-          <svg class="ico" viewBox="0 0 24 24"><use href="#i-pause"/></svg>
-        </button>
+      <div class="mp-info-row">
+        <svg viewBox="0 0 24 24" class="mp-info-ico"><use href="#i-users"/></svg>
+        <span>Butuh 2 pemain dengan HP berbeda</span>
+      </div>
+      <div class="mp-info-row">
+        <svg viewBox="0 0 24 24" class="mp-info-ico"><use href="#i-target"/></svg>
+        <span>Keduanya harus online bersamaan</span>
       </div>
     </div>
 
-    <div id="hud-combo-pill" class="hidden">
-      <span id="hud-combo-text">2x COMBO</span>
+    <button id="btn-mp-close-hub" class="btn-secondary" type="button">TUTUP</button>
+  </div>
+</div>
+
+<!-- ============ MODAL: JOIN ROOM ============ -->
+<div id="modal-mp-join" class="modal hidden">
+  <div class="modal-box">
+    <h2>MASUK ROOM</h2>
+    <p class="mp-subtitle">Masukkan kode 4 huruf dari temanmu</p>
+
+    <div class="mp-code-input-wrap">
+      <input id="mp-code-input" class="mp-code-input" type="text" maxlength="4"
+             placeholder="ABCD" autocapitalize="characters" autocomplete="off" spellcheck="false" />
     </div>
 
-    <div class="hud-bottom">
-      <div class="ctrl-cluster ctrl-left">
-        <button id="btn-move-left" class="btn-ctrl" aria-label="Kiri" type="button">
-          <svg class="ico" viewBox="0 0 24 24"><use href="#i-chev-left"/></svg>
-        </button>
-        <button id="btn-move-right" class="btn-ctrl" aria-label="Kanan" type="button">
-          <svg class="ico" viewBox="0 0 24 24"><use href="#i-chev-right"/></svg>
-        </button>
-      </div>
+    <div id="mp-join-status" class="mp-status mp-status-hidden"></div>
 
-      <div class="ctrl-cluster ctrl-right skill-row">
-        <button id="btn-freeze" class="btn-skill skill-freeze" aria-label="Freeze" type="button">
-          <svg class="skill-icon" viewBox="0 0 24 24"><use href="#i-snow"/></svg>
-          <span id="freeze-count" class="skill-count">0</span>
-        </button>
-        <button id="btn-shield" class="btn-skill skill-shield" aria-label="Shield" type="button">
-          <svg class="skill-icon" viewBox="0 0 24 24"><use href="#i-shield"/></svg>
-          <span id="shield-count" class="skill-count">0</span>
-        </button>
-        <button id="btn-bomb" class="btn-skill skill-bomb" aria-label="Bomb" type="button">
-          <svg class="skill-icon" viewBox="0 0 24 24"><use href="#i-bomb"/></svg>
-          <span id="bomb-count" class="skill-count">0</span>
-        </button>
-      </div>
-    </div>
+    <button id="btn-mp-do-join" class="btn-primary big" type="button">
+      <svg class="ico"><use href="#i-wifi"/></svg>
+      <span>GABUNG</span>
+    </button>
+    <button id="btn-mp-back-from-join" class="btn-secondary" type="button">KEMBALI</button>
   </div>
+</div>
 
-  <!-- ============ BOSS WARNING ============ -->
-  <div id="boss-warning-overlay" class="hidden">
-    <svg class="boss-warn-ico" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
-    <div class="boss-warning-text">BOSS MUNCUL</div>
-  </div>
+<!-- ============ MODAL: LOBBY (WAITING) ============ -->
+<div id="modal-mp-lobby" class="modal hidden">
+  <div class="modal-box mp-lobby-box">
+    <h2 id="mp-lobby-title">ROOM DIBUAT</h2>
 
-  <!-- ============ LEVEL INTRO BANNER ============ -->
-  <div id="level-intro" class="hidden">
-    <div class="level-intro-inner">
-      <div class="level-intro-label">STAGE</div>
-      <div class="level-intro-number" id="level-intro-number">01</div>
-      <div class="level-intro-divider"></div>
-      <div class="level-intro-name" id="level-intro-name">COSMIC SECTOR</div>
-      <div class="level-intro-mission" id="level-intro-mission">10 KILLS · TARGET 1500</div>
-    </div>
-  </div>
-
-  <!-- ============ KILL STREAK POPUP ============ -->
-  <div id="killstreak-overlay" class="hidden">
-    <div class="killstreak-text" id="killstreak-text">KILLING SPREE!</div>
-    <div class="killstreak-sub" id="killstreak-sub">10 KILLS</div>
-  </div>
-
-  <!-- ============ FLOATING TEXT ============ -->
-  <div id="popup-container"></div>
-
-  <!-- ============ MODAL: PAUSE ============ -->
-  <div id="modal-pause" class="modal hidden">
-    <div class="modal-box">
-      <h2><svg class="ico-lg"><use href="#i-pause"/></svg> GAME PAUSED</h2>
-      <p style="margin-bottom:14px">Hero: <strong id="pause-hero-name">Robot Cyber</strong></p>
-      <button id="btn-resume-game" class="btn-primary" type="button">
-        <svg class="ico"><use href="#i-play"/></svg> <span>LANJUTKAN</span>
-      </button>
-      <button id="btn-pause-change-hero" class="btn-secondary" type="button">
-        <svg class="ico"><use href="#i-mask"/></svg> <span>GANTI HERO</span>
-      </button>
-      <button id="btn-pause-leaderboard" class="btn-secondary" type="button">
-        <svg class="ico"><use href="#i-trophy"/></svg> <span>PERINGKAT</span>
-      </button>
-      <button id="btn-pause-main-menu" class="btn-danger" type="button">
-        <svg class="ico"><use href="#i-home"/></svg> <span>MENU UTAMA</span>
+    <div class="mp-room-code-display">
+      <div class="mp-room-code-label">KODE ROOM</div>
+      <div class="mp-room-code" id="mp-room-code">----</div>
+      <button id="btn-mp-copy-code" class="mp-copy-btn" type="button" title="Salin kode">
+        <svg viewBox="0 0 24 24"><use href="#i-copy"/></svg>
       </button>
     </div>
-  </div>
 
-  <!-- ============ MODAL: PILIH HERO ============ -->
-  <div id="modal-actors" class="modal hidden">
-    <div class="modal-box">
-      <h2>PILIH HERO</h2>
-      <div class="actor-grid">
-        <div class="actor-card selected" data-actor="robot">
-          <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-robot"/></svg>
-          <span>Robot Cyber</span>
+    <div class="mp-players-list">
+      <div class="mp-player-slot" id="mp-slot-host">
+        <div class="mp-slot-avatar">🎮</div>
+        <div class="mp-slot-info">
+          <div class="mp-slot-name" id="mp-host-name">Menunggu...</div>
+          <div class="mp-slot-role">HOST</div>
         </div>
-        <div class="actor-card" data-actor="cannon">
-          <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-cannon"/></svg>
-          <span>Meriam Bintang</span>
-        </div>
-        <div class="actor-card" data-actor="dragon">
-          <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-dragon"/></svg>
-          <span>Cyber Dragon</span>
-        </div>
-        <div class="actor-card" data-actor="cat">
-          <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-cat"/></svg>
-          <span>Ninja Cat</span>
-        </div>
-        <div class="actor-card" data-actor="unicorn">
-          <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-unicorn"/></svg>
-          <span>Unicorn Star</span>
-        </div>
+        <div class="mp-slot-status" id="mp-host-status">—</div>
       </div>
-      <button id="btn-close-actors" class="btn-secondary" type="button">TUTUP</button>
+      <div class="mp-player-slot" id="mp-slot-guest">
+        <div class="mp-slot-avatar">🎯</div>
+        <div class="mp-slot-info">
+          <div class="mp-slot-name" id="mp-guest-name">Menunggu...</div>
+          <div class="mp-slot-role">GUEST</div>
+        </div>
+        <div class="mp-slot-status" id="mp-guest-status">—</div>
+      </div>
     </div>
-  </div>
 
-  <!-- ============ MODAL: TOKO ============ -->
-  <div id="modal-shop" class="modal hidden">
-    <div class="modal-box">
-      <h2>TOKO UPGRADE</h2>
-      <p style="margin-bottom:16px">Koin: <strong id="shop-coin-count">0</strong>
-        <svg class="ico-inline gold" viewBox="0 0 24 24"><use href="#i-coin"/></svg>
-      </p>
-      <div class="shop-item">
-        <div class="shop-item-label">
-          <svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-bolt"/></svg>
-          <div><strong>Fire Rate</strong><small>Lv <span id="shop-level-firerate">1</span></small></div>
-        </div>
-        <button id="btn-buy-firerate" class="btn-buy" type="button">BELI <span>50</span></button>
-      </div>
-      <div class="shop-item">
-        <div class="shop-item-label">
-          <svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-shield"/></svg>
-          <div><strong>Shield</strong><small>Lv <span id="shop-level-shield">1</span></small></div>
-        </div>
-        <button id="btn-buy-shield" class="btn-buy" type="button">BELI <span>60</span></button>
-      </div>
-      <div class="shop-item">
-        <div class="shop-item-label">
-          <svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-bomb"/></svg>
-          <div><strong>Bomb</strong><small>Lv <span id="shop-level-bomb">2</span></small></div>
-        </div>
-        <button id="btn-buy-bomb" class="btn-buy" type="button">BELI <span>150</span></button>
-      </div>
-      <div class="shop-item">
-        <div class="shop-item-label">
-          <svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-snow"/></svg>
-          <div><strong>Freeze</strong><small>Lv <span id="shop-level-freeze">2</span></small></div>
-        </div>
-        <button id="btn-buy-freeze" class="btn-buy" type="button">BELI <span>150</span></button>
-      </div>
-      <button id="btn-close-shop" class="btn-secondary" type="button">TUTUP</button>
+    <div class="mp-mode-indicator">
+      <span>MODE:</span> <strong id="mp-lobby-mode">CO-OP</strong>
     </div>
-  </div>
 
-  <!-- ============ MODAL: LEADERBOARD ============ -->
-  <div id="modal-leaderboard" class="modal hidden">
-    <div class="modal-box">
-      <h2><svg class="ico-lg gold"><use href="#i-trophy"/></svg> PAPAN PERINGKAT</h2>
-      <div class="lb-tabs">
-        <button class="lb-tab active" data-tab="global" type="button">GLOBAL</button>
-        <button class="lb-tab" data-tab="endless" type="button">ENDLESS</button>
-        <button class="lb-tab" data-tab="daily" type="button">DAILY</button>
-        <button class="lb-tab" data-tab="coop" type="button">CO-OP</button>
-      </div>
-      <table class="leaderboard-table">
-        <thead>
-          <tr><th>#</th><th>NAMA</th><th>LVL</th><th>SKOR</th></tr>
-        </thead>
-        <tbody id="leaderboard-body">
-          <tr><td colspan="4" class="loading-text">Memuat...</td></tr>
-        </tbody>
-      </table>
-      <button id="btn-close-leaderboard" class="btn-secondary" type="button">TUTUP</button>
+    <div id="mp-connect-status" class="mp-status mp-status-hidden"></div>
+
+    <button id="btn-mp-start-game" class="btn-primary big" type="button" disabled>
+      <svg class="ico"><use href="#i-play"/></svg>
+      <span>MULAI PERMAINAN</span>
+    </button>
+
+    <button id="btn-mp-leave" class="btn-danger" type="button">
+      <svg class="ico"><use href="#i-exit"/></svg>
+      <span>KELUAR ROOM</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============ NARRATIVE OVERLAY ============ -->
+<div id="narrative-overlay" class="hidden">
+  <div class="narrative-box">
+    <div class="narrative-portrait">
+      <svg id="narrative-portrait-svg" viewBox="0 0 100 100"><use href="#i-vega"/></svg>
     </div>
-  </div>
-
-  <!-- ============ MODAL: STIKER ============ -->
-  <div id="modal-stickers" class="modal hidden">
-    <div class="modal-box">
-      <h2><svg class="ico-lg gold"><use href="#i-star"/></svg> ALBUM STIKER</h2>
-      <p style="margin-bottom:14px">Terbuka: <strong id="unlocked-count">0</strong></p>
-      <div id="sticker-grid" class="sticker-grid"></div>
-      <button id="btn-close-stickers" class="btn-secondary" type="button">TUTUP</button>
+    <div class="narrative-content">
+      <div id="narrative-speaker" class="narrative-speaker">VEGA</div>
+      <div id="narrative-text" class="narrative-text"></div>
     </div>
+    <div class="narrative-tap-hint">Tap untuk lanjut &#9656;</div>
   </div>
+</div>
 
-  <!-- ============ MODAL: LOADOUT ============ -->
-  <div id="modal-loadout" class="modal hidden">
-    <div class="modal-box">
-      <h2>PILIH 2 SKILL</h2>
-      <p class="loadout-subtitle">
-        Level <strong id="loadout-level">1</strong> ·
-        <span id="loadout-theme">COSMIC SECTOR</span>
-      </p>
-      <div class="loadout-grid">
-        <div class="loadout-card" data-skill="freeze">
-          <svg class="loadout-icon" viewBox="0 0 24 24"><use href="#i-snow"/></svg>
-          <strong>Freeze</strong>
-          <small>Bekukan musuh 3.5 detik</small>
-        </div>
-        <div class="loadout-card" data-skill="shield">
-          <svg class="loadout-icon" viewBox="0 0 24 24"><use href="#i-shield"/></svg>
-          <strong>Shield</strong>
-          <small>Immun damage sementara</small>
-        </div>
-        <div class="loadout-card" data-skill="bomb">
-          <svg class="loadout-icon" viewBox="0 0 24 24"><use href="#i-bomb"/></svg>
-          <strong>Bomb</strong>
-          <small>Ledakan area 50 HP</small>
-        </div>
-      </div>
-      <p class="loadout-hint">Pilih 2 dari 3 skill</p>
-      <button id="btn-start-loaded" class="btn-primary" type="button" disabled>
-        <svg class="ico"><use href="#i-play"/></svg>
-        <span>MULAI LEVEL</span>
-      </button>
-    </div>
-  </div>
+<!-- ============ FIREBASE SDK ============ -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <!-- ============ MODAL: HASIL ============ -->
-  <div id="modal-result" class="modal hidden">
-    <div class="modal-box">
-      <div class="result-icon-wrap">
-        <svg id="result-icon" class="result-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg>
-      </div>
-      <h2 id="result-title">MISI SELESAI</h2>
-      <div class="result-rows">
-        <div>Pahlawan: <strong id="result-player-name">-</strong></div>
-        <div>Skor: <strong id="result-score">0</strong></div>
-        <div>Koin: <strong id="result-coins">+0</strong></div>
-        <div>Level: <strong id="result-level">1</strong></div>
-        <div>Kill: <strong id="result-kills">0 Target</strong></div>
-        <div>Rating:
-          <strong id="result-stars">
-            <svg class="star-mini" viewBox="0 0 24 24"><use href="#i-star"/></svg>
-            <svg class="star-mini" viewBox="0 0 24 24"><use href="#i-star"/></svg>
-            <svg class="star-mini" viewBox="0 0 24 24"><use href="#i-star"/></svg>
-          </strong>
-        </div>
-      </div>
-      <button id="btn-next-level" class="btn-primary" type="button">
-        <svg class="ico"><use href="#i-play"/></svg> <span>LEVEL BERIKUTNYA</span>
-      </button>
-      <button id="btn-restart" class="btn-secondary" type="button">
-        <svg class="ico"><use href="#i-refresh"/></svg> <span>ULANG</span>
-      </button>
-      <button id="btn-menu" class="btn-danger" type="button">
-        <svg class="ico"><use href="#i-home"/></svg> <span>MENU UTAMA</span>
-      </button>
-    </div>
-  </div>
+<!-- ============ MULTIPLAYER ENGINE ============ -->
+<script src="./multiplayer.js?v=18.0"></script>
 
-  <!-- ============ MODAL: REVIVE ============ -->
-  <div id="modal-revive" class="modal hidden">
-    <div class="modal-box revive-box">
-      <div class="revive-icon-wrap">
-        <svg class="revive-icon" viewBox="0 0 24 24"><use href="#i-heart"/></svg>
-      </div>
-      <h2>NYAWA HABIS</h2>
-      <p class="revive-subtitle">Lanjutkan misi dengan menonton iklan singkat?</p>
-      <button id="btn-revive-ad" class="btn-primary big" type="button">
-        <svg class="ico"><use href="#i-play"/></svg>
-        <span>TONTON IKLAN &rarr; REVIVE</span>
-      </button>
-      <button id="btn-revive-give-up" class="btn-secondary" type="button">
-        <svg class="ico"><use href="#i-skull"/></svg>
-        <span>MENYERAH</span>
-      </button>
-      <p class="revive-quota">Revive hari ini: <strong id="revive-quota">3</strong>/3</p>
-    </div>
-  </div>
-
-  <!-- ============ REWARDED AD OVERLAY ============ -->
-  <div id="ad-overlay" class="hidden">
-    <div class="ad-box">
-      <div class="ad-label">IKLAN REWARDED</div>
-      <div class="ad-content">
-        <div class="ad-pulse">
-          <svg viewBox="0 0 24 24" class="ad-play-icon"><use href="#i-play"/></svg>
-        </div>
-        <div class="ad-message">Menyiapkan iklan untuk revive...</div>
-        <div class="ad-countdown" id="ad-countdown">5</div>
-      </div>
-      <div class="ad-note">HADIAH: +1 NYAWA + 2 DETIK KEKEBALAN</div>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: ENDLESS ============ -->
-  <div id="modal-endless" class="modal hidden">
-    <div class="modal-box">
-      <h2><svg class="ico-lg"><use href="#i-star"/></svg> ENDLESS MODE</h2>
-      <p class="endless-subtitle">Bertahan selama mungkin. Difficulty naik terus. Skor infinite.</p>
-      <div class="endless-stats">
-        <div class="endless-stat">
-          <div class="endless-stat-label">BEST WAVE</div>
-          <div class="endless-stat-value" id="endless-best-wave">0</div>
-        </div>
-        <div class="endless-stat">
-          <div class="endless-stat-label">BEST SCORE</div>
-          <div class="endless-stat-value" id="endless-best-score">0</div>
-        </div>
-      </div>
-      <div class="endless-info">
-        <div>&#9889; Musuh makin cepat &amp; kuat tiap 10 wave</div>
-        <div>&#128081; Boss muncul setiap 5 wave</div>
-        <div>&#129689; Koin 2&times; lebih banyak</div>
-        <div>&#127942; Skor masuk leaderboard Endless</div>
-      </div>
-      <button id="btn-start-endless" class="btn-primary big" type="button">
-        <svg class="ico"><use href="#i-play"/></svg>
-        <span>MULAI ENDLESS</span>
-      </button>
-      <button id="btn-close-endless" class="btn-secondary" type="button">TUTUP</button>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: DAILY ============ -->
-  <div id="modal-daily" class="modal hidden">
-    <div class="modal-box">
-      <h2><svg class="ico-lg gold"><use href="#i-trophy"/></svg> DAILY CHALLENGE</h2>
-      <p class="daily-date" id="daily-date">Memuat...</p>
-
-      <div class="daily-boss-preview">
-        <div class="daily-boss-slot" data-slot="0">
-          <svg class="daily-boss-ico" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
-          <div class="daily-boss-num">BOS 1</div>
-          <div class="daily-boss-name" id="daily-boss-0-name">—</div>
-          <div class="daily-boss-check hidden" id="daily-boss-0-check">
-            <svg viewBox="0 0 24 24"><use href="#i-check"/></svg>
-          </div>
-        </div>
-        <div class="daily-boss-arrow">→</div>
-        <div class="daily-boss-slot" data-slot="1">
-          <svg class="daily-boss-ico" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
-          <div class="daily-boss-num">BOS 2</div>
-          <div class="daily-boss-name" id="daily-boss-1-name">—</div>
-          <div class="daily-boss-check hidden" id="daily-boss-1-check">
-            <svg viewBox="0 0 24 24"><use href="#i-check"/></svg>
-          </div>
-        </div>
-        <div class="daily-boss-arrow">→</div>
-        <div class="daily-boss-slot" data-slot="2">
-          <svg class="daily-boss-ico" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
-          <div class="daily-boss-num">BOS 3</div>
-          <div class="daily-boss-name" id="daily-boss-2-name">—</div>
-          <div class="daily-boss-check hidden" id="daily-boss-2-check">
-            <svg viewBox="0 0 24 24"><use href="#i-check"/></svg>
-          </div>
-        </div>
-      </div>
-
-      <div class="daily-progress hidden" id="daily-progress">
-        <div class="daily-progress-label">PROGRESS</div>
-        <div class="daily-progress-value">
-          <strong id="daily-progress-text">0/3 BOS</strong>
-        </div>
-      </div>
-
-      <div class="daily-modifier" id="daily-modifier">
-        <div class="daily-mod-icon">
-          <svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg>
-        </div>
-        <div class="daily-mod-info">
-          <strong id="daily-mod-name">DOUBLE SPEED</strong>
-          <small id="daily-mod-desc">Musuh bergerak 2&times; lebih cepat</small>
-        </div>
-      </div>
-
-      <div class="daily-reward">
-        <div>&#129689; Reward: <strong>5&times; Koin</strong></div>
-        <div>&#127894; Badge: <strong>DAILY MASTER</strong></div>
-        <div>&#9200; Reset dalam: <strong id="daily-reset-timer">--:--:--</strong></div>
-      </div>
-
-      <div class="daily-status">
-        <div class="daily-done-badge hidden" id="daily-done-badge">
-          <svg viewBox="0 0 24 24" class="daily-check"><use href="#i-check"/></svg>
-          <span>SELESAI HARI INI</span>
-        </div>
-      </div>
-
-      <button id="btn-start-daily" class="btn-primary big" type="button">
-        <svg class="ico"><use href="#i-play"/></svg>
-        <span>MULAI 3 BOS</span>
-      </button>
-      <button id="btn-close-daily" class="btn-secondary" type="button">TUTUP</button>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: MULTIPLAYER HUB ============ -->
-  <div id="modal-mp-hub" class="modal hidden">
-    <div class="modal-box">
-      <h2>
-        <svg class="ico-lg"><use href="#i-users"/></svg>
-        MAIN BARENG TEMAN
-      </h2>
-      <p class="mp-subtitle">Co-op 2 pemain · 1 vs 1 PvP · Gratis tanpa server</p>
-
-      <button id="btn-mp-create" class="btn-primary big mp-btn" type="button">
-        <svg class="ico"><use href="#i-play"/></svg>
-        <span>BUAT ROOM (HOST)</span>
-      </button>
-
-      <button id="btn-mp-join" class="btn-secondary mp-btn" type="button">
-        <svg class="ico"><use href="#i-wifi"/></svg>
-        <span>MASUK ROOM (GUEST)</span>
-      </button>
-
-      <div class="mp-mode-select">
-        <div class="mp-mode-label">MODE PERMAINAN:</div>
-        <div class="mp-mode-buttons">
-          <button id="mp-mode-coop" class="mp-mode-btn active" data-mode="coop" type="button">
-            🤝 CO-OP
-          </button>
-          <button id="mp-mode-pvp" class="mp-mode-btn" data-mode="pvp" type="button">
-            ⚔️ PVP
-          </button>
-        </div>
-      </div>
-
-      <div class="mp-info-box">
-        <div class="mp-info-row">
-          <svg viewBox="0 0 24 24" class="mp-info-ico"><use href="#i-wifi"/></svg>
-          <span>Koneksi P2P langsung (WebRTC)</span>
-        </div>
-        <div class="mp-info-row">
-          <svg viewBox="0 0 24 24" class="mp-info-ico"><use href="#i-users"/></svg>
-          <span>Butuh 2 pemain dengan HP berbeda</span>
-        </div>
-        <div class="mp-info-row">
-          <svg viewBox="0 0 24 24" class="mp-info-ico"><use href="#i-target"/></svg>
-          <span>Keduanya harus online bersamaan</span>
-        </div>
-      </div>
-
-      <button id="btn-mp-close-hub" class="btn-secondary" type="button">TUTUP</button>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: JOIN ROOM ============ -->
-  <div id="modal-mp-join" class="modal hidden">
-    <div class="modal-box">
-      <h2>MASUK ROOM</h2>
-      <p class="mp-subtitle">Masukkan kode 4 huruf dari temanmu</p>
-
-      <div class="mp-code-input-wrap">
-        <input id="mp-code-input" class="mp-code-input" type="text" maxlength="4"
-               placeholder="ABCD" autocapitalize="characters" autocomplete="off" spellcheck="false" />
-      </div>
-
-      <div id="mp-join-status" class="mp-status mp-status-hidden"></div>
-
-      <button id="btn-mp-do-join" class="btn-primary big" type="button">
-        <svg class="ico"><use href="#i-wifi"/></svg>
-        <span>GABUNG</span>
-      </button>
-      <button id="btn-mp-back-from-join" class="btn-secondary" type="button">KEMBALI</button>
-    </div>
-  </div>
-
-  <!-- ============ MODAL: LOBBY (WAITING) ============ -->
-  <div id="modal-mp-lobby" class="modal hidden">
-    <div class="modal-box mp-lobby-box">
-      <h2 id="mp-lobby-title">ROOM DIBUAT</h2>
-
-      <div class="mp-room-code-display">
-        <div class="mp-room-code-label">KODE ROOM</div>
-        <div class="mp-room-code" id="mp-room-code">----</div>
-        <button id="btn-mp-copy-code" class="mp-copy-btn" type="button" title="Salin kode">
-          <svg viewBox="0 0 24 24"><use href="#i-copy"/></svg>
-        </button>
-      </div>
-
-      <div class="mp-players-list">
-        <div class="mp-player-slot" id="mp-slot-host">
-          <div class="mp-slot-avatar">🎮</div>
-          <div class="mp-slot-info">
-            <div class="mp-slot-name" id="mp-host-name">Menunggu...</div>
-            <div class="mp-slot-role">HOST</div>
-          </div>
-          <div class="mp-slot-status" id="mp-host-status">—</div>
-        </div>
-        <div class="mp-player-slot" id="mp-slot-guest">
-          <div class="mp-slot-avatar">🎯</div>
-          <div class="mp-slot-info">
-            <div class="mp-slot-name" id="mp-guest-name">Menunggu...</div>
-            <div class="mp-slot-role">GUEST</div>
-          </div>
-          <div class="mp-slot-status" id="mp-guest-status">—</div>
-        </div>
-      </div>
-
-      <div class="mp-mode-indicator">
-        <span>MODE:</span> <strong id="mp-lobby-mode">CO-OP</strong>
-      </div>
-
-      <div id="mp-connect-status" class="mp-status mp-status-hidden"></div>
-
-      <button id="btn-mp-start-game" class="btn-primary big" type="button" disabled>
-        <svg class="ico"><use href="#i-play"/></svg>
-        <span>MULAI PERMAINAN</span>
-      </button>
-
-      <button id="btn-mp-leave" class="btn-danger" type="button">
-        <svg class="ico"><use href="#i-exit"/></svg>
-        <span>KELUAR ROOM</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- ============ NARRATIVE OVERLAY ============ -->
-  <div id="narrative-overlay" class="hidden">
-    <div class="narrative-box">
-      <div class="narrative-portrait">
-        <svg id="narrative-portrait-svg" viewBox="0 0 100 100"><use href="#i-vega"/></svg>
-      </div>
-      <div class="narrative-content">
-        <div id="narrative-speaker" class="narrative-speaker">VEGA</div>
-        <div id="narrative-text" class="narrative-text"></div>
-      </div>
-      <div class="narrative-tap-hint">Tap untuk lanjut &#9656;</div>
-    </div>
-  </div>
-
-  <!-- ============ FIREBASE SDK ============ -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-  <!-- ============ MULTIPLAYER ENGINE ============ -->
-  <script src="./multiplayer.js?v=17.12"></script>
-
-  <!-- ============ GAME SCRIPT ============ -->
-  <script src="./game.js?v=17.12"></script>
+<!-- ============ GAME SCRIPT ============ -->
+<script src="./game.js?v=18.0"></script>
 </body>
 </html>
