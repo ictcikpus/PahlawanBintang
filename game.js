@@ -1,7 +1,8 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v17.3
-// Fix: Fullscreen di semua tombol start (Endless/Daily/Restart)
-// Fitur: Top 50 Leaderboard, Revive, Endless, Daily, Kill Streak
+// PAHLAWAN BINTANG — game.js v17.4
+// Fitur: Top 50 Leaderboard + Auto-Migration sortValue
+//        Fullscreen di semua mode (Normal/Endless/Daily)
+//        Narrative transparan, Revive, Kill Streak, 12 Tema
 // =============================================================
 
 // =============================================================
@@ -592,6 +593,9 @@ window.addEventListener('load', async () => {
     const todayKey = getTodayKey();
     reviveQuota = await getReviveQuota(todayKey);
     console.log('✅ [Boot] Loadout:', playerLoadout, '| Revive quota:', reviveQuota);
+
+    // Jalankan migration di background (silent)
+    setTimeout(() => { migrateSortValues(); }, 3000);
   } catch (e) {
     console.warn('⚠️ [Boot] Async init partial failure:', e);
   }
@@ -616,7 +620,7 @@ window.addEventListener('load', async () => {
   }
   try { updateStickerAlbumUI(); } catch (e) {}
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=17.3').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=17.4').catch(err => console.log('SW Fail:', err));
   }
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
@@ -746,12 +750,87 @@ async function setEndlessBest(wave, scoreVal) {
 }
 
 // =============================================================
+// 10b. AUTO-MIGRATION — Backfill sortValue ke data lama (v17.4)
+// =============================================================
+async function migrateSortValues() {
+  if (!db) return;
+  try {
+    const migrated = await DB.get('pahlawan_migrated_v2');
+    if (migrated === '1') {
+      console.log('✅ [Migration] Sudah pernah dijalankan');
+      return;
+    }
+
+    console.log('🔄 [Migration] Memulai migrasi sortValue...');
+
+    // Migrasi leaderboard
+    try {
+      const lbSnap = await db.ref('leaderboard').once('value');
+      const lbUpdates = {};
+      lbSnap.forEach(child => {
+        const val = child.val();
+        if (val && val.name && (val.sortValue === undefined || val.sortValue === null)) {
+          const numLevel = Number(val.level) || 1;
+          const numScore = Number(val.score) || 0;
+          lbUpdates[child.key + '/sortValue'] = (numLevel * 100000000) + numScore;
+        }
+      });
+      if (Object.keys(lbUpdates).length > 0) {
+        await db.ref('leaderboard').update(lbUpdates);
+        console.log('✅ [Migration] Leaderboard:', Object.keys(lbUpdates).length, 'records updated');
+      }
+    } catch(e) { console.warn('[Migration] leaderboard error:', e); }
+
+    // Migrasi endless
+    try {
+      const enSnap = await db.ref('endless').once('value');
+      const enUpdates = {};
+      enSnap.forEach(child => {
+        const val = child.val();
+        if (val && val.name && (val.sortValue === undefined || val.sortValue === null)) {
+          const numWave = Number(val.wave) || 1;
+          const numScore = Number(val.score) || 0;
+          enUpdates[child.key + '/sortValue'] = (numWave * 100000000) + numScore;
+        }
+      });
+      if (Object.keys(enUpdates).length > 0) {
+        await db.ref('endless').update(enUpdates);
+        console.log('✅ [Migration] Endless:', Object.keys(enUpdates).length, 'records updated');
+      }
+    } catch(e) { console.warn('[Migration] endless error:', e); }
+
+    // Migrasi daily (semua tanggal)
+    try {
+      const dailySnap = await db.ref('daily').once('value');
+      dailySnap.forEach(dateChild => {
+        const dateKey = dateChild.key;
+        const updates = {};
+        dateChild.forEach(playerChild => {
+          const val = playerChild.val();
+          if (val && val.name && (val.sortValue === undefined || val.sortValue === null)) {
+            updates[playerChild.key + '/sortValue'] = Number(val.score) || 0;
+          }
+        });
+        if (Object.keys(updates).length > 0) {
+          db.ref('daily/' + dateKey).update(updates).catch(() => {});
+        }
+      });
+      console.log('✅ [Migration] Daily: selesai');
+    } catch(e) { console.warn('[Migration] daily error:', e); }
+
+    await DB.set('pahlawan_migrated_v2', '1');
+    console.log('✅ [Migration] Selesai! Data lama sekarang muncul di leaderboard.');
+  } catch (e) {
+    console.warn('⚠️ [Migration] Gagal (fallback tetap jalan):', e);
+  }
+}
+
+// =============================================================
 // 11. EVENT LISTENERS
 // =============================================================
 function setupEventListeners() {
   const $ = id => document.getElementById(id);
 
-  // MULAI MISI
   const btnPlay = $('btn-prepare-play');
   if (btnPlay) {
     btnPlay.onclick = (e) => {
@@ -862,7 +941,6 @@ function setupEventListeners() {
     });
   }
 
-  // NEXT LEVEL — dengan fullscreen
   const bNext = $('btn-next-level');
   if (bNext) bNext.onclick = () => {
     $('modal-result').classList.add('hidden');
@@ -875,8 +953,6 @@ function setupEventListeners() {
     updateLivesDisplay();
     startCurrentLevel();
   };
-
-  // RESTART — dengan fullscreen
   const bRestart = $('btn-restart');
   if (bRestart) bRestart.onclick = () => {
     $('modal-result').classList.add('hidden');
@@ -885,14 +961,12 @@ function setupEventListeners() {
     else if (gameMode === 'daily') startDaily();
     else restartGame();
   };
-
   const bMenu = $('btn-menu');
   if (bMenu) bMenu.onclick = () => {
     $('modal-result').classList.add('hidden');
     goToMainMenu();
   };
 
-  // SKILL: FREEZE
   const bFreeze = $('btn-freeze');
   if (bFreeze) bFreeze.onclick = () => {
     if (freezeCharges <= 0 || isFrozen || isGamePaused || !isGameRunning) return;
@@ -906,7 +980,6 @@ function setupEventListeners() {
     screenShake = 6;
   };
 
-  // SKILL: SHIELD
   const bShield = $('btn-shield');
   if (bShield) bShield.onclick = () => {
     if (shieldCharges <= 0 || isShieldActive || isGamePaused || !isGameRunning) return;
@@ -919,7 +992,6 @@ function setupEventListeners() {
     spawnFloatingText(playerX, canvas.height - 70, 'SHIELD!', '#39ff14');
   };
 
-  // SKILL: BOMB
   const bBomb = $('btn-bomb');
   if (bBomb) bBomb.onclick = () => {
     if (bombCharges <= 0 || isGamePaused || !isGameRunning) return;
@@ -964,7 +1036,6 @@ function setupEventListeners() {
     checkLevelObjectives();
   };
 
-  // LOADOUT START
   const loadoutBtn = $('btn-start-loaded');
   if (loadoutBtn) {
     loadoutBtn.addEventListener('click', async () => {
@@ -977,7 +1048,6 @@ function setupEventListeners() {
     });
   }
 
-  // REVIVE
   const bRevAd = $('btn-revive-ad');
   if (bRevAd) bRevAd.onclick = async () => {
     $('modal-revive').classList.add('hidden');
@@ -993,7 +1063,6 @@ function setupEventListeners() {
     finalizeFail();
   };
 
-  // ENDLESS — dengan fullscreen
   const bEndless = $('btn-endless');
   if (bEndless) bEndless.onclick = openEndlessModal;
   const bStartEndless = $('btn-start-endless');
@@ -1005,7 +1074,6 @@ function setupEventListeners() {
   const bCloseEndless = $('btn-close-endless');
   if (bCloseEndless) bCloseEndless.onclick = () => $('modal-endless').classList.add('hidden');
 
-  // DAILY — dengan fullscreen
   const bDaily = $('btn-daily');
   if (bDaily) bDaily.onclick = openDailyModal;
   const bStartDaily = $('btn-start-daily');
@@ -1017,7 +1085,6 @@ function setupEventListeners() {
   const bCloseDaily = $('btn-close-daily');
   if (bCloseDaily) bCloseDaily.onclick = () => $('modal-daily').classList.add('hidden');
 
-  // NARRATIVE TAP
   document.addEventListener('click', (e) => {
     const overlay = $('narrative-overlay');
     if (!overlay || overlay.classList.contains('hidden')) return;
@@ -1095,7 +1162,6 @@ function resumeGame() {
   requestAnimationFrame(gameLoop);
 }
 
-// [FIX v17.3] Fullscreen robust — support semua browser
 function requestFullscreenAndLandscape() {
   try {
     const doc = document.documentElement;
@@ -2644,7 +2710,7 @@ async function finalizeDaily(success) {
 }
 
 // =============================================================
-// 21. LEADERBOARD — Top 50 real-time
+// 21. LEADERBOARD v17.4 — Top 50 + Fallback + Auto-Migration
 // =============================================================
 function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   const cleanName = (name || 'Pahlawan').trim();
@@ -2759,6 +2825,7 @@ function openLeaderboard() {
   loadLeaderboardData();
 }
 
+// [v17.4] Load leaderboard dengan fallback otomatis
 function loadLeaderboardData() {
   const tbody = document.getElementById('leaderboard-body');
   if (!tbody) return;
@@ -2775,21 +2842,26 @@ function loadLeaderboardData() {
   if (currentLeaderboardTab === 'endless') path = 'endless';
   else if (currentLeaderboardTab === 'daily') path = 'daily/' + getTodayKey();
 
+  // Coba query baru dulu (orderByChild sortValue, limit 50)
   leaderboardRef = db.ref(path).orderByChild('sortValue').limitToLast(50);
 
   let lastRenderTime = 0;
   let pendingSnapshot = null;
   let renderTimer = null;
+  let fallbackDone = false;
+  let emptySince = 0;
+  let hasRenderedOnce = false;
 
   const doRender = () => {
     if (!pendingSnapshot) return;
     const snap = pendingSnapshot;
     pendingSnapshot = null;
     lastRenderTime = Date.now();
+    hasRenderedOnce = true;
     renderLeaderboardRows(snap, tbody);
   };
 
-  leaderboardHandler = (snapshot) => {
+  const processSnapshot = (snapshot) => {
     pendingSnapshot = snapshot;
     const now = Date.now();
     const sinceLast = now - lastRenderTime;
@@ -2803,19 +2875,66 @@ function loadLeaderboardData() {
     }
   };
 
+  leaderboardHandler = (snapshot) => {
+    // Cek apakah data kosong
+    let count = 0;
+    if (snapshot.exists()) {
+      snapshot.forEach(() => count++);
+    }
+
+    if (count === 0) {
+      if (emptySince === 0) emptySince = Date.now();
+      // Kalau 1.5 detik query baru kosong → fallback ke query lama (ambil semua)
+      if ((Date.now() - emptySince) > 1500 && !fallbackDone) {
+        fallbackDone = true;
+        console.log('⚠️ [LB] Data kosong di query baru → fallback ke mode kompatibilitas');
+        try { leaderboardRef.off('value', leaderboardHandler); } catch(e) {}
+
+        // Ambil SEMUA data tanpa orderBy (kompatibel dengan data lama)
+        leaderboardRef = db.ref(path);
+        leaderboardHandler = (snap2) => {
+          processSnapshot(snap2);
+        };
+        leaderboardRef.on('value', leaderboardHandler, (err) => {
+          console.error("Firebase Listener Error (fallback):", err);
+          showLocalScores(tbody);
+        });
+        return;
+      }
+    } else {
+      emptySince = 0;
+    }
+
+    processSnapshot(snapshot);
+  };
+
   leaderboardRef.on('value', leaderboardHandler, (err) => {
     console.error("Firebase Listener Error:", err);
     showLocalScores(tbody);
   });
 }
 
+// [v17.4] Render — sort client-side kalau sortValue belum ada
 function renderLeaderboardRows(snapshot, tbody) {
   if (!snapshot.exists()) { showLocalScores(tbody); return; }
 
   let rawArr = [];
   snapshot.forEach((child) => { rawArr.push(child.val()); });
-  rawArr.reverse();
 
+  // Sort pakai sortValue kalau ada, fallback hitung dari level + score
+  rawArr.sort((a, b) => {
+    const aLevel = Number(a.level) || Number(a.wave) || 1;
+    const bLevel = Number(b.level) || Number(b.wave) || 1;
+    const aScore = Number(a.score) || 0;
+    const bScore = Number(b.score) || 0;
+    const aSV = (a.sortValue !== undefined && a.sortValue !== null)
+      ? Number(a.sortValue) : ((aLevel * 100000000) + aScore);
+    const bSV = (b.sortValue !== undefined && b.sortValue !== null)
+      ? Number(b.sortValue) : ((bLevel * 100000000) + bScore);
+    return bSV - aSV;
+  });
+
+  // Dedup nama (ambil terbaik per pemain)
   let bestMap = new Map();
   rawArr.forEach(val => {
     if (!val || !val.name) return;
@@ -3036,5 +3155,5 @@ function openStickerAlbum() {
 }
 
 // =============================================================
-// END OF FILE — v17.3
+// END OF FILE — v17.4
 // =============================================================
