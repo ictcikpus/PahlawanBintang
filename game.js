@@ -2388,14 +2388,112 @@ function levelFailed(reasonTitle) {
   const rc = $('result-coins'); if (rc) rc.innerText = `+${levelCoinsEarned}`;
   const rl = $('result-level'); if (rl) rl.innerText = levelConfig.level;
   const rk = $('result-kills'); if (rk) rk.innerText = `${levelKills} Target`;
- const starContainer = $('result-stars');
-  if (starContainer) {
-    starContainer.innerHTML = '<span style="color:#566a8c;font-size:12px;">—</span>';
-  }
-
+  const starContainer = $('result-stars');
+  if (starContainer) starContainer.innerHTML = '<span style="color:#566a8c;font-size:12px;">—</span>';
   const icon = $('result-icon');
   if (icon) { icon.innerHTML = '<use href="#i-skull"/>'; icon.classList.add('fail'); }
+  const nextBtn = $('btn-next-level');
+  if (nextBtn) nextBtn.classList.add('hidden');
+  const modal = $('modal-result');
+  if (modal) modal.classList.remove('hidden');
+}
 
+function finalizeFail() {
+  if (gameMode === 'endless') { finalizeEndless(); return; }
+  if (gameMode === 'daily') { finalizeDaily(false); return; }
+  levelFailed("GAME OVER - NYAWA HABIS");
+}
+
+// =============================================================
+// 19. ENDLESS MODE
+// =============================================================
+async function openEndlessModal() {
+  const best = await getEndlessBest();
+  const bw = document.getElementById('endless-best-wave');
+  const bs = document.getElementById('endless-best-score');
+  if (bw) bw.innerText = best.wave;
+  if (bs) bs.innerText = best.score;
+  const modal = document.getElementById('modal-endless');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function startEndless() {
+  console.log('▶ [startEndless]');
+  sounds.init();
+  const input = document.getElementById('player-name-input');
+  const inputName = input ? input.value.trim() : '';
+  playerName = inputName || 'Pahlawan';
+  DB.set('pahlawan_nama', playerName);
+  const pnd = document.getElementById('player-name-display');
+  if (pnd) pnd.innerText = playerName;
+
+  gameMode = 'endless';
+  currentLevelIndex = 0;
+  score = 0;
+  lives = 3;
+  reviveUsedThisRun = false;
+  endlessWave = 1;
+  endlessKillsThisWave = 0;
+  currentTheme = LEVEL_THEMES[0];
+  applyThemeToDocument(currentTheme);
+  recolorStars();
+  resetLevelState();
+  updateHUDValues();
+  updateLivesDisplay();
+
+  const mainMenu = document.getElementById('screen-main-menu');
+  const hud = document.getElementById('hud-overlay');
+  if (mainMenu) mainMenu.classList.add('hidden');
+  if (hud) hud.classList.remove('hidden');
+
+  resizeCanvas();
+  setTimeout(() => {
+    resizeCanvas();
+    // Loadout modal langsung tanpa story
+    const dummy = { level: 999, targetKills: ENDLESS_KILLS_PER_WAVE, targetScore: 0, algorithm: 'linear', types: ['jelly'] };
+    showLoadoutModal(dummy, () => {
+      freezeCharges = playerLoadout.includes('freeze') ? upgradeFreeze : 0;
+      shieldCharges = playerLoadout.includes('shield') ? upgradeShield : 0;
+      bombCharges = playerLoadout.includes('bomb') ? upgradeBomb : 0;
+      updateSkillButtonsUI();
+      isGameRunning = true;
+      isGamePaused = false;
+      const introData = { level: 999, targetKills: ENDLESS_KILLS_PER_WAVE, targetScore: 0, algorithm: 'endless', types: [] };
+      const numEl = document.getElementById('level-intro-number'); if (numEl) numEl.innerText = '∞';
+      const nameEl = document.getElementById('level-intro-name'); if (nameEl) nameEl.innerText = 'ENDLESS MODE';
+      const misEl = document.getElementById('level-intro-mission'); if (misEl) misEl.innerText = 'SURVIVE AS LONG AS YOU CAN';
+      const banner = document.getElementById('level-intro');
+      if (banner) {
+        banner.classList.remove('hidden'); banner.classList.remove('fade-out');
+        void banner.offsetWidth; sounds.playLevelIntro();
+        setTimeout(() => { banner.classList.add('fade-out'); setTimeout(() => banner.classList.add('hidden'), 500); }, 1800);
+      }
+      sounds.startBGM();
+      spawnMonsterLoop();
+      gameLoop();
+    });
+  }, 60);
+}
+
+async function finalizeEndless() {
+  isGameRunning = false;
+  isGamePaused = false;
+  sounds.stopBGM();
+  sounds.playWin();
+  await setEndlessBest(endlessWave, score);
+  saveEndlessToGlobalLeaderboard(playerName, score, endlessWave);
+
+  const $ = id => document.getElementById(id);
+  const rt = $('result-title'); if (rt) rt.innerText = "ENDLESS BERAKHIR";
+  const rpn = $('result-player-name'); if (rpn) rpn.innerText = playerName;
+  const rs = $('result-score'); if (rs) rs.innerText = score;
+  const rc = $('result-coins'); if (rc) rc.innerText = `+${levelCoinsEarned}`;
+  const rl = $('result-level'); if (rl) rl.innerText = `Wave ${endlessWave}`;
+  const rk = $('result-kills'); if (rk) rk.innerText = `${levelKills} Total Kills`;
+  const starContainer = $('result-stars');
+  if (starContainer) starContainer.innerHTML = `<span style="color:#ffd700;font-size:12px;">WAVE ${endlessWave}</span>`;
+  const icon = $('result-icon');
+  if (icon) { icon.innerHTML = '<use href="#i-trophy"/>'; icon.classList.remove('fail'); }
   const nextBtn = $('btn-next-level');
   if (nextBtn) nextBtn.classList.add('hidden');
   const modal = $('modal-result');
@@ -2403,38 +2501,172 @@ function levelFailed(reasonTitle) {
 }
 
 // =============================================================
-// 18. FIREBASE LEADERBOARD — STRUKTUR TIDAK DIUBAH
+// 20. DAILY CHALLENGE
+// =============================================================
+async function openDailyModal() {
+  currentDailyModifier = getDailyModifier();
+  const lvl = getDailyLevel();
+
+  const $ = id => document.getElementById(id);
+  const d = new Date();
+  const dateEl = $('daily-date');
+  if (dateEl) dateEl.innerText = d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  const nameEl = $('daily-mod-name'); if (nameEl) nameEl.innerText = currentDailyModifier.name;
+  const descEl = $('daily-mod-desc'); if (descEl) descEl.innerText = currentDailyModifier.desc;
+
+  const iconWrap = document.querySelector('.daily-mod-icon svg use');
+  if (iconWrap) iconWrap.setAttribute('href', '#' + currentDailyModifier.icon);
+
+  // Cek status selesai
+  const todayKey = getTodayKey();
+  const doneRaw = await DB.get('pahlawan_daily_done_' + todayKey);
+  const doneBadge = $('daily-done-badge');
+  const startBtn = $('btn-start-daily');
+  if (doneRaw === '1') {
+    if (doneBadge) doneBadge.classList.remove('hidden');
+    if (startBtn) startBtn.disabled = true;
+  } else {
+    if (doneBadge) doneBadge.classList.add('hidden');
+    if (startBtn) startBtn.disabled = false;
+  }
+
+  // Timer reset
+  const timerEl = $('daily-reset-timer');
+  if (timerEl) {
+    timerEl.innerText = formatTime(secondsUntilMidnight());
+  }
+
+  const modal = $('modal-daily');
+  if (modal) modal.classList.remove('hidden');
+
+  // Live timer
+  if (window._dailyTimer) clearInterval(window._dailyTimer);
+  window._dailyTimer = setInterval(() => {
+    const el = $('daily-reset-timer');
+    if (el) el.innerText = formatTime(secondsUntilMidnight());
+  }, 1000);
+}
+
+function startDaily() {
+  console.log('▶ [startDaily]');
+  sounds.init();
+  const input = document.getElementById('player-name-input');
+  const inputName = input ? input.value.trim() : '';
+  playerName = inputName || 'Pahlawan';
+  DB.set('pahlawan_nama', playerName);
+  const pnd = document.getElementById('player-name-display');
+  if (pnd) pnd.innerText = playerName;
+
+  currentDailyModifier = getDailyModifier();
+  gameMode = 'daily';
+  score = 0;
+  lives = (currentDailyModifier.id === 'one_life') ? 1 : 3;
+  reviveUsedThisRun = false;
+
+  const lvl = getDailyLevel();
+  currentLevelIndex = lvl - 1;
+  currentTheme = getThemeForLevel(lvl);
+  applyThemeToDocument(currentTheme);
+  recolorStars();
+  resetLevelState();
+  updateHUDValues();
+  updateLivesDisplay();
+
+  const mainMenu = document.getElementById('screen-main-menu');
+  const hud = document.getElementById('hud-overlay');
+  if (mainMenu) mainMenu.classList.add('hidden');
+  if (hud) hud.classList.remove('hidden');
+
+  resizeCanvas();
+  setTimeout(() => {
+    resizeCanvas();
+    const levelConfig = levelsData[lvl - 1] || levelsData[0];
+    showLoadoutModal(levelConfig, () => {
+      freezeCharges = playerLoadout.includes('freeze') ? upgradeFreeze : 0;
+      shieldCharges = (currentDailyModifier.id !== 'no_shield' && playerLoadout.includes('shield')) ? upgradeShield : 0;
+      bombCharges = playerLoadout.includes('bomb') ? upgradeBomb : 0;
+      updateSkillButtonsUI();
+      isGameRunning = true;
+      isGamePaused = false;
+      showLevelIntro(levelConfig);
+      sounds.startBGM();
+      spawnMonsterLoop();
+      gameLoop();
+    });
+  }, 60);
+}
+
+async function finalizeDaily(success) {
+  isGameRunning = false;
+  isGamePaused = false;
+  sounds.stopBGM();
+  if (success) sounds.playWin();
+  const todayKey = getTodayKey();
+  if (success) {
+    DB.set('pahlawan_daily_done_' + todayKey, '1');
+    saveDailyToGlobalLeaderboard(playerName, score, todayKey);
+  }
+
+  const lvl = getDailyLevel();
+  const levelConfig = levelsData[lvl - 1] || levelsData[0];
+
+  const $ = id => document.getElementById(id);
+  const rt = $('result-title'); if (rt) rt.innerText = success ? "DAILY CLEARED!" : "DAILY GAGAL";
+  const rpn = $('result-player-name'); if (rpn) rpn.innerText = playerName;
+  const rs = $('result-score'); if (rs) rs.innerText = score;
+  const rc = $('result-coins'); if (rc) rc.innerText = `+${levelCoinsEarned}`;
+  const rl = $('result-level'); if (rl) rl.innerText = lvl;
+  const rk = $('result-kills'); if (rk) rk.innerText = `${levelKills} Target`;
+  const starContainer = $('result-stars');
+  if (starContainer) {
+    if (success) {
+      let html = '';
+      for (let s = 0; s < 3; s++) html += `<svg class="star-mini on" viewBox="0 0 24 24"><use href="#i-star"/></svg>`;
+      starContainer.innerHTML = html;
+    } else {
+      starContainer.innerHTML = '<span style="color:#566a8c;font-size:12px;">—</span>';
+    }
+  }
+  const icon = $('result-icon');
+  if (icon) {
+    icon.innerHTML = success ? '<use href="#i-trophy"/>' : '<use href="#i-skull"/>';
+    icon.classList.toggle('fail', !success);
+  }
+  const nextBtn = $('btn-next-level');
+  if (nextBtn) nextBtn.classList.add('hidden');
+  const modal = $('modal-result');
+  if (modal) modal.classList.remove('hidden');
+}
+
+// =============================================================
+// 21. FIREBASE LEADERBOARD
 // =============================================================
 function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   const cleanName = (name || 'Pahlawan').trim();
   if (!cleanName) return;
-
   const playerKey = cleanName.toLowerCase().replace(/[^a-z0-9]/g, "_");
   const numScore = Number(scoreVal) || 0;
   const numLevel = Number(levelVal) || 1;
   const sortValue = (numLevel * 100000000) + numScore;
 
   let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
-  let existingIndex = localScores.findIndex(s => (s.name || '').trim().toLowerCase() === cleanName.toLowerCase());
-
-  let shouldUpdateLocal = false;
-  if (existingIndex === -1) {
-    shouldUpdateLocal = true;
-    localScores.push({ name: cleanName, score: numScore, level: numLevel, sortValue });
-  } else {
-    let existing = localScores[existingIndex];
-    let oldLevel = Number(existing.level) || 1;
-    let oldScore = Number(existing.score) || 0;
-    if (numLevel > oldLevel || (numLevel === oldLevel && numScore > oldScore)) {
-      shouldUpdateLocal = true;
-      localScores[existingIndex] = { name: cleanName, score: numScore, level: numLevel, sortValue };
+  let idx = localScores.findIndex(s => (s.name || '').trim().toLowerCase() === cleanName.toLowerCase());
+  let shouldUpdate = false;
+  if (idx === -1) { shouldUpdate = true; localScores.push({ name: cleanName, score: numScore, level: numLevel, sortValue }); }
+  else {
+    let old = localScores[idx];
+    let oldLvl = Number(old.level) || 1;
+    let oldScr = Number(old.score) || 0;
+    if (numLevel > oldLvl || (numLevel === oldLvl && numScore > oldScr)) {
+      shouldUpdate = true;
+      localScores[idx] = { name: cleanName, score: numScore, level: numLevel, sortValue };
     }
   }
-
-  if (shouldUpdateLocal) {
+  if (shouldUpdate) {
     localScores.sort((a, b) => {
-      let lvlA = Number(a.level) || 1, lvlB = Number(b.level) || 1;
-      if (lvlB !== lvlA) return lvlB - lvlA;
+      let la = Number(a.level) || 1, lb = Number(b.level) || 1;
+      if (lb !== la) return lb - la;
       return (Number(b.score) || 0) - (Number(a.score) || 0);
     });
     DB.set('pahlawan_scores', JSON.stringify(localScores.slice(0, 20)));
@@ -2443,76 +2675,124 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   if (db && playerKey) {
     const playerRef = db.ref('leaderboard/' + playerKey);
     playerRef.once('value').then(snapshot => {
-      let existingData = snapshot.val();
+      let existing = snapshot.val();
       let shouldUpdateDb = false;
-
-      if (!existingData) shouldUpdateDb = true;
+      if (!existing) shouldUpdateDb = true;
       else {
-        let oldLevel = Number(existingData.level) || 0;
-        let oldScore = Number(existingData.score) || 0;
-        if (numLevel > oldLevel || (numLevel === oldLevel && numScore > oldScore)) shouldUpdateDb = true;
+        let oldLvl = Number(existing.level) || 0;
+        let oldScr = Number(existing.score) || 0;
+        if (numLevel > oldLvl || (numLevel === oldLvl && numScore > oldScr)) shouldUpdateDb = true;
       }
-
       if (shouldUpdateDb) {
-        playerRef.set({
-          name: cleanName,
-          score: numScore,
-          level: numLevel,
-          sortValue: sortValue,
-          timestamp: Date.now()
-        }).catch(err => console.error("Firebase save error:", err));
+        playerRef.set({ name: cleanName, score: numScore, level: numLevel, sortValue: sortValue, timestamp: Date.now() })
+          .catch(err => console.error("Firebase save error:", err));
       }
     }).catch(err => console.error("Firebase read error:", err));
+  }
+}
+
+function saveEndlessToGlobalLeaderboard(name, scoreVal, waveVal) {
+  const cleanName = (name || 'Pahlawan').trim();
+  if (!cleanName) return;
+  const playerKey = cleanName.toLowerCase().replace(/[^a-z0-9]/g, "_");
+  const numScore = Number(scoreVal) || 0;
+  const numWave = Number(waveVal) || 1;
+  if (db && playerKey) {
+    const ref = db.ref('endless/' + playerKey);
+    ref.once('value').then(snapshot => {
+      let existing = snapshot.val();
+      let shouldUpdateDb = false;
+      if (!existing) shouldUpdateDb = true;
+      else {
+        let oldWave = Number(existing.wave) || 0;
+        let oldScore = Number(existing.score) || 0;
+        if (numWave > oldWave || (numWave === oldWave && numScore > oldScore)) shouldUpdateDb = true;
+      }
+      if (shouldUpdateDb) {
+        ref.set({ name: cleanName, score: numScore, wave: numWave, timestamp: Date.now() })
+          .catch(err => console.error("Firebase save endless error:", err));
+      }
+    }).catch(err => console.error("Firebase read endless error:", err));
+  }
+}
+
+function saveDailyToGlobalLeaderboard(name, scoreVal, dateKey) {
+  const cleanName = (name || 'Pahlawan').trim();
+  if (!cleanName) return;
+  const playerKey = cleanName.toLowerCase().replace(/[^a-z0-9]/g, "_");
+  const numScore = Number(scoreVal) || 0;
+  if (db && playerKey) {
+    const ref = db.ref('daily/' + dateKey + '/' + playerKey);
+    ref.set({ name: cleanName, score: numScore, timestamp: Date.now() })
+      .catch(err => console.error("Firebase save daily error:", err));
   }
 }
 
 function openLeaderboard() {
   const modal = document.getElementById('modal-leaderboard');
   if (modal) modal.classList.remove('hidden');
+  // Set default tab
+  document.querySelectorAll('.lb-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === currentLeaderboardTab);
+  });
+  loadLeaderboardData();
+}
+
+function loadLeaderboardData() {
   const tbody = document.getElementById('leaderboard-body');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Memuat Papan Peringkat Realtime...</td></tr>';
-  if (!db) { showLocalScores(tbody); return; }
+  tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Memuat...</td></tr>';
 
   if (leaderboardRef && leaderboardHandler) {
     try { leaderboardRef.off('value', leaderboardHandler); } catch(e) {}
+    leaderboardRef = null; leaderboardHandler = null;
   }
+  if (!db) { showLocalScores(tbody); return; }
 
-  leaderboardRef = db.ref('leaderboard');
+  let path = 'leaderboard';
+  if (currentLeaderboardTab === 'endless') path = 'endless';
+  else if (currentLeaderboardTab === 'daily') path = 'daily/' + getTodayKey();
+
+  leaderboardRef = db.ref(path);
   leaderboardHandler = (snapshot) => {
     if (!snapshot.exists()) { showLocalScores(tbody); return; }
     let bestMap = new Map();
-    snapshot.forEach((childSnapshot) => {
-      let val = childSnapshot.val();
+    snapshot.forEach((child) => {
+      let val = child.val();
       if (!val || !val.name) return;
       let cleanName = val.name.trim();
       let key = cleanName.toLowerCase();
-      let currentLevel = Number(val.level) || 1;
-      let currentScore = Number(val.score) || 0;
-      if (!bestMap.has(key)) bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
+      let curLevel = Number(val.level) || Number(val.wave) || 1;
+      let curScore = Number(val.score) || 0;
+      if (!bestMap.has(key)) bestMap.set(key, { name: cleanName, level: curLevel, score: curScore });
       else {
-        let existing = bestMap.get(key);
-        if (currentLevel > existing.level || (currentLevel === existing.level && currentScore > existing.score))
-          bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
+        let ex = bestMap.get(key);
+        if (curLevel > ex.level || (curLevel === ex.level && curScore > ex.score)) {
+          bestMap.set(key, { name: cleanName, level: curLevel, score: curScore });
+        }
       }
     });
-    let uniqueList = Array.from(bestMap.values());
-    uniqueList.sort((a, b) => {
+    let list = Array.from(bestMap.values());
+    list.sort((a, b) => {
       if (b.level !== a.level) return b.level - a.level;
       return b.score - a.score;
     });
-    let top10 = uniqueList.slice(0, 10);
-    if (top10.length === 0) { showLocalScores(tbody); return; }
-    tbody.innerHTML = top10.map((s, index) => `
-      <tr>
-        <td>${index === 0 ? '1' : index === 1 ? '2' : index === 2 ? '3' : index + 1}</td>
-        <td><strong>${escapeHtml(s.name)}</strong></td>
-        <td>Lvl ${s.level || 1}</td>
-        <td><strong>${s.score || 0}</strong></td>
-      </tr>`).join('');
+    let top = list.slice(0, 10);
+    if (top.length === 0) { showLocalScores(tbody); return; }
+    const myKey = (playerName || '').trim().toLowerCase();
+    tbody.innerHTML = top.map((s, i) => {
+      const isYou = (s.name || '').trim().toLowerCase() === myKey;
+      return `
+        <tr class="${isYou ? 'you-row' : ''}">
+          <td>${i === 0 ? '1' : i === 1 ? '2' : i === 2 ? '3' : i + 1}</td>
+          <td><strong>${escapeHtml(s.name)}</strong></td>
+          <td>${currentLeaderboardTab === 'endless' ? 'Wave ' + (s.level||1) : 'Lvl ' + (s.level||1)}</td>
+          <td><strong>${s.score || 0}</strong></td>
+        </tr>`;
+    }).join('');
   };
-  leaderboardRef.on('value', leaderboardHandler, (error) => {
-    console.error("Firebase Listener Error:", error);
+  leaderboardRef.on('value', leaderboardHandler, (err) => {
+    console.error("Firebase Listener Error:", err);
     showLocalScores(tbody);
   });
 }
@@ -2524,30 +2804,34 @@ function showLocalScores(tbody) {
     if (!s || !s.name) return;
     let cleanName = s.name.trim();
     let key = cleanName.toLowerCase();
-    let currentLevel = Number(s.level) || 1;
-    let currentScore = Number(s.score) || 0;
-    if (!bestMap.has(key)) bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
+    let curLevel = Number(s.level) || 1;
+    let curScore = Number(s.score) || 0;
+    if (!bestMap.has(key)) bestMap.set(key, { name: cleanName, level: curLevel, score: curScore });
     else {
-      let existing = bestMap.get(key);
-      if (currentLevel > existing.level || (currentLevel === existing.level && currentScore > existing.score))
-        bestMap.set(key, { name: cleanName, level: currentLevel, score: currentScore });
+      let ex = bestMap.get(key);
+      if (curLevel > ex.level || (curLevel === ex.level && curScore > ex.score))
+        bestMap.set(key, { name: cleanName, level: curLevel, score: curScore });
     }
   });
-  let uniqueList = Array.from(bestMap.values());
-  uniqueList.sort((a, b) => {
+  let list = Array.from(bestMap.values());
+  list.sort((a, b) => {
     if (b.level !== a.level) return b.level - a.level;
     return b.score - a.score;
   });
-  if (uniqueList.length === 0) {
+  if (list.length === 0) {
     tbody.innerHTML = '<tr><td colspan="4" class="loading-text">Belum ada skor tercatat.</td></tr>';
   } else {
-    tbody.innerHTML = uniqueList.slice(0, 10).map((s, index) => `
-      <tr>
-        <td>${index === 0 ? '1' : index === 1 ? '2' : index === 2 ? '3' : index + 1}</td>
-        <td><strong>${escapeHtml(s.name)}</strong></td>
-        <td>Lvl ${s.level || 1}</td>
-        <td><strong>${s.score || 0}</strong></td>
-      </tr>`).join('');
+    const myKey = (playerName || '').trim().toLowerCase();
+    tbody.innerHTML = list.slice(0, 10).map((s, i) => {
+      const isYou = (s.name || '').trim().toLowerCase() === myKey;
+      return `
+        <tr class="${isYou ? 'you-row' : ''}">
+          <td>${i === 0 ? '1' : i === 1 ? '2' : i === 2 ? '3' : i + 1}</td>
+          <td><strong>${escapeHtml(s.name)}</strong></td>
+          <td>Lvl ${s.level || 1}</td>
+          <td><strong>${s.score || 0}</strong></td>
+        </tr>`;
+    }).join('');
   }
 }
 
@@ -2558,14 +2842,14 @@ function escapeHtml(text) {
 }
 
 // =============================================================
-// 19. LOADOUT MODAL
+// 22. LOADOUT MODAL
 // =============================================================
 function showLoadoutModal(levelConfig, onDone) {
   loadoutCallback = onDone;
   loadoutCurrentSelection = [...playerLoadout];
 
   const lvlEl = document.getElementById('loadout-level');
-  if (lvlEl) lvlEl.innerText = levelConfig.level;
+  if (lvlEl) lvlEl.innerText = (gameMode === 'endless') ? '∞' : levelConfig.level;
   const themeEl = document.getElementById('loadout-theme');
   if (themeEl) themeEl.innerText = currentTheme.name;
 
@@ -2580,29 +2864,25 @@ function showLoadoutModal(levelConfig, onDone) {
     });
     if (startBtn) startBtn.disabled = loadoutCurrentSelection.length !== 2;
   };
-
   cards.forEach(card => {
     const skill = card.dataset.skill;
     card.onclick = () => {
       if (loadoutCurrentSelection.includes(skill)) {
         loadoutCurrentSelection = loadoutCurrentSelection.filter(s => s !== skill);
       } else {
-        if (loadoutCurrentSelection.length >= 2) {
-          loadoutCurrentSelection.shift();
-        }
+        if (loadoutCurrentSelection.length >= 2) loadoutCurrentSelection.shift();
         loadoutCurrentSelection.push(skill);
       }
       updateVisual();
     };
   });
-
   updateVisual();
   const modal = document.getElementById('modal-loadout');
   if (modal) modal.classList.remove('hidden');
 }
 
 // =============================================================
-// 20. NARRATIVE SYSTEM
+// 23. NARRATIVE
 // =============================================================
 function showNarrative(lines, speaker, portrait, onDone) {
   if (!lines || lines.length === 0) { if (onDone) onDone(); return; }
@@ -2616,7 +2896,6 @@ function showNarrative(lines, speaker, portrait, onDone) {
   if (overlay) overlay.classList.remove('hidden');
   playNextStoryLine();
 }
-
 function playNextStoryLine() {
   if (storyQueue.length === 0) {
     const overlay = document.getElementById('narrative-overlay');
@@ -2628,7 +2907,6 @@ function playNextStoryLine() {
   const line = storyQueue.shift();
   typeStoryLine(line);
 }
-
 function typeStoryLine(line) {
   storyTyping = true;
   storyCurrentText = line;
@@ -2650,7 +2928,7 @@ function typeStoryLine(line) {
 }
 
 // =============================================================
-// 21. STICKER ALBUM
+// 24. STICKER
 // =============================================================
 function unlockSticker(id) {
   let unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
@@ -2660,13 +2938,11 @@ function unlockSticker(id) {
     updateStickerAlbumUI();
   }
 }
-
 function updateStickerAlbumUI() {
   const unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
   const el = document.getElementById('unlocked-count');
   if (el) el.innerText = unlocked.length;
 }
-
 function openStickerAlbum() {
   const unlocked = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
   const grid = document.getElementById('sticker-grid');
