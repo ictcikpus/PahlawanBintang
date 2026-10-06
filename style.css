@@ -1172,6 +1172,13 @@ body::after {
   .narrative-text { font-size: 12px; min-height: 26px; }
 }
 
+/* ============================================================
+   v17.8 — Player HP Partial Indicator
+   ============================================================ */
+.heart-icon.partial {
+  filter: drop-shadow(0 0 6px #ffa502) hue-rotate(-15deg);
+  transition: opacity 0.2s;
+}
 @media (min-width: 1024px) {
   :root { --ctrl-size: 66px; --skill-size: 58px; }
 }
