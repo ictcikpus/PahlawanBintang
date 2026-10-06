@@ -1,5 +1,5 @@
 // ============================================================
-// PAHLAWAN BINTANG — Service Worker v18.1
+// PAHLAWAN BINTANG — Service Worker v18.2
 // Strategy:
 //   - App shell (HTML/CSS/JS lokal) → Cache First (offline ready)
 //   - JSON data (levels/stickers) → Stale-While-Revalidate
@@ -7,7 +7,7 @@
 //   - Fallback ke cache kalau network gagal
 // ============================================================
 
-const CACHE_VERSION = 'v18.1';
+const CACHE_VERSION = 'v18.2';
 const CACHE_NAME = `pahlawan-bintang-${CACHE_VERSION}`;
 
 // Daftar asset yang wajib tersedia offline
@@ -15,7 +15,7 @@ const PRECACHE_ASSETS = [
   './',
   './index.html',
   './style.css?v=18.0',
-  './multiplayer.js?v=18.0',
+  './multiplayer.js?v=18.2',
   './game.js?v=18.1',
   './manifest.json',
   './icon-192.png',
