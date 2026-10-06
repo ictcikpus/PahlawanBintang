@@ -8,16 +8,15 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Pahlawan Bintang</title>
   <link rel="manifest" href="./manifest.json" />
-  <link rel="stylesheet" href="./style.css?v=15.0" />
+  <link rel="stylesheet" href="./style.css?v=16.0" />
 </head>
 <body>
 
 <!-- ============================================================
-     SVG SPRITE — semua ikon game
+     SVG SPRITE
      ============================================================ -->
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
   <defs>
-    <!-- HERO AVATARS -->
     <symbol id="i-robot" viewBox="0 0 40 40">
       <rect x="8" y="12" width="24" height="20" rx="3" fill="currentColor"/>
       <rect x="12" y="4" width="16" height="10" rx="3" fill="currentColor" opacity=".65"/>
@@ -57,7 +56,6 @@
       <path d="M17 28 Q20 30 23 28" stroke="#05061a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
     </symbol>
 
-    <!-- UI ICONS -->
     <symbol id="i-target" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
       <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -171,7 +169,6 @@
             stroke-linecap="round" stroke-linejoin="round"/>
     </symbol>
 
-    <!-- CHARACTER PORTRAITS (100x100) -->
     <symbol id="i-vega" viewBox="0 0 100 100">
       <ellipse cx="50" cy="105" rx="38" ry="45" fill="#00d2ff"/>
       <circle cx="50" cy="42" r="28" fill="#ffd8b0"/>
@@ -259,33 +256,33 @@
         <input id="player-name-input" type="text" placeholder="Nama Pahlawan" maxlength="14" />
       </div>
 
-      <button id="btn-prepare-play" class="btn-primary big">
+      <button id="btn-prepare-play" class="btn-primary big" type="button">
         <svg class="ico"><use href="#i-play"/></svg>
         <span>MULAI MISI</span>
       </button>
 
       <div class="menu-row">
-        <button id="btn-select-actor" class="btn-secondary">
+        <button id="btn-select-actor" class="btn-secondary" type="button">
           <svg class="ico"><use href="#i-mask"/></svg>
           <span>HERO</span>
         </button>
-        <button id="btn-shop" class="btn-secondary">
+        <button id="btn-shop" class="btn-secondary" type="button">
           <svg class="ico"><use href="#i-shop"/></svg>
           <span>TOKO</span>
         </button>
       </div>
       <div class="menu-row">
-        <button id="btn-leaderboard" class="btn-secondary">
+        <button id="btn-leaderboard" class="btn-secondary" type="button">
           <svg class="ico"><use href="#i-trophy"/></svg>
           <span>PERINGKAT</span>
         </button>
-        <button id="btn-stickers" class="btn-secondary">
+        <button id="btn-stickers" class="btn-secondary" type="button">
           <svg class="ico"><use href="#i-star"/></svg>
           <span>STIKER</span>
         </button>
       </div>
 
-      <button id="btn-pwa-install" class="btn-pwa hidden">
+      <button id="btn-pwa-install" class="btn-pwa hidden" type="button">
         <svg class="ico"><use href="#i-download"/></svg>
         <span>INSTALL APLIKASI</span>
       </button>
@@ -318,7 +315,7 @@
 
       <div class="hud-right">
         <div id="hud-lives" class="hud-lives"></div>
-        <button id="btn-pause" class="btn-pause" aria-label="Pause">
+        <button id="btn-pause" class="btn-pause" aria-label="Pause" type="button">
           <svg class="ico" viewBox="0 0 24 24"><use href="#i-pause"/></svg>
         </button>
       </div>
@@ -330,24 +327,24 @@
 
     <div class="hud-bottom">
       <div class="ctrl-cluster ctrl-left">
-        <button id="btn-move-left" class="btn-ctrl" aria-label="Kiri">
+        <button id="btn-move-left" class="btn-ctrl" aria-label="Kiri" type="button">
           <svg class="ico" viewBox="0 0 24 24"><use href="#i-chev-left"/></svg>
         </button>
-        <button id="btn-move-right" class="btn-ctrl" aria-label="Kanan">
+        <button id="btn-move-right" class="btn-ctrl" aria-label="Kanan" type="button">
           <svg class="ico" viewBox="0 0 24 24"><use href="#i-chev-right"/></svg>
         </button>
       </div>
 
       <div class="ctrl-cluster ctrl-right skill-row">
-        <button id="btn-freeze" class="btn-skill skill-freeze" aria-label="Freeze">
+        <button id="btn-freeze" class="btn-skill skill-freeze" aria-label="Freeze" type="button">
           <svg class="skill-icon" viewBox="0 0 24 24"><use href="#i-snow"/></svg>
           <span id="freeze-count" class="skill-count">0</span>
         </button>
-        <button id="btn-shield" class="btn-skill skill-shield" aria-label="Shield">
+        <button id="btn-shield" class="btn-skill skill-shield" aria-label="Shield" type="button">
           <svg class="skill-icon" viewBox="0 0 24 24"><use href="#i-shield"/></svg>
           <span id="shield-count" class="skill-count">0</span>
         </button>
-        <button id="btn-bomb" class="btn-skill skill-bomb" aria-label="Bomb">
+        <button id="btn-bomb" class="btn-skill skill-bomb" aria-label="Bomb" type="button">
           <svg class="skill-icon" viewBox="0 0 24 24"><use href="#i-bomb"/></svg>
           <span id="bomb-count" class="skill-count">0</span>
         </button>
@@ -380,16 +377,16 @@
     <div class="modal-box">
       <h2><svg class="ico-lg"><use href="#i-pause"/></svg> GAME PAUSED</h2>
       <p style="margin-bottom:14px">Hero: <strong id="pause-hero-name">Robot Cyber</strong></p>
-      <button id="btn-resume-game" class="btn-primary">
+      <button id="btn-resume-game" class="btn-primary" type="button">
         <svg class="ico"><use href="#i-play"/></svg> <span>LANJUTKAN</span>
       </button>
-      <button id="btn-pause-change-hero" class="btn-secondary">
+      <button id="btn-pause-change-hero" class="btn-secondary" type="button">
         <svg class="ico"><use href="#i-mask"/></svg> <span>GANTI HERO</span>
       </button>
-      <button id="btn-pause-leaderboard" class="btn-secondary">
+      <button id="btn-pause-leaderboard" class="btn-secondary" type="button">
         <svg class="ico"><use href="#i-trophy"/></svg> <span>PERINGKAT</span>
       </button>
-      <button id="btn-pause-main-menu" class="btn-danger">
+      <button id="btn-pause-main-menu" class="btn-danger" type="button">
         <svg class="ico"><use href="#i-home"/></svg> <span>MENU UTAMA</span>
       </button>
     </div>
@@ -421,7 +418,7 @@
           <span>Unicorn Star</span>
         </div>
       </div>
-      <button id="btn-close-actors" class="btn-secondary">TUTUP</button>
+      <button id="btn-close-actors" class="btn-secondary" type="button">TUTUP</button>
     </div>
   </div>
 
@@ -441,7 +438,7 @@
             <small>Lv <span id="shop-level-firerate">1</span></small>
           </div>
         </div>
-        <button id="btn-buy-firerate" class="btn-buy">BELI <span>50</span></button>
+        <button id="btn-buy-firerate" class="btn-buy" type="button">BELI <span>50</span></button>
       </div>
 
       <div class="shop-item">
@@ -452,7 +449,7 @@
             <small>Lv <span id="shop-level-shield">1</span></small>
           </div>
         </div>
-        <button id="btn-buy-shield" class="btn-buy">BELI <span>60</span></button>
+        <button id="btn-buy-shield" class="btn-buy" type="button">BELI <span>60</span></button>
       </div>
 
       <div class="shop-item">
@@ -463,7 +460,7 @@
             <small>Lv <span id="shop-level-bomb">2</span></small>
           </div>
         </div>
-        <button id="btn-buy-bomb" class="btn-buy">BELI <span>150</span></button>
+        <button id="btn-buy-bomb" class="btn-buy" type="button">BELI <span>150</span></button>
       </div>
 
       <div class="shop-item">
@@ -474,10 +471,10 @@
             <small>Lv <span id="shop-level-freeze">2</span></small>
           </div>
         </div>
-        <button id="btn-buy-freeze" class="btn-buy">BELI <span>150</span></button>
+        <button id="btn-buy-freeze" class="btn-buy" type="button">BELI <span>150</span></button>
       </div>
 
-      <button id="btn-close-shop" class="btn-secondary">TUTUP</button>
+      <button id="btn-close-shop" class="btn-secondary" type="button">TUTUP</button>
     </div>
   </div>
 
@@ -495,7 +492,7 @@
           <tr><td colspan="4" class="loading-text">Memuat...</td></tr>
         </tbody>
       </table>
-      <button id="btn-close-leaderboard" class="btn-secondary">TUTUP</button>
+      <button id="btn-close-leaderboard" class="btn-secondary" type="button">TUTUP</button>
     </div>
   </div>
 
@@ -507,7 +504,7 @@
       </h2>
       <p style="margin-bottom:14px">Terbuka: <strong id="unlocked-count">0</strong></p>
       <div id="sticker-grid" class="sticker-grid"></div>
-      <button id="btn-close-stickers" class="btn-secondary">TUTUP</button>
+      <button id="btn-close-stickers" class="btn-secondary" type="button">TUTUP</button>
     </div>
   </div>
 
@@ -524,12 +521,12 @@
         <div class="loadout-card" data-skill="freeze">
           <svg class="loadout-icon" viewBox="0 0 24 24"><use href="#i-snow"/></svg>
           <strong>Freeze</strong>
-          <small>Bekukan semua musuh 3.5 detik</small>
+          <small>Bekukan musuh 3.5 detik</small>
         </div>
         <div class="loadout-card" data-skill="shield">
           <svg class="loadout-icon" viewBox="0 0 24 24"><use href="#i-shield"/></svg>
           <strong>Shield</strong>
-          <small>Immunitas damage sementara</small>
+          <small>Immun damage sementara</small>
         </div>
         <div class="loadout-card" data-skill="bomb">
           <svg class="loadout-icon" viewBox="0 0 24 24"><use href="#i-bomb"/></svg>
@@ -539,7 +536,7 @@
       </div>
 
       <p class="loadout-hint">Pilih 2 dari 3 skill</p>
-      <button id="btn-start-loaded" class="btn-primary" disabled>
+      <button id="btn-start-loaded" class="btn-primary" type="button" disabled>
         <svg class="ico"><use href="#i-play"/></svg>
         <span>MULAI LEVEL</span>
       </button>
@@ -567,13 +564,13 @@
           </strong>
         </div>
       </div>
-      <button id="btn-next-level" class="btn-primary">
+      <button id="btn-next-level" class="btn-primary" type="button">
         <svg class="ico"><use href="#i-play"/></svg> <span>LEVEL BERIKUTNYA</span>
       </button>
-      <button id="btn-restart" class="btn-secondary">
+      <button id="btn-restart" class="btn-secondary" type="button">
         <svg class="ico"><use href="#i-refresh"/></svg> <span>ULANG</span>
       </button>
-      <button id="btn-menu" class="btn-danger">
+      <button id="btn-menu" class="btn-danger" type="button">
         <svg class="ico"><use href="#i-home"/></svg> <span>MENU UTAMA</span>
       </button>
     </div>
@@ -598,6 +595,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <!-- ============ GAME SCRIPT ============ -->
-  <script src="./game.js?v=15.0"></script>
+  <script src="./game.js?v=16.0"></script>
 </body>
 </html>
