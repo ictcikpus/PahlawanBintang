@@ -1,7 +1,7 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v17.5
-// Fix: Leaderboard tampil 50 peserta (migration on-demand, no dedup)
-// Fitur: Top 50 real-time, Fullscreen semua mode, Narrative transparan
+// PAHLAWAN BINTANG — game.js v17.7
+// New: Daily 3 Bos berurutan + Preview + Progress + Reward 5×
+// Fitur: Top 50 LB dedup, Fullscreen, Narrative transparan
 // =============================================================
 
 // =============================================================
@@ -143,6 +143,22 @@ function getThemeForLevel(levelNum) {
 const BOSS_SIZES = { 5: 62, 10: 80, 15: 96, 20: 112, 25: 128, 30: 148 };
 let currentTheme = LEVEL_THEMES[0];
 
+// [v17.7] Nama bos untuk display
+const BOSS_NAMES = {
+  5: 'INFERNO', 10: 'VOID', 15: 'CRYO',
+  20: 'TITAN', 25: 'SOLAR', 30: 'OMEGA'
+};
+function getBossName(bossNum) {
+  return BOSS_NAMES[bossNum] || ('BOSS ' + bossNum);
+}
+function getBossTheme(bossNum) {
+  return getThemeForLevel(bossNum);
+}
+function getBossBaseHp(bossNum) {
+  const map = { 5:150, 10:350, 15:600, 20:1000, 25:1500, 30:2500 };
+  return map[bossNum] || 150;
+}
+
 // =============================================================
 // 4. STORY DATA
 // =============================================================
@@ -212,6 +228,16 @@ const DAILY_MODIFIERS = [
   { id:'no_shield',      name:'NO SHIELD',    desc:'Skill Shield dimatikan',        icon:'i-shield' },
   { id:'one_life',       name:'ONE LIFE',     desc:'Hanya 1 nyawa',                 icon:'i-heart' },
   { id:'double_monster', name:'SWARM',        desc:'Musuh spawn 2× lebih banyak',   icon:'i-target' }
+];
+
+// [v17.7] Skenario bos harian
+const DAILY_BOSS_SEQUENCES = [
+  [5, 10, 15],   // Santai: Inferno → Void → Cryo
+  [10, 15, 20],  // Medium: Void → Cryo → Titan
+  [15, 20, 25],  // Hard: Cryo → Titan → Solar
+  [20, 25, 30],  // Very Hard: Titan → Solar → Omega
+  [5, 15, 25],   // Random: Inferno → Cryo → Solar
+  [10, 20, 30]   // Extreme: Void → Titan → Omega
 ];
 
 // =============================================================
@@ -534,6 +560,11 @@ const ENDLESS_KILLS_PER_WAVE = 15;
 let currentDailyModifier = null;
 let currentLeaderboardTab = 'global';
 
+// [v17.7] Daily 3 Bos state
+let dailyBossIndex = 0;
+let dailyBossSequence = [];
+let nextBossSpawnTime = 0;
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas ? canvas.getContext('2d') : null;
 let deferredPrompt;
@@ -561,7 +592,6 @@ let loadoutCallback = null;
 let spawnLoopToken = 0;
 let isReviveModalOpen = false;
 
-// [v17.5] Flag migration on-demand per tab
 let lbMigratedThisSession = { global: false, endless: false, daily: false };
 
 // =============================================================
@@ -619,7 +649,7 @@ window.addEventListener('load', async () => {
   }
   try { updateStickerAlbumUI(); } catch (e) {}
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=17.5').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=17.7').catch(err => console.log('SW Fail:', err));
   }
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
@@ -710,9 +740,11 @@ function getDailyModifier() {
   const seed = getDailySeed();
   return DAILY_MODIFIERS[seed % DAILY_MODIFIERS.length];
 }
-function getDailyLevel() {
+// [v17.7] Daily bos sequence — 3 bos berurutan per hari
+function getDailyBossSequence() {
   const seed = getDailySeed();
-  return (seed % 29) + 1;
+  const idx = seed % DAILY_BOSS_SEQUENCES.length;
+  return DAILY_BOSS_SEQUENCES[idx].slice();
 }
 function secondsUntilMidnight() {
   const now = new Date();
@@ -939,7 +971,17 @@ function setupEventListeners() {
           monsters.splice(i, 1);
           monsters.forEach(minion => createBurstParticles3D(minion.x, minion.y, minion.color, 20));
           monsters = [];
-          setTimeout(() => onLevelCleared(), 1500);
+          if (gameMode === 'endless') {
+            setTimeout(() => {
+              endlessWave++;
+              endlessKillsThisWave = 0;
+              updateHUDValues();
+            }, 1500);
+          } else if (gameMode === 'daily') {
+            setTimeout(() => handleDailyBossDefeated(), 1500);
+          } else {
+            setTimeout(() => onLevelCleared(), 1500);
+          }
           break;
         }
       } else {
@@ -1295,25 +1337,20 @@ function actuallyStartLevel(levelConfig) {
 
 function updateHUDValues() {
   const $ = id => document.getElementById(id);
-  let levelNum = 1, targetKills = 0;
   if (gameMode === 'endless') {
-    levelNum = endlessWave;
-    targetKills = ENDLESS_KILLS_PER_WAVE;
-    const hl = $('hud-level'); if (hl) hl.innerText = '∞' + levelNum;
-    const hm = $('hud-mission'); if (hm) hm.innerText = `${endlessKillsThisWave}/${targetKills}`;
+    const hl = $('hud-level'); if (hl) hl.innerText = '∞' + endlessWave;
+    const hm = $('hud-mission'); if (hm) hm.innerText = `${endlessKillsThisWave}/${ENDLESS_KILLS_PER_WAVE}`;
   } else if (gameMode === 'daily') {
-    const lvl = getDailyLevel();
-    levelNum = lvl;
-    const levelConfig = levelsData[levelNum - 1] || levelsData[0];
-    targetKills = levelConfig.targetKills;
-    const hl = $('hud-level'); if (hl) hl.innerText = '★' + lvl;
-    const hm = $('hud-mission'); if (hm) hm.innerText = `${levelKills}/${targetKills}`;
+    // [v17.7] Daily 3 Bos: tampilkan bos progress
+    const bossNum = dailyBossSequence[dailyBossIndex] || dailyBossSequence[0] || 5;
+    const hl = $('hud-level');
+    if (hl) hl.innerText = 'B' + (dailyBossIndex + 1);
+    const hm = $('hud-mission');
+    if (hm) hm.innerText = `BOS ${dailyBossIndex + 1}/3`;
   } else {
     const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
-    levelNum = levelConfig.level;
-    targetKills = levelConfig.targetKills;
-    const hl = $('hud-level'); if (hl) hl.innerText = levelNum;
-    const hm = $('hud-mission'); if (hm) hm.innerText = `${levelKills}/${targetKills}`;
+    const hl = $('hud-level'); if (hl) hl.innerText = levelConfig.level;
+    const hm = $('hud-mission'); if (hm) hm.innerText = `${levelKills}/${levelConfig.targetKills}`;
   }
   const hs = $('hud-score'); if (hs) hs.innerText = score;
   const hc = $('hud-coins'); if (hc) hc.innerText = coins;
@@ -1348,7 +1385,7 @@ function triggerBossSiren() {
 }
 
 // =============================================================
-// 14. SPAWN LOOP
+// 14. SPAWN LOOP (updated untuk Daily 3 Bos)
 // =============================================================
 function spawnMonsterLoop(token) {
   if (token !== undefined && token !== spawnLoopToken) return;
@@ -1376,12 +1413,40 @@ function spawnMonsterLoop(token) {
         levelConfig.bossHp = 150 + endlessWave * 60;
       }
     } else if (gameMode === 'daily') {
-      const lvl = getDailyLevel();
-      const base = levelsData[lvl - 1] || levelsData[0];
-      levelConfig = { ...base };
-      if (currentDailyModifier) {
-        if (currentDailyModifier.id === 'double_speed') levelConfig.speed = (levelConfig.speed || 1) * 2;
-        if (currentDailyModifier.id === 'double_monster') spawnMultiplier = 2;
+      // [v17.7] Daily 3 Bos handling
+      if (Date.now() < nextBossSpawnTime) {
+        // Tunggu transition
+      } else if (monsters.length === 0 && dailyBossIndex < 3 && dailyBossSequence.length === 3) {
+        // Spawn bos berikutnya
+        const bossNum = dailyBossSequence[dailyBossIndex];
+        const baseHp = getBossBaseHp(bossNum);
+        const scale = [1, 1.2, 1.5][dailyBossIndex] || 1;
+        const hpVal = Math.floor(baseHp * scale);
+        const bossSize = BOSS_SIZES[bossNum] || 75;
+        const theme = getBossTheme(bossNum);
+        currentTheme = theme;
+        applyThemeToDocument(theme);
+        recolorStars();
+
+        triggerBossSiren();
+
+        monsters.push({
+          x: canvas.width / 2, startX: canvas.width / 2, y: -100,
+          speed: 1.0 + dailyBossIndex * 0.15,
+          size: bossSize,
+          hp: hpVal, maxHp: hpVal,
+          color: theme.accent,
+          type: `boss${bossNum}`,
+          algorithm: `boss_${bossNum}`,
+          shootTimer: 0, minionTimer: 0, enrageTimer: 0,
+          timeAlive: 0, opacity: 1,
+          hitFlash: 0, aura: 0,
+          aimTimer: 0, aimTargetX: 0, aimTargetY: 0,
+          coreOpen: false, coreTimer: 0, coreGlow: 0,
+          noWeakPoint: false
+        });
+        updateHUDValues();
+        console.log(`👑 [Daily] Spawn Boss #${dailyBossIndex + 1}: ${getBossName(bossNum)} (HP: ${hpVal})`);
       }
     } else {
       levelConfig = levelsData[currentLevelIndex] || levelsData[0];
@@ -1442,7 +1507,7 @@ function spawnMonsterLoop(token) {
 
   let currentRate = 1500;
   if (gameMode === 'endless') currentRate = Math.max(300, 1200 - endlessWave * 40);
-  else if (gameMode === 'daily') currentRate = 1200;
+  else if (gameMode === 'daily') currentRate = 500;
   else currentRate = levelsData[currentLevelIndex] ? levelsData[currentLevelIndex].spawnRate : 1500;
 
   const myToken = (token !== undefined) ? token : spawnLoopToken;
@@ -1531,12 +1596,7 @@ function checkLevelObjectives() {
     return;
   }
   if (gameMode === 'daily') {
-    const lvl = getDailyLevel();
-    const levelConfig = levelsData[lvl - 1] || levelsData[0];
-    if (levelKills >= levelConfig.targetKills) {
-      if (score >= levelConfig.targetScore) onLevelCleared();
-      else onLevelFailed("SKOR BELUM MENCAPAI TARGET");
-    }
+    // [v17.7] Daily 3 Bos — progress handled by handleDailyBossDefeated
     return;
   }
   const levelConfig = levelsData[currentLevelIndex] || levelsData[0];
@@ -1818,6 +1878,8 @@ function gameLoop() {
                 endlessKillsThisWave = 0;
                 updateHUDValues();
               }, 1500);
+            } else if (gameMode === 'daily') {
+              setTimeout(() => handleDailyBossDefeated(), 1500);
             } else {
               setTimeout(() => onLevelCleared(), 1500);
             }
@@ -2506,30 +2568,62 @@ async function finalizeEndless() {
 }
 
 // =============================================================
-// 20. DAILY CHALLENGE
+// 20. DAILY CHALLENGE — 3 Bos Berurutan (v17.7)
 // =============================================================
 async function openDailyModal() {
   currentDailyModifier = getDailyModifier();
+  dailyBossSequence = getDailyBossSequence();
+
   const $ = id => document.getElementById(id);
   const d = new Date();
   const dateEl = $('daily-date');
   if (dateEl) dateEl.innerText = d.toLocaleDateString('id-ID', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  // Fill preview bos
+  for (let i = 0; i < 3; i++) {
+    const bossNum = dailyBossSequence[i];
+    const nameEl = $('daily-boss-' + i + '-name');
+    if (nameEl) nameEl.innerText = getBossName(bossNum);
+  }
+
+  // Modifier
   const nameEl = $('daily-mod-name'); if (nameEl) nameEl.innerText = currentDailyModifier.name;
   const descEl = $('daily-mod-desc'); if (descEl) descEl.innerText = currentDailyModifier.desc;
   const iconWrap = document.querySelector('.daily-mod-icon svg use');
   if (iconWrap) iconWrap.setAttribute('href', '#' + currentDailyModifier.icon);
 
+  // Cek status selesai hari ini
   const todayKey = getTodayKey();
   const doneRaw = await DB.get('pahlawan_daily_done_' + todayKey);
   const doneBadge = $('daily-done-badge');
   const startBtn = $('btn-start-daily');
+  const progressEl = $('daily-progress');
+
   if (doneRaw === '1') {
+    // Sudah selesai hari ini: semua checkmark ON, badge ON, tombol OFF
+    for (let i = 0; i < 3; i++) {
+      const chk = $('daily-boss-' + i + '-check');
+      const slot = document.querySelector('.daily-boss-slot[data-slot="' + i + '"]');
+      if (chk) chk.classList.remove('hidden');
+      if (slot) slot.classList.add('completed');
+    }
     if (doneBadge) doneBadge.classList.remove('hidden');
     if (startBtn) startBtn.disabled = true;
+    if (progressEl) progressEl.classList.add('hidden');
   } else {
+    // Belum selesai: reset semua checkmark
+    for (let i = 0; i < 3; i++) {
+      const chk = $('daily-boss-' + i + '-check');
+      const slot = document.querySelector('.daily-boss-slot[data-slot="' + i + '"]');
+      if (chk) chk.classList.add('hidden');
+      if (slot) slot.classList.remove('completed');
+    }
     if (doneBadge) doneBadge.classList.add('hidden');
     if (startBtn) startBtn.disabled = false;
+    if (progressEl) progressEl.classList.add('hidden');
   }
+
+  // Timer
   const timerEl = $('daily-reset-timer');
   if (timerEl) timerEl.innerText = formatTime(secondsUntilMidnight());
   const modal = $('modal-daily');
@@ -2543,7 +2637,7 @@ async function openDailyModal() {
 }
 
 function startDaily() {
-  console.log('▶ [startDaily]');
+  console.log('▶ [startDaily] 3 Bos');
   sounds.init();
   const input = document.getElementById('player-name-input');
   const inputName = input ? input.value.trim() : '';
@@ -2553,14 +2647,18 @@ function startDaily() {
   if (pnd) pnd.innerText = playerName;
 
   currentDailyModifier = getDailyModifier();
+  dailyBossSequence = getDailyBossSequence();
+  dailyBossIndex = 0;
+  nextBossSpawnTime = 0;
+
   gameMode = 'daily';
   score = 0;
   lives = (currentDailyModifier.id === 'one_life') ? 1 : 3;
   reviveUsedThisRun = false;
 
-  const lvl = getDailyLevel();
-  currentLevelIndex = lvl - 1;
-  currentTheme = getThemeForLevel(lvl);
+  // Tema awal = bos pertama
+  const firstBossNum = dailyBossSequence[0];
+  currentTheme = getBossTheme(firstBossNum);
   applyThemeToDocument(currentTheme);
   recolorStars();
   resetLevelState();
@@ -2575,20 +2673,89 @@ function startDaily() {
   resizeCanvas();
   setTimeout(() => {
     resizeCanvas();
-    const levelConfig = levelsData[lvl - 1] || levelsData[0];
-    showLoadoutModal(levelConfig, () => {
+    const dummy = { level: 999, targetKills: 1, targetScore: 0, algorithm: 'boss_daily', types: ['boss'] };
+    showLoadoutModal(dummy, () => {
       freezeCharges = playerLoadout.includes('freeze') ? upgradeFreeze : 0;
       shieldCharges = (currentDailyModifier.id !== 'no_shield' && playerLoadout.includes('shield')) ? upgradeShield : 0;
       bombCharges = playerLoadout.includes('bomb') ? upgradeBomb : 0;
       updateSkillButtonsUI();
       isGameRunning = true;
       isGamePaused = false;
-      showLevelIntro(levelConfig);
+
+      // Show intro bos 1
+      const banner = document.getElementById('level-intro');
+      if (banner) {
+        const numEl = document.getElementById('level-intro-number');
+        if (numEl) numEl.innerText = 'BOS 1';
+        const nameEl = document.getElementById('level-intro-name');
+        if (nameEl) nameEl.innerText = getBossName(firstBossNum);
+        const misEl = document.getElementById('level-intro-mission');
+        if (misEl) misEl.innerText = 'DAILY 3 BOS · 1/3';
+        banner.classList.remove('hidden');
+        banner.classList.remove('fade-out');
+        void banner.offsetWidth;
+        sounds.playLevelIntro();
+        setTimeout(() => {
+          banner.classList.add('fade-out');
+          setTimeout(() => banner.classList.add('hidden'), 500);
+        }, 1800);
+      }
+
       sounds.startBGM();
       startSpawnLoop();
       gameLoop();
     });
   }, 60);
+}
+
+// [v17.7] Handle ketika bos harian dikalahkan
+function handleDailyBossDefeated() {
+  const defeatedIdx = dailyBossIndex;
+  dailyBossIndex++;
+
+  // Update preview checkmark
+  const chk = document.getElementById('daily-boss-' + defeatedIdx + '-check');
+  if (chk) chk.classList.remove('hidden');
+  const slot = document.querySelector('.daily-boss-slot[data-slot="' + defeatedIdx + '"]');
+  if (slot) slot.classList.add('completed');
+
+  console.log(`🏆 [Daily] Boss ${defeatedIdx + 1}/3 defeated. Next index: ${dailyBossIndex}`);
+
+  // Selesai semua 3 bos?
+  if (dailyBossIndex >= 3) {
+    finalizeDaily(true);
+    return;
+  }
+
+  // Tampilkan transition banner
+  const banner = document.getElementById('level-intro');
+  if (banner) {
+    const nextBossNum = dailyBossSequence[dailyBossIndex];
+    const numEl = document.getElementById('level-intro-number');
+    if (numEl) numEl.innerText = 'BOS ' + (dailyBossIndex + 1);
+    const nameEl = document.getElementById('level-intro-name');
+    if (nameEl) nameEl.innerText = getBossName(nextBossNum);
+    const misEl = document.getElementById('level-intro-mission');
+    if (misEl) misEl.innerText = (dailyBossIndex === 2) ? 'FINAL BOSS!' : 'BOSS DEFEATED! NEXT...';
+    banner.classList.remove('hidden');
+    banner.classList.remove('fade-out');
+    void banner.offsetWidth;
+    sounds.playBossWarning();
+    setTimeout(() => {
+      banner.classList.add('fade-out');
+      setTimeout(() => banner.classList.add('hidden'), 500);
+    }, 2200);
+  }
+
+  // Delay spawn bos berikutnya
+  nextBossSpawnTime = Date.now() + 2800;
+
+  // Reset player bullets untuk clean transition
+  bullets = [];
+  bossBullets = [];
+  telegraphs = [];
+
+  updateHUDValues();
 }
 
 async function finalizeDaily(success) {
@@ -2597,20 +2764,31 @@ async function finalizeDaily(success) {
   stopSpawnLoop();
   sounds.stopBGM();
   if (success) sounds.playWin();
+  triggerVibrate(success ? [50, 50, 50, 50, 100] : [200, 100, 200]);
+
   const todayKey = getTodayKey();
   if (success) {
     DB.set('pahlawan_daily_done_' + todayKey, '1');
+    // [v17.7] Reward 5× koin (bonus +500)
+    const dailyBonus = 500;
+    coins += dailyBonus;
+    levelCoinsEarned += dailyBonus;
+    DB.set('pahlawan_coins', coins);
     saveDailyToGlobalLeaderboard(playerName, score, todayKey);
+    console.log('🎉 [Daily] DAILY MASTER! Reward +500 koin');
   }
-  const lvl = getDailyLevel();
 
   const $ = id => document.getElementById(id);
-  const rt = $('result-title'); if (rt) rt.innerText = success ? "DAILY CLEARED!" : "DAILY GAGAL";
+  const rt = $('result-title');
+  if (rt) rt.innerText = success ? "DAILY MASTER!" : "DAILY GAGAL";
   const rpn = $('result-player-name'); if (rpn) rpn.innerText = playerName;
   const rs = $('result-score'); if (rs) rs.innerText = score;
   const rc = $('result-coins'); if (rc) rc.innerText = `+${levelCoinsEarned}`;
-  const rl = $('result-level'); if (rl) rl.innerText = lvl;
-  const rk = $('result-kills'); if (rk) rk.innerText = `${levelKills} Target`;
+  const rl = $('result-level');
+  if (rl) rl.innerText = success ? '3/3 BOS' : `${dailyBossIndex}/3 BOS`;
+  const rk = $('result-kills');
+  if (rk) rk.innerText = `${dailyBossIndex} Bos Dikalahkan`;
+
   const starContainer = $('result-stars');
   if (starContainer) {
     if (success) {
@@ -2633,7 +2811,7 @@ async function finalizeDaily(success) {
 }
 
 // =============================================================
-// 21. LEADERBOARD v17.5 — Top 50 + migration on-demand + no dedup
+// 21. LEADERBOARD — Top 50 + dedup nama
 // =============================================================
 function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   const cleanName = (name || 'Pahlawan').trim();
@@ -2748,7 +2926,6 @@ function openLeaderboard() {
   loadLeaderboardData();
 }
 
-// [v17.5] Load leaderboard dengan migration on-demand
 async function loadLeaderboardData() {
   const tbody = document.getElementById('leaderboard-body');
   if (!tbody) return;
@@ -2766,7 +2943,7 @@ async function loadLeaderboardData() {
   if (currentLeaderboardTab === 'endless') { path = 'endless'; tabKey = 'endless'; }
   else if (currentLeaderboardTab === 'daily') { path = 'daily/' + getTodayKey(); tabKey = 'daily'; }
 
-  // [v17.5] MIGRATION ON-DEMAND
+  // Migration on-demand
   if (!lbMigratedThisSession[tabKey]) {
     try {
       console.log(`🔄 [LB] Cek migration untuk ${path}...`);
@@ -2797,8 +2974,8 @@ async function loadLeaderboardData() {
     }
   }
 
-  // Load top 50 dengan query
-  leaderboardRef = db.ref(path).orderByChild('sortValue').limitToLast(50);
+  // Buffer 100 → dedup → top 50
+  leaderboardRef = db.ref(path).orderByChild('sortValue').limitToLast(100);
 
   let lastRenderTime = 0;
   let pendingSnapshot = null;
@@ -2832,7 +3009,6 @@ async function loadLeaderboardData() {
   });
 }
 
-// [v17.5] Render tanpa dedup — Firebase key sudah unik per pemain
 function renderLeaderboardRows(snapshot, tbody) {
   if (!snapshot.exists()) { showLocalScores(tbody); return; }
 
@@ -2855,7 +3031,6 @@ function renderLeaderboardRows(snapshot, tbody) {
 
   if (rawArr.length === 0) { showLocalScores(tbody); return; }
 
-  // Sort: pakai sortValue kalau ada, fallback hitung dari level + score
   rawArr.sort((a, b) => {
     const aSV = (a.sortValue !== undefined && a.sortValue !== null)
       ? Number(a.sortValue) : ((a.level * 100000000) + a.score);
@@ -2864,7 +3039,36 @@ function renderLeaderboardRows(snapshot, tbody) {
     return bSV - aSV;
   });
 
-  const top = rawArr.slice(0, 50);
+  // Dedup by lowercase name
+  const dedupMap = new Map();
+  let dupeCount = 0;
+
+  rawArr.forEach(item => {
+    const dedupKey = item.name.toLowerCase().replace(/\s+/g, ' ').trim();
+    if (!dedupMap.has(dedupKey)) {
+      dedupMap.set(dedupKey, item);
+    } else {
+      dupeCount++;
+    }
+  });
+
+  let uniqueList = Array.from(dedupMap.values());
+
+  uniqueList.sort((a, b) => {
+    const aSV = (a.sortValue !== undefined && a.sortValue !== null)
+      ? Number(a.sortValue) : ((a.level * 100000000) + a.score);
+    const bSV = (b.sortValue !== undefined && b.sortValue !== null)
+      ? Number(b.sortValue) : ((b.level * 100000000) + b.score);
+    return bSV - aSV;
+  });
+
+  const top = uniqueList.slice(0, 50);
+
+  if (dupeCount > 0) {
+    console.log(`🧹 [LB] Dedup: ${rawArr.length} raw → ${uniqueList.length} unik (${dupeCount} duplikat dihapus)`);
+  }
+
+  if (top.length === 0) { showLocalScores(tbody); return; }
 
   const myKey = (playerName || '').trim().toLowerCase().replace(/[^a-z0-9]/g, "_");
   let foundYou = false;
@@ -2884,9 +3088,9 @@ function renderLeaderboardRows(snapshot, tbody) {
   }).join('');
 
   if (!foundYou && myKey) {
-    const youIndex = rawArr.findIndex(s => (s.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, "_") === myKey);
+    const youIndex = uniqueList.findIndex(s => (s.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, "_") === myKey);
     if (youIndex !== -1) {
-      const s = rawArr[youIndex];
+      const s = uniqueList[youIndex];
       const rank = youIndex + 1;
       tbody.innerHTML += `
         <tr class="you-row you-outside">
@@ -2901,20 +3105,21 @@ function renderLeaderboardRows(snapshot, tbody) {
 
 function showLocalScores(tbody) {
   let localScores = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
-  let list = [];
-  let seen = new Set();
+  let bestMap = new Map();
   localScores.forEach(s => {
     if (!s || !s.name) return;
-    const cleanName = s.name.trim();
-    const key = cleanName.toLowerCase();
-    if (seen.has(key)) return;
-    seen.add(key);
-    list.push({
-      name: cleanName,
-      level: Number(s.level) || 1,
-      score: Number(s.score) || 0
-    });
+    let cleanName = s.name.trim();
+    let key = cleanName.toLowerCase();
+    let curLevel = Number(s.level) || 1;
+    let curScore = Number(s.score) || 0;
+    if (!bestMap.has(key)) bestMap.set(key, { name: cleanName, level: curLevel, score: curScore });
+    else {
+      let ex = bestMap.get(key);
+      if (curLevel > ex.level || (curLevel === ex.level && curScore > ex.score))
+        bestMap.set(key, { name: cleanName, level: curLevel, score: curScore });
+    }
   });
+  let list = Array.from(bestMap.values());
   list.sort((a, b) => {
     if (b.level !== a.level) return b.level - a.level;
     return b.score - a.score;
@@ -2950,7 +3155,11 @@ function showLoadoutModal(levelConfig, onDone) {
   loadoutCurrentSelection = [...playerLoadout];
 
   const lvlEl = document.getElementById('loadout-level');
-  if (lvlEl) lvlEl.innerText = (gameMode === 'endless') ? '∞' : levelConfig.level;
+  if (lvlEl) {
+    if (gameMode === 'endless') lvlEl.innerText = '∞';
+    else if (gameMode === 'daily') lvlEl.innerText = 'BOS ' + (dailyBossIndex + 1);
+    else lvlEl.innerText = levelConfig.level;
+  }
   const themeEl = document.getElementById('loadout-theme');
   if (themeEl) themeEl.innerText = currentTheme.name;
 
@@ -3061,5 +3270,5 @@ function openStickerAlbum() {
 }
 
 // =============================================================
-// END OF FILE — v17.5
+// END OF FILE — v17.7
 // =============================================================
