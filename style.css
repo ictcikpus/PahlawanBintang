@@ -979,3 +979,82 @@ body::after {
 @media (min-width: 1024px) {
   :root { --ctrl-size: 66px; --skill-size: 58px; }
 }
+
+/* ============================================================
+   LEADERBOARD v17.2 — Scrollable Top 50
+   ============================================================ */
+#modal-leaderboard .modal-box {
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 18px;
+}
+
+.leaderboard-table {
+  max-height: 55vh;
+  overflow-y: auto;
+  display: block;
+  padding-right: 4px;
+  margin-bottom: 12px;
+}
+
+.leaderboard-table thead,
+.leaderboard-table tbody {
+  display: block;
+}
+
+.leaderboard-table thead tr,
+.leaderboard-table tbody tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.leaderboard-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: linear-gradient(180deg, #0e1035 0%, #0e1035 100%);
+  border-radius: 10px 10px 0 0;
+}
+
+.leaderboard-table thead th:first-child { border-radius: 10px 0 0 0; }
+.leaderboard-table thead th:last-child  { border-radius: 0 10px 0 0; }
+
+/* Baris YOU di luar top 50 */
+.you-row.you-outside {
+  position: relative;
+  margin-top: 10px;
+}
+.you-row.you-outside td {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.25), rgba(255, 215, 0, 0.05)) !important;
+  border-top: 2px dashed var(--neon-gold, #ffd700) !important;
+  border-bottom: 2px dashed var(--neon-gold, #ffd700) !important;
+  color: #fff !important;
+}
+.you-row.you-outside td:first-child { border-radius: 10px 0 0 10px; color: var(--neon-gold); font-weight: 900; }
+.you-row.you-outside td:last-child  { border-radius: 0 10px 10px 0; }
+
+/* Custom scrollbar */
+.leaderboard-table::-webkit-scrollbar {
+  width: 8px;
+}
+.leaderboard-table::-webkit-scrollbar-track {
+  background: rgba(0, 210, 255, 0.05);
+  border-radius: 4px;
+  margin: 4px 0;
+}
+.leaderboard-table::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #00d2ff, #a55eea);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.leaderboard-table::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #4de8ff, #c86bff);
+}
+
+/* Mobile — scrollbar lebih tipis */
+@media (max-width: 480px) {
+  .leaderboard-table { max-height: 50vh; }
+  .leaderboard-table::-webkit-scrollbar { width: 4px; }
+}
