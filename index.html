@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Pahlawan Bintang</title>
   <link rel="manifest" href="./manifest.json" />
-  <link rel="stylesheet" href="./style.css?v=17.9" />
+  <link rel="stylesheet" href="./style.css?v=17.10" />
 </head>
 <body>
 
@@ -239,17 +239,81 @@
   <!-- ============ CANVAS ============ -->
   <canvas id="gameCanvas"></canvas>
 
-  <!-- ============ MAIN MENU ============ -->
+   <!-- ============ MAIN MENU ============ -->
   <div id="screen-main-menu" class="screen">
+
+    <!-- Background Space Decoration -->
+    <div class="space-bg">
+      <div class="nebula nebula-1"></div>
+      <div class="nebula nebula-2"></div>
+      <div class="nebula nebula-3"></div>
+      <div class="shooting-stars">
+        <div class="shooting-star ss-1"></div>
+        <div class="shooting-star ss-2"></div>
+        <div class="shooting-star ss-3"></div>
+        <div class="shooting-star ss-4"></div>
+      </div>
+      <div class="orbit-ring orbit-ring-outer"></div>
+      <div class="orbit-ring orbit-ring-inner"></div>
+    </div>
+
     <div class="menu-box">
       <button id="btn-audio" class="btn-audio" title="Suara" type="button">
         <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
       </button>
 
+      <!-- ========== LOGO EMBLEM (Space) ========== -->
+      <div class="game-emblem">
+        <!-- Orbit decoratif -->
+        <div class="emblem-orbit orbit-1">
+          <div class="orbit-dot dot-cyan"></div>
+        </div>
+        <div class="emblem-orbit orbit-2">
+          <div class="orbit-dot dot-gold"></div>
+        </div>
+        <div class="emblem-orbit orbit-3">
+          <div class="orbit-dot dot-pink"></div>
+        </div>
+
+        <!-- Ring bercahaya -->
+        <div class="emblem-ring"></div>
+        <div class="emblem-ring inner"></div>
+
+        <!-- Bintang utama -->
+        <svg class="emblem-star" viewBox="0 0 100 100">
+          <defs>
+            <radialGradient id="starGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+              <stop offset="40%" stop-color="#ffd700" stop-opacity="0.9"/>
+              <stop offset="100%" stop-color="#ffd700" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="starBody" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="50%" stop-color="#ffd700"/>
+              <stop offset="100%" stop-color="#ff8a00"/>
+            </linearGradient>
+          </defs>
+          <circle cx="50" cy="50" r="48" fill="url(#starGlow)" opacity="0.6"/>
+          <path d="M50 8 L61 38 L94 38 L67 57 L78 88 L50 69 L22 88 L33 57 L6 38 L39 38 Z"
+                fill="url(#starBody)"
+                stroke="#ffffff"
+                stroke-width="1.5"
+                stroke-linejoin="round"
+                filter="drop-shadow(0 0 8px #ffd700) drop-shadow(0 0 16px #ff8a00)"/>
+          <circle cx="50" cy="50" r="4" fill="#ffffff"/>
+        </svg>
+
+        <!-- Sparkle kecil -->
+        <div class="sparkle sparkle-1">✦</div>
+        <div class="sparkle sparkle-2">✦</div>
+        <div class="sparkle sparkle-3">✦</div>
+        <div class="sparkle sparkle-4">✦</div>
+      </div>
+
       <div class="game-title-wrap">
         <h1 class="game-title">PAHLAWAN<br>BINTANG</h1>
       </div>
-      <p class="game-subtitle">Bertahanlah dari Gelombang Monster Galaksi</p>
+      <p class="game-subtitle">✦ Bertahanlah dari Gelombang Monster Galaksi ✦</p>
 
       <div class="input-wrap">
         <svg class="input-ico" viewBox="0 0 24 24"><use href="#i-user"/></svg>
@@ -257,37 +321,37 @@
       </div>
 
       <button id="btn-prepare-play" class="btn-primary big" type="button">
-        <svg class="ico"><use href="#i-play"/></svg>
+        <svg class="ico btn-play-ico"><use href="#i-play"/></svg>
         <span>MULAI MISI</span>
       </button>
 
       <div class="menu-row">
         <button id="btn-select-actor" class="btn-secondary" type="button">
-          <svg class="ico"><use href="#i-mask"/></svg>
+          <svg class="ico btn-hero-ico"><use href="#i-mask"/></svg>
           <span>HERO</span>
         </button>
         <button id="btn-shop" class="btn-secondary" type="button">
-          <svg class="ico"><use href="#i-shop"/></svg>
+          <svg class="ico btn-shop-ico"><use href="#i-shop"/></svg>
           <span>TOKO</span>
         </button>
       </div>
       <div class="menu-row">
         <button id="btn-leaderboard" class="btn-secondary" type="button">
-          <svg class="ico"><use href="#i-trophy"/></svg>
+          <svg class="ico btn-trophy-ico"><use href="#i-trophy"/></svg>
           <span>PERINGKAT</span>
         </button>
         <button id="btn-stickers" class="btn-secondary" type="button">
-          <svg class="ico"><use href="#i-star"/></svg>
+          <svg class="ico btn-star-ico"><use href="#i-star"/></svg>
           <span>STIKER</span>
         </button>
       </div>
       <div class="menu-row">
         <button id="btn-endless" class="btn-secondary" type="button">
-          <svg class="ico"><use href="#i-star"/></svg>
+          <svg class="ico btn-endless-ico"><use href="#i-star"/></svg>
           <span>ENDLESS</span>
         </button>
         <button id="btn-daily" class="btn-secondary" type="button">
-          <svg class="ico"><use href="#i-trophy"/></svg>
+          <svg class="ico btn-daily-ico"><use href="#i-trophy"/></svg>
           <span>DAILY</span>
         </button>
       </div>
@@ -735,6 +799,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <!-- ============ GAME SCRIPT ============ -->
-  <script src="./game.js?v=17.9"></script>
+  <script src="./game.js?v=17.10"></script>
 </body>
 </html>
