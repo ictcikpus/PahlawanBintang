@@ -14,16 +14,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css?v=18.0" />
+  <link rel="stylesheet" href="./style.css?v=19.1" />
 </head>
 <body class="no-select">
 
 <!-- ============================================================
-     SVG SPRITE — Semua ikon game
+     SVG SPRITE
      ============================================================ -->
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
   <defs>
-    <!-- HERO AVATARS -->
     <symbol id="i-robot" viewBox="0 0 40 40">
       <rect x="8" y="12" width="24" height="20" rx="3" fill="currentColor"/>
       <rect x="12" y="4" width="16" height="10" rx="3" fill="currentColor" opacity=".65"/>
@@ -62,8 +61,6 @@
       <circle cx="25" cy="22" r="1.5" fill="#05061a"/>
       <path d="M17 28 Q20 30 23 28" stroke="#05061a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
     </symbol>
-
-    <!-- UI ICONS -->
     <symbol id="i-target" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
       <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -198,8 +195,6 @@
       <path d="M5 12 L10 17 L19 8" stroke="currentColor" stroke-width="3" fill="none"
             stroke-linecap="round" stroke-linejoin="round"/>
     </symbol>
-
-    <!-- CHARACTER PORTRAITS -->
     <symbol id="i-vega" viewBox="0 0 100 100">
       <ellipse cx="50" cy="105" rx="38" ry="45" fill="#00d2ff"/>
       <circle cx="50" cy="42" r="28" fill="#ffd8b0"/>
@@ -291,7 +286,7 @@
   <div class="menu-box">
 
     <div class="menu-topbar">
-      <div class="version-badge">v18.0</div>
+      <div class="version-badge">v19.1</div>
       <button id="btn-audio" class="btn-audio" title="Suara" type="button">
         <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
       </button>
@@ -375,7 +370,7 @@
       <div class="btn-hero-shine"></div>
       <div class="btn-hero-content">
         <svg class="btn-hero-icon" viewBox="0 0 24 24"><use href="#i-play"/></svg>
-        <span class="btn-hero-text">MULAI MISI</span>
+        <span class="btn-hero-text">LANJUTKAN MISI</span>
       </div>
       <div class="btn-hero-glow"></div>
     </button>
@@ -449,6 +444,8 @@
     <div class="menu-footer">
       <span class="footer-dot"></span>
       <span>Hero: <strong id="selected-actor-name">Robot Cyber</strong></span>
+      <span class="footer-dot"></span>
+      <span>Progress: <strong id="saved-level-display">Level 1</strong></span>
       <span class="footer-dot"></span>
     </div>
 
@@ -555,6 +552,9 @@
     </button>
     <button id="btn-pause-leaderboard" class="btn-secondary" type="button">
       <svg class="ico"><use href="#i-trophy"/></svg> <span>PERINGKAT</span>
+    </button>
+    <button id="btn-pause-reset-progress" class="btn-secondary" type="button">
+      <svg class="ico"><use href="#i-refresh"/></svg> <span>RESET PROGRESS</span>
     </button>
     <button id="btn-pause-main-menu" class="btn-danger" type="button">
       <svg class="ico"><use href="#i-home"/></svg> <span>MENU UTAMA</span>
@@ -720,8 +720,8 @@
     <button id="btn-next-level" class="btn-primary" type="button">
       <svg class="ico"><use href="#i-play"/></svg> <span>LEVEL BERIKUTNYA</span>
     </button>
-    <button id="btn-restart" class="btn-secondary" type="button">
-      <svg class="ico"><use href="#i-refresh"/></svg> <span>ULANG</span>
+    <button id="btn-retry-level" class="btn-primary btn-retry" type="button">
+      <svg class="ico"><use href="#i-refresh"/></svg> <span>ULANG LEVEL INI</span>
     </button>
     <button id="btn-menu" class="btn-danger" type="button">
       <svg class="ico"><use href="#i-home"/></svg> <span>MENU UTAMA</span>
@@ -1006,9 +1006,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <!-- ============ MULTIPLAYER ENGINE ============ -->
-<script src="./multiplayer.js?v=18.0"></script>
+<script src="./multiplayer.js?v=19.1"></script>
 
 <!-- ============ GAME SCRIPT ============ -->
-<script src="./game.js?v=18.0"></script>
+<script src="./game.js?v=19.1"></script>
 </body>
 </html>
