@@ -14,9 +14,9 @@ const CACHE_NAME = `pahlawan-bintang-${CACHE_VERSION}`;
 const PRECACHE_ASSETS = [
   './',
   './index.html',
-  './style.css?v=19.0',
+  './style.css?v=19.2',
   './multiplayer.js?v=18.2',
-  './game.js?v=19.0',
+  './game.js?v=19.2',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
