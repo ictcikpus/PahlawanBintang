@@ -2924,3 +2924,64 @@ body.tab-hidden *::after {
     padding: 5px 3px;
   }
 }
+
+/* ============================================================
+   🔥 v20.1 — MP CONNECT SPINNER
+   ============================================================ */
+.mp-status-info {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.mp-status-info::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--neon-cyan);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: mpSpin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+.mp-status-success::before,
+.mp-status-warning::before,
+.mp-status-error::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+.mp-status-success::before {
+  content: '✓';
+  color: #7dff8e;
+  font-weight: 900;
+  text-align: center;
+  line-height: 14px;
+}
+.mp-status-warning::before {
+  content: '⚠';
+  color: #ffb84d;
+  text-align: center;
+  line-height: 14px;
+}
+.mp-status-error::before {
+  content: '✕';
+  color: #ff6ba5;
+  font-weight: 900;
+  text-align: center;
+  line-height: 14px;
+}
+
+@keyframes mpSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Smooth transition saat status berubah */
+.mp-status {
+  transition: background 0.3s, border-color 0.3s, color 0.3s;
+}
