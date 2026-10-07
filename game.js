@@ -1,19 +1,15 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v20.2
-// "Spectator Edition + Sync Pause Fix"
+// PAHLAWAN BINTANG — game.js v20.3
+// "Spectator Isolation Edition"
 // ------------------------------------------------------------
-// v20.0 (semua dipertahankan):
-//   Achievement System, Player Stats, Login Streak, dll
-// v20.1:
-//   MP Status UI feedback (spinner + progress text)
-// v20.2 (baru):
-//   17. Spectator Mode (MP Co-op only)
-//   18. Per-player lives & death countdown (60s)
-//   19. Manual respawn button after countdown
-// v20.2 FIX:
-//   20. Dead player only affects own screen
-//   21. Pause tersinkronisasi ke kedua pemain
-//   22. Input skill guest diperbaiki
+// v20.0-v20.2 (dipertahankan):
+//   Achievement, Player Stats, Login Streak, MP Sync, Spectator
+// v20.3 FIX:
+//   1. Isolasi total state spectator (self vs remote)
+//   2. Overlay spectator pakai display:none saat hidden
+//   3. Pause jadi read-only di guest — tidak looping
+//   4. Game loop tetap jalan untuk host spectator
+//   5. Debug log berlabel untuk diagnosa
 // =============================================================
 
 // =============================================================
@@ -207,7 +203,7 @@ let ACHIEVEMENTS_DATA = { categories: [], achievements: [] };
 
 async function loadAchievementsData() {
   try {
-    const res = await fetch('./achievements.json?v=20.2');
+    const res = await fetch('./achievements.json?v=20.3');
     if (res.ok) {
       ACHIEVEMENTS_DATA = await res.json();
       console.log('🏆 [Ach] Loaded', ACHIEVEMENTS_DATA.achievements.length, 'achievements');
@@ -292,7 +288,6 @@ async function checkAchievements(silent) {
 function showAchievementToast(ach) {
   const container = document.getElementById('achievement-toast-container');
   if (!container) return;
-
   const toast = document.createElement('div');
   toast.className = 'achievement-toast';
   toast.innerHTML = `
@@ -309,9 +304,7 @@ function showAchievementToast(ach) {
     </div>
   `;
   container.appendChild(toast);
-
   try { if (typeof sounds !== 'undefined') sounds.playKillstreak(); } catch(e) {}
-
   setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3800);
 }
 
@@ -351,13 +344,11 @@ function updateAchievementStatsBar() {
   const total = ACHIEVEMENTS_DATA.achievements.length;
   const unlocked = PLAYER_STATS.unlockedAchievements.length;
   const claimed = PLAYER_STATS.claimedAchievements.length;
-
   let totalReward = 0;
   PLAYER_STATS.claimedAchievements.forEach(id => {
     const ach = ACHIEVEMENTS_DATA.achievements.find(a => a.id === id);
     if (ach && ach.reward && ach.reward.coins) totalReward += ach.reward.coins;
   });
-
   const el1 = document.getElementById('ach-unlocked-count'); if (el1) el1.innerText = unlocked;
   const el2 = document.getElementById('ach-total-count'); if (el2) el2.innerText = total;
   const el3 = document.getElementById('ach-total-reward'); if (el3) el3.innerText = totalReward;
@@ -368,14 +359,9 @@ function updateAchievementStatsBar() {
 function renderAchievementGrid(filter) {
   const grid = document.getElementById('achievement-grid');
   if (!grid) return;
-
   let list = ACHIEVEMENTS_DATA.achievements.slice();
   list = list.filter(a => !a.hidden || PLAYER_STATS.unlockedAchievements.includes(a.id));
-
-  if (filter && filter !== 'all') {
-    list = list.filter(a => a.category === filter);
-  }
-
+  if (filter && filter !== 'all') list = list.filter(a => a.category === filter);
   list.sort((a, b) => {
     const ua = PLAYER_STATS.unlockedAchievements.includes(a.id);
     const ub = PLAYER_STATS.unlockedAchievements.includes(b.id);
@@ -387,24 +373,20 @@ function renderAchievementGrid(filter) {
     if (cb && !ca) return 1;
     return 0;
   });
-
   if (list.length === 0) {
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#93a5c4;font-style:italic;">Belum ada pencapaian di kategori ini.</div>';
     return;
   }
-
   grid.innerHTML = list.map(a => {
     const unlocked = PLAYER_STATS.unlockedAchievements.includes(a.id);
     const claimed = PLAYER_STATS.claimedAchievements.includes(a.id);
     const progress = getAchievementProgress(a);
     const progressText = getAchievementProgressText(a);
-
     let cls = 'achievement-card';
     cls += ` rarity-${a.rarity}`;
     if (claimed) cls += ' claimed';
     else if (unlocked) cls += ' unlocked';
     else cls += ' locked';
-
     return `
       <div class="${cls}" data-ach-id="${a.id}">
         <div class="ach-card-icon-wrap">
@@ -421,12 +403,8 @@ function renderAchievementGrid(filter) {
       </div>
     `;
   }).join('');
-
   grid.querySelectorAll('.achievement-card').forEach(card => {
-    card.onclick = () => {
-      const id = card.dataset.achId;
-      openAchievementDetail(id);
-    };
+    card.onclick = () => openAchievementDetail(card.dataset.achId);
   });
 }
 
@@ -434,29 +412,22 @@ function openAchievementDetail(achId) {
   const ach = ACHIEVEMENTS_DATA.achievements.find(a => a.id === achId);
   if (!ach) return;
   currentAchievementDetailId = achId;
-
   const modal = document.getElementById('modal-achievement-detail');
   if (!modal) return;
   modal.classList.remove('hidden');
-
   const unlocked = PLAYER_STATS.unlockedAchievements.includes(ach.id);
   const claimed = PLAYER_STATS.claimedAchievements.includes(ach.id);
-
   const iconWrap = document.getElementById('ach-detail-icon-wrap');
   if (iconWrap) iconWrap.className = 'ach-detail-icon-wrap rarity-' + ach.rarity;
-
   const iconSvg = document.getElementById('ach-detail-icon');
   if (iconSvg) iconSvg.innerHTML = `<use href="#${ach.icon}"/>`;
-
   const titleEl = document.getElementById('ach-detail-title'); if (titleEl) titleEl.innerText = ach.title;
   const descEl = document.getElementById('ach-detail-desc'); if (descEl) descEl.innerText = ach.desc;
-
   const rarityEl = document.getElementById('ach-detail-rarity');
   if (rarityEl) {
     rarityEl.innerText = ach.rarity.toUpperCase();
     rarityEl.className = 'ach-detail-rarity rarity-' + ach.rarity;
   }
-
   const progress = getAchievementProgress(ach);
   const fill = document.getElementById('ach-detail-progress-fill');
   if (fill) {
@@ -465,26 +436,14 @@ function openAchievementDetail(achId) {
   }
   const progressText = document.getElementById('ach-detail-progress-text');
   if (progressText) progressText.innerText = getAchievementProgressText(ach);
-
   const rewardEl = document.getElementById('ach-detail-reward-coins');
   if (rewardEl) rewardEl.innerText = ach.reward.coins;
-
   const claimBtn = document.getElementById('btn-ach-detail-claim');
   const claimText = claimBtn ? claimBtn.querySelector('span') : null;
   if (claimBtn) {
-    if (claimed) {
-      claimBtn.disabled = true;
-      claimBtn.classList.add('claimed');
-      if (claimText) claimText.innerText = 'SUDAH DIKLAIM';
-    } else if (unlocked) {
-      claimBtn.disabled = false;
-      claimBtn.classList.remove('claimed');
-      if (claimText) claimText.innerText = 'KLAIM REWARD';
-    } else {
-      claimBtn.disabled = true;
-      claimBtn.classList.remove('claimed');
-      if (claimText) claimText.innerText = 'BELUM TERBUKA';
-    }
+    if (claimed) { claimBtn.disabled = true; claimBtn.classList.add('claimed'); if (claimText) claimText.innerText = 'SUDAH DIKLAIM'; }
+    else if (unlocked) { claimBtn.disabled = false; claimBtn.classList.remove('claimed'); if (claimText) claimText.innerText = 'KLAIM REWARD'; }
+    else { claimBtn.disabled = true; claimBtn.classList.remove('claimed'); if (claimText) claimText.innerText = 'BELUM TERBUKA'; }
   }
 }
 
@@ -493,31 +452,22 @@ async function claimAchievementReward(achId) {
   if (!ach) return;
   if (!PLAYER_STATS.unlockedAchievements.includes(achId)) return;
   if (PLAYER_STATS.claimedAchievements.includes(achId)) return;
-
   PLAYER_STATS.claimedAchievements.push(achId);
   coins += ach.reward.coins || 0;
   PLAYER_STATS.totalCoinsEarned += ach.reward.coins || 0;
   await DB.set('pahlawan_coins', coins);
   await savePlayerStats();
-
-  updateShopUI();
-  updateHUDValues();
-  updateAchievementStatsBar();
-  updateAchievementBadge();
+  updateShopUI(); updateHUDValues();
+  updateAchievementStatsBar(); updateAchievementBadge();
   renderAchievementGrid(currentAchievementFilter);
-
   try { sounds.playCoin(); sounds.playPowerup(); } catch(e) {}
-
   openAchievementDetail(achId);
-
   const container = document.getElementById('achievement-toast-container');
   if (container) {
     const toast = document.createElement('div');
     toast.className = 'achievement-toast';
     toast.innerHTML = `
-      <div class="toast-icon-wrap">
-        <svg viewBox="0 0 24 24"><use href="#i-coin"/></svg>
-      </div>
+      <div class="toast-icon-wrap"><svg viewBox="0 0 24 24"><use href="#i-coin"/></svg></div>
       <div class="toast-content">
         <div class="toast-label">REWARD DIKLAIM</div>
         <div class="toast-title">${escapeHtml(ach.title)}</div>
@@ -804,7 +754,6 @@ class SoundEngine {
       o.start(this.ctx.currentTime+i*0.08); o.stop(this.ctx.currentTime+i*0.08+0.2);
     });
   }
-
   _playTone(freq, dur, type='square', vol=0.05, detune=0) {
     if (!this.ctx) return;
     const o=this.ctx.createOscillator(), g=this.ctx.createGain();
@@ -846,27 +795,22 @@ class SoundEngine {
     g.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+0.05);
     s.connect(f); f.connect(g); g.connect(this.ctx.destination); s.start();
   }
-
   startBGM() {
     const themeId = (currentTheme && currentTheme.id) || 'cosmic';
     if (this.currentBgmTheme === themeId && this.bgmTimer) return;
     this.stopBGM();
     this.currentBgmTheme = themeId;
-
     const cfg = THEME_BGM[themeId] || THEME_BGM.cosmic;
     const bpm = cfg.bpm;
     const stepMs = (60 / bpm / 4) * 1000;
     const root = cfg.root;
     const scale = cfg.scale;
-
     const chordDegrees = [0, 2, 4, 5];
-    const chordNotes = chordDegrees.map(deg => {
-      return [0, 2, 4, 6].map(off => {
-        const idx = (deg + off) % scale.length;
-        const octave = Math.floor((deg + off) / scale.length);
-        return root * Math.pow(2, (scale[idx] + 12 * octave) / 12);
-      });
-    });
+    const chordNotes = chordDegrees.map(deg => [0, 2, 4, 6].map(off => {
+      const idx = (deg + off) % scale.length;
+      const octave = Math.floor((deg + off) / scale.length);
+      return root * Math.pow(2, (scale[idx] + 12 * octave) / 12);
+    }));
     const bassNotes = chordDegrees.map(deg => {
       const idx = deg % scale.length;
       const octave = Math.floor(deg / scale.length);
@@ -878,21 +822,14 @@ class SoundEngine {
       [4, null, 3, null, 2, null, 4, null, 3, null, 1, null, 2, null, 3, 4],
       [1, null, 2, null, 3, null, 4, null, 3, null, 5, null, 4, null, 2, 1]
     ];
-
     let step = 0;
     this.bgmTimer = setInterval(() => {
       if (this.isMuted || !isGameRunning || isGamePaused) { step = 0; return; }
       this.init(); if (!this.ctx) return;
       const bar = Math.floor(step / 16) % 4;
       const beat = step % 16;
-
-      if (beat % 4 === 0) {
-        this._playTone(bassNotes[bar], 0.22, cfg.bassWave, 0.09 * cfg.energy);
-      }
-      if (beat % 2 === 0) {
-        const chordNote = chordNotes[bar][(beat / 2) % 4];
-        this._playTone(chordNote, 0.14, cfg.waveform, 0.028 * cfg.energy);
-      }
+      if (beat % 4 === 0) this._playTone(bassNotes[bar], 0.22, cfg.bassWave, 0.09 * cfg.energy);
+      if (beat % 2 === 0) this._playTone(chordNotes[bar][(beat / 2) % 4], 0.14, cfg.waveform, 0.028 * cfg.energy);
       const melIdx = melodyPatterns[bar][beat];
       if (melIdx !== null && melIdx !== undefined) {
         const idx = melIdx % scale.length;
@@ -903,7 +840,6 @@ class SoundEngine {
       if (beat === 0 || beat === 8) this._playKick();
       if (beat === 4 || beat === 12) this._playSnare();
       if (beat % 2 === 1 && cfg.energy > 1.0) this._playHiHat();
-
       step++;
       this.bgmStep = step;
     }, stepMs);
@@ -1095,7 +1031,7 @@ let mpRemoteShootCooldown = 0;
 let mpRemoteBulletId = 0;
 let mpRemoteHeroType = 'robot';
 
-// 🔥 v20.2 FIX — Tambahkan flag pause/resume
+// 🔥 v20.3 — mpGuestInput dengan flag lengkap
 let mpGuestInput = {
   left: false, right: false, shoot: false,
   skill1: false, skill2: false, skill3: false,
@@ -1131,15 +1067,26 @@ let mpLastAppliedLevel = -1;
 let mpEffectQueue = [];
 let mpComboIndicatorState = { text: null, active: false, shownAt: 0 };
 
-// 🔥 v20.2 — Spectator Mode State
-let mpSpectatorMode = false;
+// 🔥 v20.3 — Spectator State (ISOLATED)
+// SELF spectator = only set by local death, never by remote state
+let mpSpectatorMode = false;         // true = THIS player is spectator (local death)
 let mpSpectatorReady = false;
 let mpSpectatorTimer = 0;
 let mpSpectatorTickInterval = null;
 
-let mpGuestSpectator = false;
+// REMOTE spectator = only for rendering partner
+let mpRemoteHostSpectator = false;   // true = host is spectator (guest's POV)
+let mpRemoteGuestSpectator = false;  // true = guest is spectator (host's POV)
+
+// Guest lives tracking (synced from host)
 let mpGuestLives = 3;
-let mpRemoteHostSpectator = false;
+
+// 🔥 v20.3 — Pause Sync (SEPARATE from isGamePaused)
+// isGamePaused = local execution pause (this device)
+// mpRemotePaused = partner requested pause (read-only overlay)
+let mpRemotePaused = false;
+let mpLocalPauseRequested = false;   // guest asked host to pause
+let mpPauseState = 'none';           // 'none' | 'paused-local' | 'paused-remote'
 
 const MP_SPECTATOR_WAIT_SECONDS = 60;
 
@@ -1157,15 +1104,10 @@ function bootstrapUI() {
       document.body.classList.add('low-end');
       console.log('🐢 [Perf] Low-end device — simplified effects enabled');
     }
-
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        document.body.classList.add('tab-hidden');
-      } else {
-        document.body.classList.remove('tab-hidden');
-      }
+      if (document.hidden) document.body.classList.add('tab-hidden');
+      else document.body.classList.remove('tab-hidden');
     });
-
     setupEventListeners();
     console.log('✅ [Boot] Event listeners attached');
   } catch (e) {
@@ -1191,7 +1133,6 @@ window.addEventListener('load', async () => {
     playerLoadout = await getLoadout();
     const todayKey = getTodayKey();
     reviveQuota = await getReviveQuota(todayKey);
-
     await loadPlayerStats();
     await loadAchievementsData();
     await trackLoginStreak();
@@ -1215,11 +1156,9 @@ window.addEventListener('load', async () => {
     updateShopUI();
     updateAudioButtonUI();
     updateReviveQuotaUI();
-
     const savedLvl = await getSavedLevel();
     const slEl = document.getElementById('saved-level-display');
     if (slEl) slEl.innerText = `Level ${savedLvl}`;
-
     if (!document.getElementById('screen-flash-overlay')) {
       const fl = document.createElement('div');
       fl.id = 'screen-flash-overlay';
@@ -1233,14 +1172,10 @@ window.addEventListener('load', async () => {
     }
   } catch (e) { console.error('❌ [Boot] UI init error:', e); }
 
-  try {
-    await loadGameData();
-  } catch (e) {
-    levelsData = generate30Levels();
-  }
+  try { await loadGameData(); } catch (e) { levelsData = generate30Levels(); }
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=20.2').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=20.3').catch(err => console.log('SW Fail:', err));
   }
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
@@ -1261,16 +1196,11 @@ async function trackLoginStreak() {
   const todayKey = getTodayKey();
   const last = PLAYER_STATS.lastLoginDate;
   if (last === todayKey) return;
-
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yKey = `${yesterday.getFullYear()}${String(yesterday.getMonth()+1).padStart(2,'0')}${String(yesterday.getDate()).padStart(2,'0')}`;
-
-  if (last === yKey) {
-    PLAYER_STATS.loginStreak = (PLAYER_STATS.loginStreak || 0) + 1;
-  } else {
-    PLAYER_STATS.loginStreak = 1;
-  }
+  if (last === yKey) PLAYER_STATS.loginStreak = (PLAYER_STATS.loginStreak || 0) + 1;
+  else PLAYER_STATS.loginStreak = 1;
   PLAYER_STATS.lastLoginDate = todayKey;
   await savePlayerStats();
   console.log('📅 [Login] Streak:', PLAYER_STATS.loginStreak);
@@ -1294,17 +1224,14 @@ function resizeCanvas() {
   if (!canvas || !ctx) return;
   const cssW = Math.max(1, window.innerWidth);
   const cssH = Math.max(1, Math.floor(window.visualViewport ? window.visualViewport.height : window.innerHeight));
-
   canvas.width  = Math.floor(cssW * DPR);
   canvas.height = Math.floor(cssH * DPR);
   canvas.style.width  = cssW + 'px';
   canvas.style.height = cssH + 'px';
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-
   const prevW = VIRTUAL_WIDTH;
   VIRTUAL_WIDTH  = cssW;
   VIRTUAL_HEIGHT = cssH;
-
   if (playerX === 0 || playerX > VIRTUAL_WIDTH) {
     playerX = VIRTUAL_WIDTH / 2;
     playerTargetX = playerX;
@@ -1350,13 +1277,11 @@ function initStarfield() {
   stars = [];
   starLayers = [];
   const colors = currentTheme.stars || ['#ffffff'];
-
   const layerConfigs = [
     { count: 55, speed: 0.3, sizeMin: 0.4, sizeMax: 1.0, alphaBase: 0.35 },
     { count: 40, speed: 0.8, sizeMin: 0.7, sizeMax: 1.6, alphaBase: 0.65 },
     { count: 25, speed: 1.6, sizeMin: 1.0, sizeMax: 2.4, alphaBase: 1.0 }
   ];
-
   layerConfigs.forEach((cfg) => {
     const layer = [];
     for (let i = 0; i < cfg.count; i++) {
@@ -1373,7 +1298,6 @@ function initStarfield() {
     }
     starLayers.push({ config: cfg, stars: layer });
   });
-
   stars = [];
   starLayers.forEach(l => stars.push(...l.stars));
 }
@@ -1389,7 +1313,7 @@ function recolorStars() {
 
 async function loadGameData() {
   try {
-    const [rl] = await Promise.all([fetch('./levels.json?v=20.2')]);
+    const [rl] = await Promise.all([fetch('./levels.json?v=20.3')]);
     if (rl.ok) levelsData = await rl.json();
   } catch (err) { levelsData = generate30Levels(); }
 }
@@ -1482,18 +1406,45 @@ function triggerHitStop(frames) {
 }
 
 // =============================================================
-// 🔥 v20.2 — SPECTATOR MODE (with FIX)
+// 🔥 v20.3 — SPECTATOR MODE (ISOLATED)
 // =============================================================
-function startSpectatorMode() {
-  if (mpSpectatorMode) return; // FIX: jangan dobel
-  console.log('👻 [MP] Entering spectator mode');
+
+// Overlay helper — mengelola display + pointer-events
+function setSpectatorOverlayVisible(visible) {
+  const overlay = document.getElementById('mp-spectator-overlay');
+  if (!overlay) return;
+  if (visible) {
+    overlay.classList.remove('hidden');
+    overlay.style.display = 'flex';
+    overlay.style.pointerEvents = 'auto';
+  } else {
+    overlay.classList.add('hidden');
+    overlay.style.display = 'none';
+    overlay.style.pointerEvents = 'none';
+  }
+}
+
+// Force semua overlay non-aktif tidak menyerap pointer
+function ensureOverlaysInert() {
+  const ids = ['mp-spectator-overlay'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.classList.contains('hidden')) {
+      el.style.display = 'none';
+      el.style.pointerEvents = 'none';
+    }
+  });
+}
+
+// Self spectator — HANYA dipanggil dari handlePlayerHit() lokal atau dari host memerintahkan guest
+function startSelfSpectatorMode(reason) {
+  if (mpSpectatorMode) return;
+  console.log('👻 [MP] SELF spectator START. reason:', reason || '-', '| role:', mpRole);
   mpSpectatorMode = true;
   mpSpectatorReady = false;
   mpSpectatorTimer = MP_SPECTATOR_WAIT_SECONDS;
-
-  const overlay = document.getElementById('mp-spectator-overlay');
-  if (overlay) overlay.classList.remove('hidden');
-
+  setSpectatorOverlayVisible(true);
   updateSpectatorUI();
 
   if (mpSpectatorTickInterval) clearInterval(mpSpectatorTickInterval);
@@ -1519,16 +1470,15 @@ function startSpectatorMode() {
   if (mpRole === 'guest') {
     mpGuestInput.spectator = true;
   }
-
   if (mpRole === 'host') {
     checkBothDead();
   }
 }
 
-// 🔥 v20.2 FIX — Fungsi baru untuk keluar dari spectator
-function endSpectatorMode() {
+// Self spectator — keluar
+function endSelfSpectatorMode() {
   if (!mpSpectatorMode) return;
-  console.log('👻 [MP] Exiting spectator mode');
+  console.log('👻 [MP] SELF spectator END');
   mpSpectatorMode = false;
   mpSpectatorReady = false;
   mpSpectatorTimer = 0;
@@ -1536,9 +1486,21 @@ function endSpectatorMode() {
     clearInterval(mpSpectatorTickInterval);
     mpSpectatorTickInterval = null;
   }
-  const overlay = document.getElementById('mp-spectator-overlay');
-  if (overlay) overlay.classList.add('hidden');
+  setSpectatorOverlayVisible(false);
   updateSpectatorUI();
+}
+
+// Remote spectator — HANYA untuk rendering partner
+function applyRemoteHostSpectator(bool) {
+  if (mpRemoteHostSpectator === !!bool) return;
+  mpRemoteHostSpectator = !!bool;
+  console.log('👻 [MP] Remote HOST spectator:', mpRemoteHostSpectator);
+}
+
+function applyRemoteGuestSpectator(bool) {
+  if (mpRemoteGuestSpectator === !!bool) return;
+  mpRemoteGuestSpectator = !!bool;
+  console.log('👻 [MP] Remote GUEST spectator:', mpRemoteGuestSpectator);
 }
 
 function updateSpectatorUI() {
@@ -1546,7 +1508,6 @@ function updateSpectatorUI() {
   const hint = document.getElementById('spectator-hint');
   const btn = document.getElementById('btn-spectator-respawn');
   const prog = document.getElementById('spectator-progress-fill');
-
   if (cd) {
     if (mpSpectatorReady) {
       cd.innerText = '✓';
@@ -1571,12 +1532,10 @@ function updateSpectatorUI() {
   }
 }
 
-// 🔥 v20.2 FIX — respawnFromSpectator menggunakan endSpectatorMode
 function respawnFromSpectator() {
   if (!mpSpectatorMode || !mpSpectatorReady) return;
-  console.log('👻 [MP] Respawning from spectator');
-
-  endSpectatorMode();
+  console.log('👻 [MP] Respawning from spectator (self)');
+  endSelfSpectatorMode();
 
   lives = 1;
   playerHitPoints = PLAYER_MAX_HIT_POINTS;
@@ -1584,12 +1543,10 @@ function respawnFromSpectator() {
   isReviveInvuln = true;
   reviveInvulnTimer = 120;
   updateLivesDisplay();
-
   try { sounds.playRespawn(); } catch(e) {}
 
   if (mpRole === 'guest') {
     mpGuestInput.respawn = true;
-    mpGuestSpectator = false;
   } else {
     playerX = VIRTUAL_WIDTH * 0.25;
     playerTargetX = playerX;
@@ -1601,7 +1558,8 @@ function respawnFromSpectator() {
 function checkBothDead() {
   if (!mpActive || gameMode !== 'coop') return;
   if (mpRole !== 'host') return;
-  if (mpSpectatorMode && mpGuestSpectator) {
+  // Host knows both statuses: mpSpectatorMode (self), mpRemoteGuestSpectator (from state)
+  if (mpSpectatorMode && mpRemoteGuestSpectator) {
     console.log('💀 [MP] Both players dead — game over');
     setTimeout(() => mpEndGame(false, 'KEDUA PEMAIN MATI'), 500);
   }
@@ -1663,7 +1621,6 @@ function setupEventListeners() {
     $('modal-achievement-detail').classList.add('hidden');
     currentAchievementDetailId = null;
   };
-
   const bAchClaim = $('btn-ach-detail-claim');
   if (bAchClaim) bAchClaim.onclick = () => {
     if (currentAchievementDetailId) claimAchievementReward(currentAchievementDetailId);
@@ -1682,7 +1639,6 @@ function setupEventListeners() {
       goToMainMenu();
     }
   };
-
   const bPMain = $('btn-pause-main-menu');
   if (bPMain) bPMain.onclick = () => { $('modal-pause').classList.add('hidden'); goToMainMenu(); };
 
@@ -1750,12 +1706,12 @@ function setupEventListeners() {
     };
     canvas.addEventListener('pointerdown', (e) => {
       if (!isGameRunning || isGamePaused) return;
-      if (mpSpectatorMode) return;
+      if (mpSpectatorMode) return;  // HANYA skip jika SELF spectator
       if (e.pointerType === 'touch' || e.buttons > 0) setTargetFromClientX(e.clientX);
     });
     canvas.addEventListener('pointermove', (e) => {
       if (!isGameRunning || isGamePaused) return;
-      if (mpSpectatorMode) return;
+      if (mpSpectatorMode) return;  // HANYA skip jika SELF spectator
       if (e.buttons > 0 || e.pointerType === 'touch') setTargetFromClientX(e.clientX);
     });
   }
@@ -1770,7 +1726,6 @@ function setupEventListeners() {
     lives = 3; playerHitPoints = PLAYER_MAX_HIT_POINTS; playerHitFlash = 0; reviveUsedThisRun = false;
     updateLivesDisplay(); startCurrentLevel();
   };
-
   const bRetry = $('btn-retry-level');
   if (bRetry) bRetry.onclick = () => {
     $('modal-result').classList.add('hidden');
@@ -1785,7 +1740,6 @@ function setupEventListeners() {
     updateLivesDisplay();
     startCurrentLevel();
   };
-
   const bMenu = $('btn-menu');
   if (bMenu) bMenu.onclick = () => { $('modal-result').classList.add('hidden'); goToMainMenu(); };
 
@@ -1840,8 +1794,7 @@ function setupEventListeners() {
           dropBossLoot(m.x, m.y, parseInt(m.type.replace('boss','')) || 5);
           total += (ENEMY_SCORE_TABLE[m.type] || 150) * combo;
           levelKills++; handleKillStreak();
-          PLAYER_STATS.totalKills++;
-          PLAYER_STATS.totalBossKills++;
+          PLAYER_STATS.totalKills++; PLAYER_STATS.totalBossKills++;
           monsters.splice(i, 1);
           monsters.forEach(mn => createBurstParticles3D(mn.x, mn.y, mn.color, 20));
           monsters = [];
@@ -2006,32 +1959,74 @@ function buyUpgrade(type) {
   sounds.playCoin(); updateShopUI();
 }
 
-// 🔥 v20.2 FIX — Pause disinkronkan ke partner
+// 🔥 v20.3 — Pause lokal (host atau single player)
 function pauseGame() {
   if (!isGameRunning) return;
   if (mpSpectatorMode) return;
+
   if (mpActive && mpRole === 'guest') {
-    // Guest: kirim request pause ke host
+    // Guest: kirim request ke host, TIDAK ubah isGamePaused lokal
+    console.log('⏸️ [MP] Guest requests pause');
     mpGuestInput.pause = true;
+    mpPauseState = 'paused-local';
     return;
   }
+
+  // Host atau single player
+  console.log('⏸️ [MP] LOCAL pause activated');
   isGamePaused = true;
+  mpPauseState = 'paused-local';
   sounds.stopBGM();
   const p = document.getElementById('modal-pause');
-  if (p) p.classList.remove('hidden');
+  if (p) {
+    // Set modal jadi interaktif
+    p.style.pointerEvents = 'auto';
+    p.classList.remove('hidden');
+  }
 }
-// 🔥 v20.2 FIX — Resume disinkronkan ke partner
+
 function resumeGame() {
   if (mpActive && mpRole === 'guest') {
+    console.log('▶️ [MP] Guest requests resume');
     mpGuestInput.resume = true;
+    mpPauseState = 'none';
     return;
   }
+  console.log('▶️ [MP] LOCAL resume activated');
   isGamePaused = false;
+  mpPauseState = 'none';
   sounds.startBGM();
   const p = document.getElementById('modal-pause');
   if (p) p.classList.add('hidden');
   requestAnimationFrame(gameLoop);
 }
+
+// 🔥 v20.3 — Read-only pause display untuk guest saat host pause
+function showRemotePauseOverlay() {
+  const p = document.getElementById('modal-pause');
+  if (!p) return;
+  // Update text untuk menandai ini dari host
+  const title = p.querySelector('h2, .modal-title');
+  if (title) title.innerText = 'PARTNER PAUSED';
+  p.style.pointerEvents = 'none';  // tidak bisa diklik
+  p.classList.remove('hidden');
+  // Sembunyikan tombol resume/main menu agar tidak bisa interaksi
+  p.querySelectorAll('button').forEach(b => {
+    if (b.id !== 'btn-pause-leaderboard' && b.id !== 'btn-pause-change-hero') {
+      b.style.display = 'none';
+    }
+  });
+}
+
+function hideRemotePauseOverlay() {
+  const p = document.getElementById('modal-pause');
+  if (!p) return;
+  p.style.pointerEvents = 'auto';
+  p.classList.add('hidden');
+  // Restore buttons
+  p.querySelectorAll('button').forEach(b => { b.style.display = ''; });
+}
+
 function requestFullscreenAndLandscape() {
   try {
     const doc = document.documentElement, body = document.body;
@@ -2079,18 +2074,17 @@ function goToMainMenu() {
   mpLastAppliedPhase = null;
   mpLastAppliedLevel = -1;
   mpEffectQueue = [];
-
   // Reset spectator
-  mpSpectatorMode = false;
-  mpSpectatorReady = false;
-  mpSpectatorTimer = 0;
-  if (mpSpectatorTickInterval) { clearInterval(mpSpectatorTickInterval); mpSpectatorTickInterval = null; }
-  mpGuestSpectator = false;
-  mpGuestLives = 3;
+  endSelfSpectatorMode();
   mpRemoteHostSpectator = false;
-  const specOverlay = document.getElementById('mp-spectator-overlay');
-  if (specOverlay) specOverlay.classList.add('hidden');
-
+  mpRemoteGuestSpectator = false;
+  mpGuestLives = 3;
+  setSpectatorOverlayVisible(false);
+  // Reset pause
+  mpRemotePaused = false;
+  mpLocalPauseRequested = false;
+  mpPauseState = 'none';
+  hideRemotePauseOverlay();
   const hud = document.getElementById('hud-overlay'); if (hud) hud.classList.add('hidden');
   const menu = document.getElementById('screen-main-menu'); if (menu) menu.classList.remove('hidden');
   sounds.stopBGM();
@@ -2128,21 +2122,18 @@ function mpShowLobby(role, roomCode, mode) {
   document.getElementById('modal-mp-join').classList.add('hidden');
   const lobby = document.getElementById('modal-mp-lobby');
   if (lobby) lobby.classList.remove('hidden');
-
   const title = document.getElementById('mp-lobby-title');
   if (title) title.innerText = role === 'host' ? 'ROOM DIBUAT' : 'MENUNGGU HOST';
   const codeEl = document.getElementById('mp-room-code');
   if (codeEl) codeEl.innerText = roomCode;
   const modeEl = document.getElementById('mp-lobby-mode');
   if (modeEl) modeEl.innerText = (mode || 'coop').toUpperCase();
-
   const hostNameEl = document.getElementById('mp-host-name');
   const hostStatusEl = document.getElementById('mp-host-status');
   const guestNameEl = document.getElementById('mp-guest-name');
   const guestStatusEl = document.getElementById('mp-guest-status');
   const slotHost = document.getElementById('mp-slot-host');
   const slotGuest = document.getElementById('mp-slot-guest');
-
   if (role === 'host') {
     if (hostNameEl) hostNameEl.innerText = playerName + ' (Kamu)';
     if (hostStatusEl) { hostStatusEl.innerText = 'ONLINE'; hostStatusEl.className = 'mp-slot-status online'; }
@@ -2158,7 +2149,6 @@ function mpShowLobby(role, roomCode, mode) {
     if (guestStatusEl) { guestStatusEl.innerText = 'ONLINE'; guestStatusEl.className = 'mp-slot-status online'; }
     if (slotGuest) slotGuest.classList.add('occupied', 'ready');
   }
-
   const startBtn = document.getElementById('btn-mp-start-game');
   if (startBtn) startBtn.disabled = true;
   mpSetStatus('mp-connect-status', 'Menunggu pemain lain...', 'info');
@@ -2184,7 +2174,6 @@ async function mpJoinRoom() {
   const input = document.getElementById('mp-code-input');
   const code = (input && input.value.trim().toUpperCase()) || '';
   if (code.length !== 4) { mpSetStatus('mp-join-status', 'Kode harus 4 huruf', 'error'); return; }
-
   mpSetStatus('mp-join-status', 'Menghubungkan...', 'info');
   try {
     const nameInput = document.getElementById('player-name-input');
@@ -2223,7 +2212,6 @@ function mpSetupCallbacks() {
     mpSetStatus('mp-connect-status', '✅ Terhubung! ' + (data.peerName || ''), 'success');
     const startBtn = document.getElementById('btn-mp-start-game');
     if (startBtn && MP.isHost) startBtn.disabled = false;
-
     const guestName = document.getElementById('mp-guest-name');
     if (guestName && data.peerName) guestName.innerText = data.peerName;
     const guestStatus = document.getElementById('mp-guest-status');
@@ -2235,14 +2223,10 @@ function mpSetupCallbacks() {
   MP.onDisconnect((who) => {
     console.log('❌ [MP] Disconnected:', who);
     mpSetStatus('mp-connect-status', '⚠️ Pemain lain terputus', 'warning');
-    if (isGameRunning && gameMode === 'coop') {
-      mpEndGame(false, 'Pemain lain terputus');
-    }
+    if (isGameRunning && gameMode === 'coop') mpEndGame(false, 'Pemain lain terputus');
   });
 
-  MP.onError((msg) => {
-    mpSetStatus('mp-connect-status', '⚠️ ' + msg, 'error');
-  });
+  MP.onError((msg) => mpSetStatus('mp-connect-status', '⚠️ ' + msg, 'error'));
 
   MP.onStatusChange((state) => {
     console.log('🔄 [MP] State:', state);
@@ -2262,39 +2246,40 @@ function mpSetupCallbacks() {
     }
   });
 
+  // 🔥 v20.3 — Input handler di HOST
   MP.onInput((input) => {
-    // 🔥 v20.2 FIX — Handle guest pause/resume request
-    if (input && input.pause) {
-      console.log('⏸️ [MP] Guest requested pause');
-      if (!isGamePaused && isGameRunning && !mpSpectatorMode) {
-        pauseGame();
+    if (!input) return;
+
+    // Handle pause request dari guest (HANYA host yang eksekusi)
+    if (input.pause) {
+      console.log('⏸️ [MP] Host received PAUSE request from guest');
+      if (!isGamePaused && isGameRunning) {
+        isGamePaused = true;
+        mpPauseState = 'paused-local';
+        sounds.stopBGM();
+        const p = document.getElementById('modal-pause');
+        if (p) { p.style.pointerEvents = 'auto'; p.classList.remove('hidden'); }
       }
       return;
     }
-    if (input && input.resume) {
-      console.log('▶️ [MP] Guest requested resume');
+    if (input.resume) {
+      console.log('▶️ [MP] Host received RESUME request from guest');
       if (isGamePaused) {
-        resumeGame();
+        isGamePaused = false;
+        mpPauseState = 'none';
+        sounds.startBGM();
+        const p = document.getElementById('modal-pause');
+        if (p) p.classList.add('hidden');
+        requestAnimationFrame(gameLoop);
       }
       return;
     }
 
-    mpGuestInput = input;
-    if (input && input.heroType && input.heroType !== mpRemoteHeroType) {
-      mpRemoteHeroType = input.heroType;
-      console.log('🎨 [MP] Guest hero type:', mpRemoteHeroType);
-    }
-    if (input && input.spectator !== undefined) {
-      const wasSpec = mpGuestSpectator;
-      mpGuestSpectator = input.spectator;
-      if (wasSpec !== mpGuestSpectator) {
-        console.log('👻 [MP] Guest spectator:', mpGuestSpectator);
-        if (mpGuestSpectator) checkBothDead();
-      }
-    }
-    if (input && input.respawn) {
-      console.log('👻 [MP] Guest respawning');
-      mpGuestSpectator = false;
+    // Handle respawn dari guest
+    if (input.respawn) {
+      console.log('👻 [MP] Host received RESPAWN from guest');
+      mpRemoteGuestSpectator = false;
+      mpGuestSpectator_setLocal(false);  // internal helper
       mpGuestHP = PLAYER_MAX_HIT_POINTS;
       mpGuestAlive = true;
       mpGuestX = VIRTUAL_WIDTH * 0.75;
@@ -2303,30 +2288,44 @@ function mpSetupCallbacks() {
       spawnFloatingText(mpGuestX, VIRTUAL_HEIGHT - 70 * GAME_SCALE, 'PARTNER REVIVED!', '#39ff14');
       triggerScreenFlash(0.4);
     }
+
+    // Handle spectator state dari guest
+    if (input.spectator !== undefined) {
+      const newGuestSpec = !!input.spectator;
+      if (newGuestSpec !== mpRemoteGuestSpectator) {
+        console.log('👻 [MP] Host received GUEST spectator:', newGuestSpec);
+        mpRemoteGuestSpectator = newGuestSpec;
+        if (mpRemoteGuestSpectator) checkBothDead();
+      }
+    }
+
+    mpGuestInput = input;
+    if (input.heroType && input.heroType !== mpRemoteHeroType) {
+      mpRemoteHeroType = input.heroType;
+      console.log('🎨 [MP] Guest hero type:', mpRemoteHeroType);
+    }
   });
 
-  MP.onState((state) => {
-    mpApplyHostState(state);
-  });
+  MP.onState((state) => mpApplyHostState(state));
 
   MP.onStart((data) => {
     console.log('▶️ [MP] Start signal received');
     mpActuallyStartCoop();
   });
 
-  MP.onRemoteReady((ready) => {
-    console.log('🎯 [MP] Remote ready:', ready);
-  });
+  MP.onRemoteReady((ready) => console.log('🎯 [MP] Remote ready:', ready));
 }
+
+// 🔥 v20.3 — helper untuk guest agar flag konsisten
+let mpGuestSpectator_local = false;
+function mpGuestSpectator_setLocal(v) { mpGuestSpectator_local = !!v; }
 
 function mpHostSendState() {
   if (!mpActive || mpRole !== 'host') return;
   if (!MP || !MP.isConnected) return;
-
   const W = VIRTUAL_WIDTH || 1;
   const H = VIRTUAL_HEIGHT || 1;
   const baseSize = Math.min(W, H);
-
   const effectsToSend = mpEffectQueue.splice(0, mpEffectQueue.length);
 
   let comboIndicatorText = null;
@@ -2355,13 +2354,14 @@ function mpHostSendState() {
     guestCombo: mpGuestCombo, guestAlive: mpGuestAlive,
     guestLives: mpGuestLives,
     hostHP: playerHitPoints, hostScore: score,
-    hostSpectator: mpSpectatorMode,
-    guestSpectator: mpGuestSpectator,
+    hostSpectator: mpSpectatorMode,          // host own spectator state
+    guestSpectator: mpRemoteGuestSpectator,  // guest spectator state (from guest input)
     totalScore: score + mpGuestScore,
     level: currentLevelIndex + 1,
     targetKills: (levelsData[currentLevelIndex] || levelsData[0]).targetKills,
     totalKills: levelKills,
-    gameRunning: isGameRunning, gamePaused: isGamePaused,
+    gameRunning: isGameRunning,
+    gamePaused: isGamePaused,  // 🔥 host broadcast pause state
     theme: currentTheme.id,
     flow: {
       phase: mpFlow.phase,
@@ -2371,12 +2371,8 @@ function mpHostSendState() {
       themeId: currentTheme.id
     },
     effects: effectsToSend,
-    comboIndicator: {
-      text: comboIndicatorText,
-      active: comboBoostLastNotified > 0
-    }
+    comboIndicator: { text: comboIndicatorText, active: comboBoostLastNotified > 0 }
   };
-
   MP.sendState(state);
 }
 
@@ -2422,49 +2418,57 @@ function mpApplyHostState(state) {
   if (state.guestXNorm !== undefined) mpGuestX = state.guestXNorm * W;
   if (state.guestHP !== undefined) {
     mpGuestHP = state.guestHP;
-    if (!mpSpectatorMode) playerHitPoints = state.guestHP;
+    // Guest: sinkronkan HP lokal (host authoritative)
+    if (mpRole === 'guest' && !mpSpectatorMode) {
+      playerHitPoints = state.guestHP;
+    }
   }
   if (state.guestScore !== undefined) mpGuestScore = state.guestScore;
   if (state.guestCombo !== undefined) mpGuestCombo = state.guestCombo;
   if (state.guestAlive !== undefined) mpGuestAlive = state.guestAlive;
-
   if (state.guestLives !== undefined) {
-    lives = state.guestLives;
     mpGuestLives = state.guestLives;
-    updateLivesDisplay();
+    if (mpRole === 'guest') { lives = state.guestLives; updateLivesDisplay(); }
   }
 
-  if (state.hostSpectator !== undefined) {
-    mpRemoteHostSpectator = state.hostSpectator;
+  // 🔥 v20.3 — Remote spectator (RENDER ONLY)
+  if (state.hostSpectator !== undefined && mpRole === 'guest') {
+    applyRemoteHostSpectator(state.hostSpectator);
+  }
+  if (state.guestSpectator !== undefined && mpRole === 'host') {
+    applyRemoteGuestSpectator(state.guestSpectator);
+    if (state.guestSpectator) checkBothDead();
   }
 
-  // 🔥 v20.2 FIX — Guest masuk/keluar spectator mode sesuai state host
-  if (state.guestSpectator !== undefined && mpRole === 'guest') {
-    const newSpec = state.guestSpectator;
-    if (newSpec !== mpGuestSpectator) {
-      console.log('👻 [MP] Guest spectator state:', mpGuestSpectator, '→', newSpec);
-      mpGuestSpectator = newSpec;
-      if (mpGuestSpectator && !mpSpectatorMode) {
-        startSpectatorMode();
-      } else if (!mpGuestSpectator && mpSpectatorMode) {
-        endSpectatorMode();
-      }
+  // 🔥 v20.3 — Guest own spectator: driven oleh host state (bukan input sendiri)
+  if (mpRole === 'guest' && state.guestSpectator !== undefined) {
+    const shouldBeSpectator = !!state.guestSpectator;
+    if (shouldBeSpectator && !mpSpectatorMode) {
+      console.log('👻 [MP] Host says: guest is spectator. Entering.');
+      startSelfSpectatorMode('host-command');
+    } else if (!shouldBeSpectator && mpSpectatorMode) {
+      console.log('👻 [MP] Host says: guest is alive. Exiting spectator.');
+      endSelfSpectatorMode();
     }
   }
 
-  // 🔥 v20.2 FIX — Sync pause state dari host ke guest
-  if (state.gamePaused !== undefined && mpRole === 'guest') {
+  // 🔥 v20.3 — Pause sync: guest reads host's pause state (READ-ONLY)
+  if (mpRole === 'guest' && state.gamePaused !== undefined) {
     const hostPaused = !!state.gamePaused && state.gameRunning !== false;
     if (hostPaused && !isGamePaused) {
+      console.log('⏸️ [MP] Guest: host paused — showing read-only overlay');
       isGamePaused = true;
+      mpRemotePaused = true;
+      mpPauseState = 'paused-remote';
       sounds.stopBGM();
-      const p = document.getElementById('modal-pause');
-      if (p) p.classList.remove('hidden');
-    } else if (!hostPaused && isGamePaused && isGameRunning) {
+      showRemotePauseOverlay();
+    } else if (!hostPaused && isGamePaused && mpRemotePaused) {
+      console.log('▶️ [MP] Guest: host resumed');
       isGamePaused = false;
+      mpRemotePaused = false;
+      mpPauseState = 'none';
       sounds.startBGM();
-      const p = document.getElementById('modal-pause');
-      if (p) p.classList.add('hidden');
+      hideRemotePauseOverlay();
       requestAnimationFrame(gameLoop);
     }
   }
@@ -2507,20 +2511,14 @@ function mpApplyHostState(state) {
     const newLevel = state.flow.levelIndex;
     const phaseChanged = (newPhase !== mpLastAppliedPhase);
     const levelChanged = (newLevel !== mpLastAppliedLevel);
-
     if (phaseChanged || levelChanged) {
       console.log('🎬 [MP] Flow change:', mpLastAppliedPhase, '→', newPhase, '| level:', mpLastAppliedLevel, '→', newLevel);
       mpLastAppliedPhase = newPhase;
       mpLastAppliedLevel = newLevel;
       mpFlow = Object.assign({}, state.flow);
-
-      if (newPhase === 'intro' && state.flow.introData) {
-        mpGuestShowIntro(state.flow.introData);
-      } else if (newPhase === 'playing') {
-        mpGuestHideIntro();
-      } else if (newPhase === 'result') {
-        mpGuestHideIntro();
-      }
+      if (newPhase === 'intro' && state.flow.introData) mpGuestShowIntro(state.flow.introData);
+      else if (newPhase === 'playing') mpGuestHideIntro();
+      else if (newPhase === 'result') mpGuestHideIntro();
     }
   }
 
@@ -2555,21 +2553,19 @@ function mpSendGuestSkill(skillNum) {
 }
 
 function mpHandleGuestDeath() {
+  // HANYA dipanggil di HOST saat guest HP habis (host-authoritative)
   mpGuestLives--;
   mpGuestHP = PLAYER_MAX_HIT_POINTS;
   mpGuestAlive = true;
   console.log('💀 [MP] Guest lost life, remaining:', mpGuestLives);
-
   if (mpGuestLives <= 0) {
-    console.log('👻 [MP] Guest entered spectator mode');
-    mpGuestSpectator = true;
+    console.log('👻 [MP] Guest entering spectator (host-side flag)');
+    mpRemoteGuestSpectator = true;
     checkBothDead();
   }
 }
 
-function mpHostLevelComplete() {
-  mpEndGame(true, 'SELESAI!');
-}
+function mpHostLevelComplete() { mpEndGame(true, 'SELESAI!'); }
 
 function mpEndGame(win, reason) {
   isGameRunning = false;
@@ -2578,18 +2574,16 @@ function mpEndGame(win, reason) {
   mpStopHostSyncLoop();
   sounds.stopBGM();
   if (win) sounds.playWin();
-
   mpFlow.phase = 'result';
-
-  // Reset spectator
-  mpSpectatorMode = false;
-  mpSpectatorReady = false;
-  mpSpectatorTimer = 0;
-  if (mpSpectatorTickInterval) { clearInterval(mpSpectatorTickInterval); mpSpectatorTickInterval = null; }
-  mpGuestSpectator = false;
+  // Reset spectator (self + remote)
+  endSelfSpectatorMode();
   mpRemoteHostSpectator = false;
-  const specOverlay = document.getElementById('mp-spectator-overlay');
-  if (specOverlay) specOverlay.classList.add('hidden');
+  mpRemoteGuestSpectator = false;
+  setSpectatorOverlayVisible(false);
+  // Reset pause
+  mpRemotePaused = false;
+  mpPauseState = 'none';
+  hideRemotePauseOverlay();
 
   const wasRole = mpRole;
   mpActive = false;
@@ -2603,40 +2597,25 @@ function mpEndGame(win, reason) {
   const rc = $('result-coins'); if (rc) rc.innerText = `+${levelCoinsEarned}`;
   const rl = $('result-level'); if (rl) rl.innerText = (currentLevelIndex + 1) + ' (Co-op)';
   const rk = $('result-kills'); if (rk) rk.innerText = `${levelKills} Target`;
-
   const starContainer = $('result-stars');
   if (starContainer) {
     if (win) {
       let h = '';
       for (let s = 0; s < 3; s++) h += `<svg class="star-mini on" viewBox="0 0 24 24"><use href="#i-star"/></svg>`;
       starContainer.innerHTML = h;
-    } else {
-      starContainer.innerHTML = '<span style="color:#566a8c;font-size:12px;">—</span>';
-    }
+    } else starContainer.innerHTML = '<span style="color:#566a8c;font-size:12px;">—</span>';
   }
-
   const icon = $('result-icon');
-  if (icon) {
-    icon.innerHTML = win ? '<use href="#i-trophy"/>' : '<use href="#i-skull"/>';
-    icon.classList.toggle('fail', !win);
-  }
-
-  const nextBtn = $('btn-next-level');
-  if (nextBtn) nextBtn.classList.add('hidden');
-  const retryBtn = $('btn-retry-level');
-  if (retryBtn) retryBtn.classList.remove('hidden');
-
-  const modal = $('modal-result');
-  if (modal) modal.classList.remove('hidden');
-
+  if (icon) { icon.innerHTML = win ? '<use href="#i-trophy"/>' : '<use href="#i-skull"/>'; icon.classList.toggle('fail', !win); }
+  const nextBtn = $('btn-next-level'); if (nextBtn) nextBtn.classList.add('hidden');
+  const retryBtn = $('btn-retry-level'); if (retryBtn) retryBtn.classList.remove('hidden');
+  const modal = $('modal-result'); if (modal) modal.classList.remove('hidden');
   try { MP.leaveRoom(); } catch(e) {}
-
   if (win && wasRole === 'host') {
     saveCoopScoreToGlobalLeaderboard(playerName, mpRemoteName || 'Guest', score, currentLevelIndex + 1);
     PLAYER_STATS.coopWins++;
     savePlayerStats().then(() => checkAchievements());
   }
-
   mpRole = null;
 }
 
@@ -2652,7 +2631,6 @@ function mpActuallyStartCoop() {
   reviveUsedThisRun = false;
   levelKills = 0; levelCoinsEarned = 0;
 
-  // 🔥 v20.2 FIX — reset dengan flag pause/resume
   mpGuestInput = {
     left: false, right: false, shoot: false,
     skill1: false, skill2: false, skill3: false,
@@ -2671,16 +2649,16 @@ function mpActuallyStartCoop() {
   mpEffectQueue = [];
   mpComboIndicatorState = { text: null, active: false, shownAt: 0 };
 
-  mpSpectatorMode = false;
-  mpSpectatorReady = false;
-  mpSpectatorTimer = 0;
-  if (mpSpectatorTickInterval) { clearInterval(mpSpectatorTickInterval); mpSpectatorTickInterval = null; }
-  mpGuestSpectator = false;
-  mpGuestLives = 3;
+  // Reset ALL spectator & pause state
+  endSelfSpectatorMode();
   mpRemoteHostSpectator = false;
-
-  const specOverlay = document.getElementById('mp-spectator-overlay');
-  if (specOverlay) specOverlay.classList.add('hidden');
+  mpRemoteGuestSpectator = false;
+  mpGuestLives = 3;
+  setSpectatorOverlayVisible(false);
+  mpRemotePaused = false;
+  mpLocalPauseRequested = false;
+  mpPauseState = 'none';
+  hideRemotePauseOverlay();
 
   if (mpRole === 'host') {
     playerX = VIRTUAL_WIDTH * 0.25;
@@ -2734,7 +2712,6 @@ function mpActuallyStartCoop() {
       banner.classList.remove('fade-out');
       void banner.offsetWidth;
       sounds.playLevelIntro();
-
       setTimeout(() => {
         banner.classList.add('fade-out');
         setTimeout(() => banner.classList.add('hidden'), 500);
@@ -2773,7 +2750,6 @@ function saveCoopScoreToGlobalLeaderboard(hostName, guestName, scoreVal, levelVa
   const numScore = Number(scoreVal) || 0;
   const numLevel = Number(levelVal) || 1;
   const sortValue = (numLevel * 100000000) + numScore;
-
   const ref = db.ref('leaderboard_coop/' + teamKey);
   ref.once('value').then(snap => {
     const ex = snap.val();
@@ -2805,7 +2781,6 @@ async function startGame() {
   DB.set('pahlawan_nama', playerName);
   const pnd = document.getElementById('player-name-display');
   if (pnd) pnd.innerText = playerName;
-
   gameMode = 'normal';
   const savedLevel = await getSavedLevel();
   currentLevelIndex = Math.max(0, savedLevel - 1);
@@ -2817,10 +2792,8 @@ async function startGame() {
   reviveUsedThisRun = false;
   coins = Number(localStorage.getItem('pahlawan_coins')) || 0;
   if (!levelsData || levelsData.length === 0) levelsData = generate30Levels();
-
   document.getElementById('screen-main-menu').classList.add('hidden');
   document.getElementById('hud-overlay').classList.remove('hidden');
-
   resizeCanvas();
   updateGameScale();
   setTimeout(() => { resizeCanvas(); updateGameScale(); startCurrentLevel(); }, 60);
@@ -2857,13 +2830,11 @@ async function startCurrentLevel() {
   resetLevelState();
   updateHUDValues(); updateLivesDisplay();
   isGameRunning = false; isGamePaused = false;
-
   const story = STORY[levelConfig.level];
   const storyKey = 'story_seen_' + levelConfig.level;
   let already = null;
   try { already = await DB.get(storyKey); } catch(e) {}
   const runStory = story && story.before && !already;
-
   const proceed = () => {
     if (runStory) DB.set(storyKey, '1');
     showLoadoutModal(levelConfig, () => actuallyStartLevel(levelConfig));
@@ -2971,35 +2942,20 @@ function updateComboBoosts() {
     PLAYER_STATS.maxCombo = combo;
     savePlayerStats().then(() => checkAchievements());
   }
-
-  const c3 = combo >= 3;
-  const c5 = combo >= 5;
-  const c10 = combo >= 10;
-
+  const c3 = combo >= 3, c5 = combo >= 5, c10 = combo >= 10;
   if (c3 && !comboBoostActive.coins) {
     comboBoostActive.coins = true;
-    if (comboBoostLastNotified < 3) {
-      showComboBoostIndicator('💰 COIN +50%');
-      sounds.playComboBoost(3);
-      comboBoostLastNotified = 3;
-    }
+    if (comboBoostLastNotified < 3) { showComboBoostIndicator('💰 COIN +50%'); sounds.playComboBoost(3); comboBoostLastNotified = 3; }
   }
   if (c5 && !comboBoostActive.firerate) {
     comboBoostActive.firerate = true;
-    if (comboBoostLastNotified < 5) {
-      showComboBoostIndicator('⚡ FIRE RATE +20%');
-      sounds.playComboBoost(5);
-      comboBoostLastNotified = 5;
-    }
+    if (comboBoostLastNotified < 5) { showComboBoostIndicator('⚡ FIRE RATE +20%'); sounds.playComboBoost(5); comboBoostLastNotified = 5; }
   }
   if (c10 && !comboBoostActive.magnet) {
     comboBoostActive.magnet = true;
     if (comboBoostLastNotified < 10) {
-      showComboBoostIndicator('🧲 AUTO MAGNET');
-      sounds.playComboBoost(10);
-      comboBoostLastNotified = 10;
-      isMagnetActive = true;
-      magnetTimer = 600;
+      showComboBoostIndicator('🧲 AUTO MAGNET'); sounds.playComboBoost(10); comboBoostLastNotified = 10;
+      isMagnetActive = true; magnetTimer = 600;
     }
   }
 }
@@ -3120,13 +3076,11 @@ function spawnMonsterLoop(token) {
       }
     }
   }
-
   let rate = 1500;
   if (gameMode === 'endless') rate = Math.max(300, 1200 - endlessWave * 40);
   else if (gameMode === 'daily') rate = 500;
   else if (gameMode === 'coop') rate = 800;
   else rate = levelsData[currentLevelIndex] ? levelsData[currentLevelIndex].spawnRate : 1500;
-
   const myToken = (token !== undefined) ? token : spawnLoopToken;
   setTimeout(() => spawnMonsterLoop(myToken), rate);
 }
@@ -3238,7 +3192,6 @@ function showKillStreak(title, count) {
 
 function checkLevelObjectives() {
   if (gameMode === 'coop' && mpActive && mpRole !== 'host') return;
-
   if (gameMode === 'endless') {
     if (endlessKillsThisWave >= ENDLESS_KILLS_PER_WAVE && monsters.length === 0) {
       endlessWave++; endlessKillsThisWave = 0;
@@ -3251,9 +3204,7 @@ function checkLevelObjectives() {
   if (gameMode === 'daily') return;
   if (gameMode === 'coop') {
     const lc = levelsData[currentLevelIndex] || levelsData[0];
-    if (levelKills >= lc.targetKills * 1.5 && monsters.length === 0) {
-      mpHostLevelComplete();
-    }
+    if (levelKills >= lc.targetKills * 1.5 && monsters.length === 0) mpHostLevelComplete();
     return;
   }
   const lc = levelsData[currentLevelIndex] || levelsData[0];
@@ -3272,9 +3223,7 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
   ctx.translate(x, y);
   ctx.scale(GAME_SCALE, GAME_SCALE);
   if (isRemote) ctx.globalAlpha = 0.85;
-
   const rageMode = !isRemote && lives === 1 && playerHitPoints === 1;
-
   if (type === 'robot') {
     ctx.fillStyle = '#1e90ff'; ctx.fillRect(-18, -10, 36, 28);
     ctx.fillStyle = '#70a1ff'; ctx.fillRect(-12, -26, 24, 16);
@@ -3308,7 +3257,6 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
     ctx.fillStyle = '#ffd700';
     ctx.beginPath(); ctx.moveTo(0, -32); ctx.lineTo(5, -12); ctx.lineTo(-5, -12); ctx.closePath(); ctx.fill();
   }
-
   if (rageMode) {
     ctx.save();
     ctx.globalAlpha = 0.35 + Math.sin(playerPulse * 3) * 0.15;
@@ -3316,7 +3264,6 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
     ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI*2); ctx.fill();
     ctx.restore();
   }
-
   if (!isRemote && (isShieldActive || isReviveInvuln)) {
     ctx.save();
     ctx.beginPath();
@@ -3341,7 +3288,6 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
   }
   ctx.restore();
 }
-
 // =============================================================
 // 19. GAME LOOP (HOST / SINGLE)
 // =============================================================
@@ -3364,14 +3310,15 @@ function gameLoop() {
     }
   }
 
-  if (mpActive && mpRole === 'guest') {
-    return gameLoopGuest();
-  }
+  // Kalau kita guest → pindah ke render-only loop
+  if (mpActive && mpRole === 'guest') return gameLoopGuest();
 
   const W = VIRTUAL_WIDTH;
   const H = VIRTUAL_HEIGHT;
   const S = GAME_SCALE;
 
+  // 🔥 v20.3 — Host tetap jalankan loop meski spectator.
+  // Yang di-skip hanya aksi lokal (movement, shooting, pickup).
   const localPlayerActive = !mpSpectatorMode;
 
   playerPulse += 0.08;
@@ -3400,6 +3347,7 @@ function gameLoop() {
   ctx.fillRect(0, H - groundH - 5, W, 5);
   ctx.globalAlpha = 1;
 
+  // === Player local movement (skip if spectator) ===
   if (localPlayerActive) {
     if (isMovingLeft) playerTargetX -= playerSpeed;
     if (isMovingRight) playerTargetX += playerSpeed;
@@ -3421,7 +3369,8 @@ function gameLoop() {
 
   const heroPlayerY = H - 45 * S;
 
-  if (mpActive && mpRole === 'host' && !mpGuestSpectator) {
+  // === Guest input handling (host processes guest's input) ===
+  if (mpActive && mpRole === 'host' && !mpRemoteGuestSpectator) {
     if (mpGuestInput.left) mpGuestTargetX -= playerSpeed;
     if (mpGuestInput.right) mpGuestTargetX += playerSpeed;
     mpGuestTargetX = Math.max(40 * S, Math.min(W - 40 * S, mpGuestTargetX));
@@ -3459,7 +3408,7 @@ function gameLoop() {
       triggerScreenFlash(0.7);
       let total = 0;
       for (let i = monsters.length - 1; i >= 0; i--) {
-        let m = monsters[i];
+        const m = monsters[i];
         createBurstParticles3D(m.x, m.y, m.color, 25);
         total += (ENEMY_SCORE_TABLE[m.type] || 150) * combo;
         levelKills++;
@@ -3474,6 +3423,7 @@ function gameLoop() {
     }
   }
 
+  // === Local shooting (skip if spectator) ===
   let baseInterval = 160;
   if (currentActor === 'cat') baseInterval = 110;
   else if (currentActor === 'cannon') baseInterval = 210;
@@ -3533,6 +3483,7 @@ function gameLoop() {
     if (t.progress >= t.duration) telegraphs.splice(i, 1);
   }
 
+  // === Bullet updates + collision ===
   for (let i = bullets.length - 1; i >= 0; i--) {
     const b = bullets[i];
     b.y -= b.vy; b.x += b.vx;
@@ -3594,12 +3545,8 @@ function gameLoop() {
           updateComboBoosts();
           spawnFloatingText(m.x, m.y, `+${gained}`, '#ffd700');
 
-          if (isB) {
-            triggerScreenFlash(0.6);
-            triggerHitStop(6);
-          } else if (m.size > 30 * GAME_SCALE) {
-            triggerHitStop(2);
-          }
+          if (isB) { triggerScreenFlash(0.6); triggerHitStop(6); }
+          else if (m.size > 30 * GAME_SCALE) { triggerHitStop(2); }
 
           if (m.algorithm === 'splitter' && m.size > 22 * S) {
             const miniSize = 22 * S;
@@ -3610,7 +3557,6 @@ function gameLoop() {
           }
           monsters.splice(j, 1);
           updateHUDValues();
-
           savePlayerStats();
           checkAchievements();
 
@@ -3630,6 +3576,7 @@ function gameLoop() {
     if (consumed) continue;
   }
 
+  // === Coins ===
   const magnetPull = isMagnetActive || (currentActor === 'cat') || comboBoostActive.magnet;
   for (let i = coinsOnField.length - 1; i >= 0; i--) {
     const c = coinsOnField[i];
@@ -3670,6 +3617,7 @@ function gameLoop() {
     if (c.y > H) coinsOnField.splice(i, 1);
   }
 
+  // === Powerups ===
   for (let i = powerups.length - 1; i >= 0; i--) {
     const p = powerups[i];
     p.y += p.speed;
@@ -3719,6 +3667,7 @@ function gameLoop() {
     if (p.y > H) powerups.splice(i, 1);
   }
 
+  // === Boss bullets ===
   for (let i = bossBullets.length - 1; i >= 0; i--) {
     const bb = bossBullets[i];
     bb.y += bb.vy; bb.x += bb.vx;
@@ -3732,16 +3681,16 @@ function gameLoop() {
       const dh = Math.hypot(playerX - bb.x, heroPlayerY - bb.y);
       if (dh < 30 * S) {
         bossBullets.splice(i, 1);
-        if (isShieldActive || isReviveInvuln) {
-          spawnFloatingText(playerX, H - 60 * S, 'BLOCKED', '#ffd700');
-        } else {
+        if (isShieldActive || isReviveInvuln) spawnFloatingText(playerX, H - 60 * S, 'BLOCKED', '#ffd700');
+        else {
           handlePlayerHit();
           if (!isGameRunning) { ctx.restore(); return; }
         }
         continue;
       }
     }
-    if (mpActive && mpRole === 'host' && mpGuestAlive && !mpGuestSpectator) {
+    // Boss bullets hit guest (host handles guest)
+    if (mpActive && mpRole === 'host' && mpGuestAlive && !mpRemoteGuestSpectator) {
       const dg = Math.hypot(mpGuestX - bb.x, heroPlayerY - bb.y);
       if (dg < 30 * S) {
         bossBullets.splice(i, 1);
@@ -3753,6 +3702,7 @@ function gameLoop() {
     if (bb.y > H || bb.x < -50 * S || bb.x > W + 50 * S) bossBullets.splice(i, 1);
   }
 
+  // === Draw local hero (skip if spectator) ===
   if (localPlayerActive) {
     ctx.save();
     const aA = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
@@ -3764,12 +3714,12 @@ function gameLoop() {
     ctx.ellipse(playerX, heroPlayerY + 20 * S, 55 * S, 14 * S, 0, 0, Math.PI*2);
     ctx.fill();
     ctx.restore();
-
     drawHeroVector(ctx, playerX, heroPlayerY, currentActor, false);
   }
 
+  // === Draw guest hero (skip if guest spectator) ===
   if (mpActive && mpRole === 'host') {
-    if (mpGuestAlive && !mpGuestSpectator) {
+    if (mpGuestAlive && !mpRemoteGuestSpectator) {
       ctx.save();
       const aA = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
       const gG = ctx.createRadialGradient(mpGuestX, heroPlayerY + 20 * S, 4 * S, mpGuestX, heroPlayerY + 20 * S, 55 * S);
@@ -3780,9 +3730,7 @@ function gameLoop() {
       ctx.ellipse(mpGuestX, heroPlayerY + 20 * S, 55 * S, 14 * S, 0, 0, Math.PI*2);
       ctx.fill();
       ctx.restore();
-
       drawHeroVector(ctx, mpGuestX, heroPlayerY, mpRemoteHeroType, true);
-
       ctx.save();
       ctx.font = `bold ${11 * S}px Orbitron, sans-serif`;
       ctx.textAlign = 'center';
@@ -3793,6 +3741,7 @@ function gameLoop() {
     }
   }
 
+  // === Monsters ===
   for (let i = monsters.length - 1; i >= 0; i--) {
     const m = monsters[i];
     m.timeAlive += 0.05;
@@ -4002,6 +3951,7 @@ function gameLoop() {
       ctx.restore();
     }
 
+    // === Monster reaches ground ===
     if (m.y > H - 55 * S && !m.type.startsWith('boss')) {
       monsters.splice(i, 1);
       if (localPlayerActive) {
@@ -4012,9 +3962,15 @@ function gameLoop() {
           if (!isGameRunning) { ctx.restore(); return; }
         }
       }
+      // Guest is shielded by host-side logic — guest damage handled separately in host loop
+      if (mpActive && mpRole === 'host' && mpGuestAlive && !mpRemoteGuestSpectator) {
+        // (optional) kasih damage ke guest kalau monster sampai bawah
+        // sengaja tidak dipakai karena guest hanya bisa kena boss bullet
+      }
     }
   }
 
+  // === Particles ===
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.x += p.vx; p.y += p.vy;
@@ -4093,6 +4049,7 @@ function gameLoopGuest() {
 
   playerPulse += 0.08;
   const theme = currentTheme;
+  // 🔥 v20.3 — Guest tetap render meski spectator; hanya aksinya yang di-skip
   const localPlayerActive = !mpSpectatorMode;
 
   ctx.save();
@@ -4115,7 +4072,7 @@ function gameLoopGuest() {
 
   const heroPlayerY = H - 45 * S;
 
-  // 🔥 v20.2 FIX — kirim semua input (termasuk skill & pause/resume)
+  // 🔥 v20.3 — Kirim SEMUA input (skill, pause, resume, spectator, respawn)
   if (MP && MP.isConnected) {
     MP.sendInput({
       left: localPlayerActive ? isMovingLeft : false,
@@ -4130,6 +4087,7 @@ function gameLoopGuest() {
       pause: mpGuestInput.pause || false,
       resume: mpGuestInput.resume || false
     });
+    // Reset one-shot flags setelah dikirim
     mpGuestInput.skill1 = false;
     mpGuestInput.skill2 = false;
     mpGuestInput.skill3 = false;
@@ -4142,7 +4100,7 @@ function gameLoopGuest() {
   if (Math.abs(gdx) > 0.5) playerX += gdx * 0.35;
   else playerX = mpGuestX;
 
-  // Draw host — skip jika host spectator
+  // Draw host — skip if host is spectator (remote)
   if (mpRemoteAlive !== false && !mpRemoteHostSpectator) {
     const hostX = mpRemoteX;
     ctx.save();
@@ -4155,9 +4113,7 @@ function gameLoopGuest() {
     ctx.ellipse(hostX, heroPlayerY + 20 * S, 55 * S, 14 * S, 0, 0, Math.PI*2);
     ctx.fill();
     ctx.restore();
-
     drawHeroVector(ctx, hostX, heroPlayerY, mpRemoteHeroType, true);
-
     ctx.save();
     ctx.font = `bold ${11 * S}px Orbitron, sans-serif`;
     ctx.textAlign = 'center';
@@ -4170,6 +4126,7 @@ function gameLoopGuest() {
   drawRemoteMonsters(ctx, W, H, S, heroPlayerY);
   drawRemoteBullets(ctx, S);
 
+  // Draw own hero — only if NOT spectator
   if (localPlayerActive) {
     ctx.save();
     const aA2 = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
@@ -4181,9 +4138,7 @@ function gameLoopGuest() {
     ctx.ellipse(playerX, heroPlayerY + 20 * S, 55 * S, 14 * S, 0, 0, Math.PI*2);
     ctx.fill();
     ctx.restore();
-
     drawHeroVector(ctx, playerX, heroPlayerY, currentActor, false);
-
     ctx.save();
     ctx.font = `bold ${11 * S}px Orbitron, sans-serif`;
     ctx.textAlign = 'center';
@@ -4219,14 +4174,12 @@ function drawRemoteMonsters(ctx, W, H, S, heroPlayerY) {
   for (let i = 0; i < mpRemoteMonsters.length; i++) {
     const m = mpRemoteMonsters[i];
     if (!m) continue;
-
     ctx.save();
     ctx.globalAlpha = m.opacity || 1.0;
     ctx.beginPath();
     ctx.ellipse(m.x, H - 38 * S, m.size * 0.7, m.size * 0.25, 0, 0, Math.PI*2);
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.fill();
-
     ctx.translate(m.x, m.y);
 
     if (m.type && m.type.startsWith('boss')) {
@@ -4321,7 +4274,6 @@ function drawRemoteMonsters(ctx, W, H, S, heroPlayerY) {
       ctx.fillStyle = '#2ed573';
       ctx.fillRect(-wb/2, -m.size - 18 * S, (m.hp/m.maxHp)*wb, 8 * S);
     }
-
     ctx.restore();
   }
 
@@ -4352,10 +4304,8 @@ function drawRemoteBullets(ctx, S) {
   for (let i = 0; i < mpRemoteBullets.length; i++) {
     const b = mpRemoteBullets[i];
     if (!b) continue;
-
     ctx.save();
     ctx.translate(b.x, b.y);
-
     if (b.heroType === 'cat') {
       ctx.rotate((Date.now() * 0.01) % (Math.PI * 2));
       ctx.fillStyle = b.color;
@@ -4378,7 +4328,6 @@ function drawRemoteBullets(ctx, S) {
       ctx.strokeStyle = b.color;
       ctx.stroke();
     }
-
     ctx.restore();
   }
 }
@@ -4390,6 +4339,7 @@ function handlePlayerHit() {
   if (isReviveInvuln) return;
   if (isReviveModalOpen) return;
   if (mpSpectatorMode) return;
+
   levelDamageTaken++;
   const oneLife = (gameMode === 'daily' && currentDailyModifier && currentDailyModifier.id === 'one_life');
   playerHitPoints--; playerHitFlash = 12;
@@ -4399,18 +4349,22 @@ function handlePlayerHit() {
   sounds.playHit(); screenShake = 12;
   triggerVibrate([60, 30, 60]);
   triggerScreenFlash(0.4);
+
   if (playerHitPoints > 0) {
     spawnFloatingText(playerX, VIRTUAL_HEIGHT - 60 * GAME_SCALE, `HP ${playerHitPoints}/${PLAYER_MAX_HIT_POINTS}`, '#ffa502');
   } else {
-    if (oneLife) lives = 0; else lives--;
+    if (oneLife) lives = 0;
+    else lives--;
     playerHitPoints = PLAYER_MAX_HIT_POINTS;
     spawnFloatingText(playerX, VIRTUAL_HEIGHT - 60 * GAME_SCALE, '-1 ❤', '#ff4757');
     screenShake = 18;
   }
   updateLivesDisplay();
+
   if (lives <= 0) {
+    // 🔥 v20.3 — MP coop: masuk spectator (lokal). Game loop tetap lanjut.
     if (mpActive && gameMode === 'coop') {
-      startSpectatorMode();
+      startSelfSpectatorMode('lives-zero');
     } else {
       offerReviveOrFail();
     }
@@ -4475,7 +4429,6 @@ async function levelComplete() {
   isGameRunning = false; isGamePaused = false;
   stopSpawnLoop(); sounds.stopBGM(); sounds.playWin();
   const lc = levelsData[currentLevelIndex] || levelsData[0];
-
   const levelTime = (Date.now() - levelStartTime) / 1000;
   if (levelTime < PLAYER_STATS.fastestLevelTime) {
     PLAYER_STATS.fastestLevelTime = levelTime;
@@ -4485,14 +4438,11 @@ async function levelComplete() {
     PLAYER_STATS.perfectLevels++;
     console.log('✨ [Stats] Perfect level!');
   }
-
   await setSavedLevel(lc.level + 1);
   await savePlayerStats();
-
   saveScoreToGlobalLeaderboard(playerName, score, lc.level);
   const stars = (lives === 3 && combo >= 3) ? 3 : (lives === 3 ? 2 : 1);
   try { await setStar(lc.level, stars); } catch(e) {}
-
   await checkAchievements();
 
   const showResult = () => {
@@ -4758,18 +4708,13 @@ async function finalizeDaily(success) {
     const bonus = 500;
     coins += bonus; levelCoinsEarned += bonus;
     PLAYER_STATS.totalCoinsEarned += bonus;
-
     const lastDaily = PLAYER_STATS.lastDailyDate;
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yKey = `${yesterday.getFullYear()}${String(yesterday.getMonth()+1).padStart(2,'0')}${String(yesterday.getDate()).padStart(2,'0')}`;
-    if (lastDaily === yKey) {
-      PLAYER_STATS.dailyStreak = (PLAYER_STATS.dailyStreak || 0) + 1;
-    } else if (lastDaily !== tk) {
-      PLAYER_STATS.dailyStreak = 1;
-    }
+    if (lastDaily === yKey) PLAYER_STATS.dailyStreak = (PLAYER_STATS.dailyStreak || 0) + 1;
+    else if (lastDaily !== tk) PLAYER_STATS.dailyStreak = 1;
     PLAYER_STATS.lastDailyDate = tk;
-
     DB.set('pahlawan_coins', coins);
     saveDailyToGlobalLeaderboard(playerName, score, tk);
     await savePlayerStats();
@@ -4812,13 +4757,13 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   let upd = false;
   if (idx === -1) { upd = true; ls.push({ name: cleanName, score: numScore, level: numLevel, sortValue }); }
   else {
-    let o = ls[idx];
-    let ol = Number(o.level) || 1, os = Number(o.score) || 0;
+    const o = ls[idx];
+    const ol = Number(o.level) || 1, os = Number(o.score) || 0;
     if (numLevel > ol || (numLevel === ol && numScore > os)) { upd = true; ls[idx] = { name: cleanName, score: numScore, level: numLevel, sortValue }; }
   }
   if (upd) {
     ls.sort((a, b) => {
-      let la = Number(a.level)||1, lb = Number(b.level)||1;
+      const la = Number(a.level)||1, lb = Number(b.level)||1;
       if (lb !== la) return lb - la;
       return (Number(b.score)||0) - (Number(a.score)||0);
     });
@@ -4827,11 +4772,11 @@ function saveScoreToGlobalLeaderboard(name, scoreVal, levelVal) {
   if (db && playerKey) {
     const ref = db.ref('leaderboard/' + playerKey);
     ref.once('value').then(snap => {
-      let ex = snap.val();
+      const ex = snap.val();
       let su = false;
       if (!ex) su = true;
       else {
-        let ol = Number(ex.level)||0, os = Number(ex.score)||0;
+        const ol = Number(ex.level)||0, os = Number(ex.score)||0;
         if (numLevel > ol || (numLevel === ol && numScore > os)) su = true;
       }
       if (su) ref.set({ name: cleanName, score: numScore, level: numLevel, sortValue, timestamp: Date.now() }).catch(() => {});
@@ -4847,10 +4792,11 @@ function saveEndlessToGlobalLeaderboard(name, scoreVal, waveVal) {
   if (db && pk) {
     const r = db.ref('endless/' + pk);
     r.once('value').then(s => {
-      let ex = s.val(), su = false;
+      const ex = s.val();
+      let su = false;
       if (!ex) su = true;
       else {
-        let ow = Number(ex.wave)||0, os = Number(ex.score)||0;
+        const ow = Number(ex.wave)||0, os = Number(ex.score)||0;
         if (nw > ow || (nw === ow && ns > os)) su = true;
       }
       if (su) r.set({ name: cleanName, score: ns, wave: nw, sortValue: sv, timestamp: Date.now() }).catch(() => {});
@@ -4922,7 +4868,7 @@ async function loadLeaderboardData() {
     if (sl >= 1000) doR();
     else if (!rt) rt = setTimeout(() => { rt = null; doR(); }, 1000 - sl);
   };
-  leaderboardRef.on('value', leaderboardHandler, (err) => { showLocalScores(tbody); });
+  leaderboardRef.on('value', leaderboardHandler, () => { showLocalScores(tbody); });
 }
 
 function renderLeaderboardRows(snapshot, tbody) {
@@ -4956,7 +4902,7 @@ function renderLeaderboardRows(snapshot, tbody) {
     const k = it.name.toLowerCase().replace(/\s+/g, ' ').trim();
     if (!dm.has(k)) dm.set(k, it);
   });
-  let uniq = Array.from(dm.values());
+  const uniq = Array.from(dm.values());
   uniq.sort((a, b) => {
     const asv = (a.sortValue !== undefined && a.sortValue !== null) ? Number(a.sortValue) : ((a.level * 100000000) + a.score);
     const bsv = (b.sortValue !== undefined && b.sortValue !== null) ? Number(b.sortValue) : ((b.level * 100000000) + b.score);
@@ -4974,8 +4920,8 @@ function renderLeaderboardRows(snapshot, tbody) {
 }
 
 function showLocalScores(tbody) {
-  let ls = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
-  let bm = new Map();
+  const ls = JSON.parse(localStorage.getItem('pahlawan_scores') || '[]');
+  const bm = new Map();
   ls.forEach(s => {
     if (!s || !s.name) return;
     const cn = s.name.trim();
@@ -4987,7 +4933,7 @@ function showLocalScores(tbody) {
       if (cl > e.level || (cl === e.level && csc > e.score)) bm.set(k, { name: cn, level: cl, score: csc });
     }
   });
-  let arr = Array.from(bm.values());
+  const arr = Array.from(bm.values());
   arr.sort((a, b) => {
     if (b.level !== a.level) return b.level - a.level;
     return b.score - a.score;
@@ -5098,8 +5044,18 @@ window.addEventListener('load', () => {
       console.warn('⚠️ [MP] multiplayer.js belum loaded');
     }
   }, 500);
+
+  // 🔥 v20.3 — Paksa overlay spectator inert saat hidden
+  setTimeout(() => {
+    ensureOverlaysInert();
+  }, 800);
 });
 
 // =============================================================
-// END OF FILE — v20.2 (Spectator Edition + Sync Pause Fix)
+// END OF FILE — v20.3 (Spectator Isolation Edition)
 // =============================================================
+
+// =============================================================
+// END OF PART 1 — Lanjut ke Part 2 di respons berikutnya
+// =============================================================
+        
