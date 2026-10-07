@@ -15,7 +15,7 @@ const PRECACHE_ASSETS = [
   './',
   './index.html',
   './style.css?v=20.1',
-  './multiplayer.js?v=18.2',
+  './multiplayer.js?v=20.1',
   './game.js?v=20.1',
   './manifest.json',
   './icon-192.png',
