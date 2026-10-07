@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css?v=19.2" />
+  <link rel="stylesheet" href="./style.css?v=20.0" />
 </head>
 <body class="no-select">
 
@@ -286,7 +286,7 @@
   <div class="menu-box">
 
     <div class="menu-topbar">
-      <div class="version-badge">v19.1</div>
+      <div class="version-badge">v20.0</div>
       <button id="btn-audio" class="btn-audio" title="Suara" type="button">
         <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
       </button>
@@ -410,14 +410,18 @@
           <span class="menu-card-label">PERINGKAT</span>
         </div>
       </button>
-      <button id="btn-stickers" class="menu-card" type="button">
+
+      <!-- 🔥 MENU STIKER → PENCAPAIAN -->
+      <button id="btn-achievements" class="menu-card" type="button">
         <div class="menu-card-inner">
           <div class="menu-card-icon-wrap c-pink">
-            <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
+            <svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg>
           </div>
-          <span class="menu-card-label">STIKER</span>
+          <span class="menu-card-label">MISI</span>
+          <span id="achievement-badge-count" class="menu-card-badge hidden">0</span>
         </div>
       </button>
+
       <button id="btn-endless" class="menu-card" type="button">
         <div class="menu-card-inner">
           <div class="menu-card-icon-wrap c-green">
@@ -539,6 +543,9 @@
 <!-- ============ FLOATING TEXT ============ -->
 <div id="popup-container"></div>
 
+<!-- ============ ACHIEVEMENT TOAST CONTAINER ============ -->
+<div id="achievement-toast-container"></div>
+
 <!-- ============ MODAL: PAUSE ============ -->
 <div id="modal-pause" class="modal hidden">
   <div class="modal-box">
@@ -653,13 +660,81 @@
   </div>
 </div>
 
-<!-- ============ MODAL: STIKER ============ -->
-<div id="modal-stickers" class="modal hidden">
-  <div class="modal-box">
-    <h2><svg class="ico-lg gold"><use href="#i-star"/></svg> ALBUM STIKER</h2>
-    <p style="margin-bottom:14px">Terbuka: <strong id="unlocked-count">0</strong></p>
-    <div id="sticker-grid" class="sticker-grid"></div>
-    <button id="btn-close-stickers" class="btn-secondary" type="button">TUTUP</button>
+<!-- ============ MODAL: ACHIEVEMENTS (BARU) ============ -->
+<div id="modal-achievements" class="modal hidden">
+  <div class="modal-box modal-achievements-box">
+    <h2>
+      <svg class="ico-lg gold"><use href="#i-trophy"/></svg>
+      PENCAPAIAN
+    </h2>
+
+    <!-- Stats bar -->
+    <div class="ach-stats-bar">
+      <div class="ach-stat">
+        <div class="ach-stat-label">TERBUKA</div>
+        <div class="ach-stat-value">
+          <span id="ach-unlocked-count">0</span>/<span id="ach-total-count">0</span>
+        </div>
+      </div>
+      <div class="ach-stat">
+        <div class="ach-stat-label">TOTAL REWARD</div>
+        <div class="ach-stat-value gold">
+          <svg class="ico-inline" viewBox="0 0 24 24" style="width:14px;height:14px;vertical-align:-2px;"><use href="#i-coin"/></svg>
+          <span id="ach-total-reward">0</span>
+        </div>
+      </div>
+      <div class="ach-stat">
+        <div class="ach-stat-label">DIKLAIM</div>
+        <div class="ach-stat-value">
+          <span id="ach-claimed-count">0</span>/<span id="ach-unlocked-count-2">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category tabs -->
+    <div class="ach-tabs" id="ach-tabs">
+      <button class="ach-tab active" data-cat="all" type="button">SEMUA</button>
+      <button class="ach-tab" data-cat="combat" type="button">PETARUNG</button>
+      <button class="ach-tab" data-cat="progress" type="button">PROGRES</button>
+      <button class="ach-tab" data-cat="challenge" type="button">TANTANGAN</button>
+      <button class="ach-tab" data-cat="special" type="button">SPESIAL</button>
+    </div>
+
+    <!-- Achievement grid -->
+    <div id="achievement-grid" class="achievement-grid"></div>
+
+    <button id="btn-close-achievements" class="btn-secondary" type="button">TUTUP</button>
+  </div>
+</div>
+
+<!-- ============ MODAL: ACHIEVEMENT DETAIL (BARU) ============ -->
+<div id="modal-achievement-detail" class="modal hidden">
+  <div class="modal-box modal-achievement-detail-box">
+    <div class="ach-detail-icon-wrap" id="ach-detail-icon-wrap">
+      <svg id="ach-detail-icon" class="ach-detail-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg>
+    </div>
+    <h2 id="ach-detail-title">Judul</h2>
+    <p class="ach-detail-desc" id="ach-detail-desc">Deskripsi</p>
+    <div class="ach-detail-rarity" id="ach-detail-rarity">COMMON</div>
+    <div class="ach-detail-progress">
+      <div class="ach-detail-progress-label">PROGRESS</div>
+      <div class="ach-detail-progress-bar">
+        <div class="ach-detail-progress-fill" id="ach-detail-progress-fill"></div>
+      </div>
+      <div class="ach-detail-progress-text" id="ach-detail-progress-text">0/1</div>
+    </div>
+    <div class="ach-detail-reward">
+      <span>Reward:</span>
+      <strong>
+        <svg class="ico-inline gold" viewBox="0 0 24 24" style="width:16px;height:16px;vertical-align:-3px;"><use href="#i-coin"/></svg>
+        <span id="ach-detail-reward-coins">0</span>
+      </strong>
+    </div>
+    <button id="btn-ach-detail-claim" class="btn-primary big" type="button">
+      <svg class="ico"><use href="#i-coin"/></svg>
+      <span>KLAIM REWARD</span>
+    </button>
+    <button id="btn-ach-detail-close" class="btn-secondary" type="button">TUTUP</button>
   </div>
 </div>
 
@@ -1006,9 +1081,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <!-- ============ MULTIPLAYER ENGINE ============ -->
-<script src="./multiplayer.js?v=18.2"></script>
+<script src="./multiplayer.js?v=20.0"></script>
 
 <!-- ============ GAME SCRIPT ============ -->
-<script src="./game.js?v=19.2"></script>
+<script src="./game.js?v=20.0"></script>
 </body>
 </html>
