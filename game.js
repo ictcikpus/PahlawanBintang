@@ -1,17 +1,18 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v19.1
-// "Juice Edition + MP Sync" 
+// PAHLAWAN BINTANG — game.js v19.2
+// "Butter Smooth Edition"
 // ------------------------------------------------------------
-// Fitur baru v19.0:
+// Fitur:
 //   1. Level Persistence (auto-save, resume, reset)
 //   2. Hit Stop (frame freeze saat hit besar)
 //   3. Screen Flash (efek juice)
 //   4. Combo Rewards (bonus di combo 3/5/10)
 //   5. BGM per Theme (12 tema musik dinamis)
 //   6. Parallax Starfield (3 layer)
-// Fitur baru v19.1:
 //   7. MP Effect Sync (flash, hitstop, combo indicator)
 //   8. BGM restart saat theme berubah di guest
+//   9. Low-end device detection (auto-disable berat effects)
+//  10. Tab-hidden animation pause
 // =============================================================
 
 // =============================================================
@@ -731,7 +732,7 @@ let mpFlow = {
 let mpLastAppliedPhase = null;
 let mpLastAppliedLevel = -1;
 
-// 🔥 MP Effect Queue (v19.1)
+// 🔥 MP Effect Queue
 let mpEffectQueue = [];
 let mpComboIndicatorState = { text: null, active: false, shownAt: 0 };
 
@@ -740,6 +741,26 @@ let mpComboIndicatorState = { text: null, active: false, shownAt: 0 };
 // =============================================================
 function bootstrapUI() {
   try {
+    // 🔥 Detect low-end device
+    const isLowEnd = (
+      (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) ||
+      (window.devicePixelRatio >= 3 && window.innerWidth < 500) ||
+      /Android [4-6]/.test(navigator.userAgent)
+    );
+    if (isLowEnd) {
+      document.body.classList.add('low-end');
+      console.log('🐢 [Perf] Low-end device — simplified effects enabled');
+    }
+
+    // 🔥 Pause animations saat tab tidak aktif
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        document.body.classList.add('tab-hidden');
+      } else {
+        document.body.classList.remove('tab-hidden');
+      }
+    });
+
     setupEventListeners();
     console.log('✅ [Boot] Event listeners attached');
   } catch (e) {
@@ -809,7 +830,7 @@ window.addEventListener('load', async () => {
   try { updateStickerAlbumUI(); } catch (e) {}
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=19.1').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=19.2').catch(err => console.log('SW Fail:', err));
   }
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
@@ -927,7 +948,7 @@ function recolorStars() {
 async function loadGameData() {
   try {
     const [rl, rs] = await Promise.all([
-      fetch('./levels.json?v=19.1'), fetch('./stickers.json?v=19.1')
+      fetch('./levels.json?v=19.2'), fetch('./stickers.json?v=19.2')
     ]);
     if (rl.ok) levelsData = await rl.json();
     if (rs.ok) stickersData = await rs.json();
@@ -997,7 +1018,7 @@ async function setEndlessBest(wave, s) {
   }
 }
 
-// 🔥 Juice helpers (v19.1 with MP sync)
+// 🔥 Juice helpers
 function triggerScreenFlash(intensity) {
   screenFlash = Math.min(1, (intensity || 0.5));
   const fl = document.getElementById('screen-flash-overlay');
@@ -1005,7 +1026,6 @@ function triggerScreenFlash(intensity) {
     fl.style.opacity = String(screenFlash);
     setTimeout(() => { if (fl) fl.style.opacity = '0'; }, 80);
   }
-  // Sync ke guest
   if (mpActive && mpRole === 'host') {
     mpEffectQueue.push({ type: 'flash', intensity, t: Date.now() });
   }
@@ -1628,10 +1648,8 @@ function mpHostSendState() {
   const H = VIRTUAL_HEIGHT || 1;
   const baseSize = Math.min(W, H);
 
-  // 🔥 Ambil efek yang ada di queue
   const effectsToSend = mpEffectQueue.splice(0, mpEffectQueue.length);
 
-  // 🔥 Combo indicator state
   let comboIndicatorText = null;
   if (comboBoostLastNotified >= 10) comboIndicatorText = '🧲 AUTO MAGNET';
   else if (comboBoostLastNotified >= 5) comboIndicatorText = '⚡ FIRE RATE +20%';
@@ -1670,7 +1688,6 @@ function mpHostSendState() {
       introData: mpFlow.introData,
       themeId: currentTheme.id
     },
-    // 🔥 Sync effects + combo indicator
     effects: effectsToSend,
     comboIndicator: {
       text: comboIndicatorText,
@@ -1695,7 +1712,6 @@ function mpApplyHostState(state) {
       currentTheme = matchingTheme;
       applyThemeToDocument(currentTheme);
       recolorStars();
-      // 🔥 Restart BGM dengan theme baru di guest
       if (mpActive && mpRole === 'guest') {
         sounds.stopBGM();
         sounds.startBGM();
@@ -1734,7 +1750,6 @@ function mpApplyHostState(state) {
   score = state.totalScore || 0;
   levelKills = state.totalKills || 0;
 
-  // 🔥 Terapkan efek dari host
   if (Array.isArray(state.effects)) {
     state.effects.forEach(eff => {
       if (eff.type === 'flash') {
@@ -1750,7 +1765,6 @@ function mpApplyHostState(state) {
     });
   }
 
-  // 🔥 Sync combo indicator
   if (state.comboIndicator && state.comboIndicator.active && state.comboIndicator.text) {
     const cb = document.getElementById('combo-boost-indicator');
     if (cb && cb.innerText !== state.comboIndicator.text) {
@@ -1762,7 +1776,6 @@ function mpApplyHostState(state) {
     }
   }
 
-  // 🔥 Flow sync
   if (state.flow) {
     const newPhase = state.flow.phase;
     const newLevel = state.flow.levelIndex;
@@ -2566,14 +2579,12 @@ function gameLoop() {
   if (!isGameRunning || isGamePaused) return;
   if (!ctx || !canvas) return;
 
-  // 🔥 HIT STOP
   if (hitStopFrames > 0) {
     hitStopFrames--;
     requestAnimationFrame(gameLoop);
     return;
   }
 
-  // 🔥 SCREEN FLASH
   if (screenFlash > 0) {
     const fl = document.getElementById('screen-flash-overlay');
     if (fl) {
@@ -2686,7 +2697,6 @@ function gameLoop() {
     }
   }
 
-  // Shooting
   let baseInterval = 160;
   if (currentActor === 'cat') baseInterval = 110;
   else if (currentActor === 'cannon') baseInterval = 210;
@@ -2746,7 +2756,6 @@ function gameLoop() {
     if (t.progress >= t.duration) telegraphs.splice(i, 1);
   }
 
-  // Bullets
   for (let i = bullets.length - 1; i >= 0; i--) {
     const b = bullets[i];
     b.y -= b.vy; b.x += b.vx;
@@ -2839,7 +2848,6 @@ function gameLoop() {
     if (consumed) continue;
   }
 
-  // Coins
   const magnetPull = isMagnetActive || (currentActor === 'cat') || comboBoostActive.magnet;
   for (let i = coinsOnField.length - 1; i >= 0; i--) {
     const c = coinsOnField[i];
@@ -2879,7 +2887,6 @@ function gameLoop() {
     if (c.y > H) coinsOnField.splice(i, 1);
   }
 
-  // Powerups
   for (let i = powerups.length - 1; i >= 0; i--) {
     const p = powerups[i];
     p.y += p.speed;
@@ -2929,7 +2936,6 @@ function gameLoop() {
     if (p.y > H) powerups.splice(i, 1);
   }
 
-  // Boss bullets
   for (let i = bossBullets.length - 1; i >= 0; i--) {
     const bb = bossBullets[i];
     bb.y += bb.vy; bb.x += bb.vx;
@@ -2962,7 +2968,6 @@ function gameLoop() {
     if (bb.y > H || bb.x < -50 * S || bb.x > W + 50 * S) bossBullets.splice(i, 1);
   }
 
-  // Hero aura
   ctx.save();
   const aA = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
   const aG = ctx.createRadialGradient(playerX, heroPlayerY + 20 * S, 4 * S, playerX, heroPlayerY + 20 * S, 55 * S);
@@ -3000,7 +3005,6 @@ function gameLoop() {
     }
   }
 
-  // Monsters
   for (let i = monsters.length - 1; i >= 0; i--) {
     const m = monsters[i];
     m.timeAlive += 0.05;
@@ -3221,7 +3225,6 @@ function gameLoop() {
     }
   }
 
-  // Particles
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.x += p.vx; p.y += p.vy;
@@ -3277,21 +3280,19 @@ function drawParallaxStars(ctx, W, H) {
 }
 
 // =============================================================
-// 19b. GUEST RENDER-ONLY LOOP (v19.1 — dengan juice support)
+// 19b. GUEST RENDER-ONLY LOOP
 // =============================================================
 function gameLoopGuest() {
   const W = VIRTUAL_WIDTH;
   const H = VIRTUAL_HEIGHT;
   const S = GAME_SCALE;
 
-  // 🔥 Hit stop berlaku di guest juga
   if (hitStopFrames > 0) {
     hitStopFrames--;
     requestAnimationFrame(gameLoop);
     return;
   }
 
-  // 🔥 Screen flash fade
   if (screenFlash > 0) {
     const fl = document.getElementById('screen-flash-overlay');
     if (fl) {
@@ -4279,5 +4280,5 @@ window.addEventListener('load', () => {
 });
 
 // =============================================================
-// END OF FILE — v19.1
+// END OF FILE — v19.2
 // =============================================================
