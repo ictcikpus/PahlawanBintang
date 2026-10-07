@@ -1,10 +1,12 @@
 // ============================================================
-// PAHLAWAN BINTANG — multiplayer.js v18.2
-// WebRTC P2P Engine untuk Co-op & PvP
+// PAHLAWAN BINTANG — multiplayer.js v20.1
+// "Fast Connect Edition"
 // ------------------------------------------------------------
-// v18.2:
-//   - Input sekarang include heroType (untuk sync hero guest)
-//   - Input include skill3 (bomb guest → host)
+// v20.1:
+//   - TURN server (openrelay free fallback)
+//   - Wait for ICE gathering before sending offer/answer
+//   - Bulk listen ICE (value instead of child_added)
+//   - Detailed logging untuk debugging
 // ============================================================
 
 (function() {
@@ -21,13 +23,38 @@ const MP_CONFIG = {
   PING_TIMEOUT_MS: 15000,
   INPUT_THROTTLE_MS: 33,
   STATE_THROTTLE_MS: 50,
-  CONNECT_TIMEOUT_MS: 20000,
+  CONNECT_TIMEOUT_MS: 25000,
+  ICE_GATHERING_TIMEOUT_MS: 3000,   // 🔥 Tunggu ICE max 3 detik
+
+  // 🔥 ICE SERVERS — STUN + TURN (dengan fallback)
   ICE_SERVERS: [
+    // STUN servers (gratis, untuk direct P2P)
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' }
+    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'stun:stun.nextcloud.com:443' },
+
+    // 🔥 TURN servers (relay fallback)
+    // Menggunakan openrelay.metered.ca — GRATIS, publik
+    // Untuk production, ganti dengan akun sendiri di metered.ca
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    }
   ]
 };
 
@@ -57,9 +84,7 @@ class MultiplayerEngine {
     this._offerListener = null;
     this._answerListener = null;
     this._hostIceRef = null;
-    this._guestIceRef = null;
     this._hostIceListener = null;
-    this._guestIceListener = null;
 
     this._pingTimer = null;
     this._pingCheckTimer = null;
@@ -80,7 +105,7 @@ class MultiplayerEngine {
     this._onRoomJoined = null;
     this._onRoomFull = null;
 
-    console.log('🎮 [MP] MultiplayerEngine initialized (v18.2)');
+    console.log('🎮 [MP] MultiplayerEngine initialized (v20.1)');
   }
 
   // ============================================================
@@ -253,9 +278,6 @@ class MultiplayerEngine {
     }
   }
 
-  // ============================================================
-  // 🔥 SEND INPUT — sekarang include heroType + skill3
-  // ============================================================
   sendInput(input) {
     if (!this.isConnected) return;
     const now = Date.now();
@@ -315,7 +337,7 @@ class MultiplayerEngine {
   onRoomFull(cb)    { this._onRoomFull = cb; }
 
   // ============================================================
-  // PRIVATE — ROOM MANAGEMENT
+  // PRIVATE — ROOM
   // ============================================================
   _makePlayerKey(name) {
     return 'p_' + (name || 'player').toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 20) +
@@ -431,6 +453,42 @@ class MultiplayerEngine {
     this._answerListener = db.ref('signaling/' + code + '/answer').on('value', () => {});
   }
 
+  // ============================================================
+  // 🔥 WAIT FOR ICE GATHERING
+  // ============================================================
+  _waitForIceGathering(timeoutMs) {
+    return new Promise((resolve) => {
+      if (!this.peerConnection) return resolve();
+      if (this.peerConnection.iceGatheringState === 'complete') {
+        console.log('🧊 [MP] ICE already complete');
+        return resolve();
+      }
+
+      const timer = setTimeout(() => {
+        console.log('⏱️ [MP] ICE gathering timeout (' + timeoutMs + 'ms), continue anyway');
+        cleanup();
+        resolve();
+      }, timeoutMs);
+
+      const checkState = () => {
+        if (this.peerConnection.iceGatheringState === 'complete') {
+          console.log('🧊 [MP] ICE gathering complete');
+          cleanup();
+          resolve();
+        }
+      };
+
+      const cleanup = () => {
+        clearTimeout(timer);
+        try {
+          this.peerConnection.removeEventListener('icegatheringstatechange', checkState);
+        } catch(e) {}
+      };
+
+      this.peerConnection.addEventListener('icegatheringstatechange', checkState);
+    });
+  }
+
   async _setupPeerConnection() {
     if (this.peerConnection) return;
 
@@ -442,7 +500,9 @@ class MultiplayerEngine {
 
     this.peerConnection = new RTCPeerConnection({
       iceServers: MP_CONFIG.ICE_SERVERS,
-      iceCandidatePoolSize: 10
+      iceCandidatePoolSize: 10,
+      bundlePolicy: 'max-bundle',
+      rtcpMuxPolicy: 'require'
     });
 
     this.peerConnection.onicecandidate = (event) => {
@@ -534,9 +594,6 @@ class MultiplayerEngine {
     };
   }
 
-  // ============================================================
-  // 🔥 HANDLE MESSAGE — input include heroType + skill3
-  // ============================================================
   _handleMessage(msg) {
     if (!msg || !msg.type) return;
 
@@ -600,6 +657,9 @@ class MultiplayerEngine {
     }
   }
 
+  // ============================================================
+  // 🔥 BULK LISTEN ICE (instead of child_added)
+  // ============================================================
   _listenForRemoteICE() {
     const code = this.roomCode;
     if (!code) return;
@@ -607,29 +667,42 @@ class MultiplayerEngine {
     const remoteField = this.isHost ? 'guestIce' : 'hostIce';
     this._hostIceRef = db.ref('signaling/' + code + '/' + remoteField);
 
-    this._hostIceListener = this._hostIceRef.on('child_added', async (snapshot) => {
-      if (!this.peerConnection) return;
-      const candidate = snapshot.val();
-      if (!candidate) return;
-      try {
-        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch(e) {
-        console.warn('⚠️ [MP] Add ICE candidate error:', e.message);
+    this._hostIceListener = this._hostIceRef.on('value', async (snapshot) => {
+      if (!snapshot.exists() || !this.peerConnection) return;
+      const data = snapshot.val();
+      const candidates = Object.values(data || {});
+      for (const cand of candidates) {
+        if (cand && typeof cand === 'object') {
+          try {
+            await this.peerConnection.addIceCandidate(new RTCIceCandidate(cand));
+          } catch(e) {
+            // Ignore duplicate candidates
+          }
+        }
       }
     });
   }
 
+  // ============================================================
+  // 🔥 OFFER — WAIT FOR ICE GATHERING
+  // ============================================================
   async _createOffer() {
     if (!this.peerConnection) return;
 
+    const t0 = Date.now();
     const offer = await this.peerConnection.createOffer();
     await this.peerConnection.setLocalDescription(offer);
+    console.log('📝 [MP] Local description set (host)');
 
+    // 🔥 Tunggu ICE gathering selesai
+    await this._waitForIceGathering(MP_CONFIG.ICE_GATHERING_TIMEOUT_MS);
+
+    const localDesc = this.peerConnection.localDescription;
     await db.ref('signaling/' + this.roomCode + '/offer').set({
-      type: offer.type,
-      sdp: offer.sdp
+      type: localDesc.type,
+      sdp: localDesc.sdp
     });
-    console.log('📤 [MP] Offer sent');
+    console.log('📤 [MP] Offer sent with ICE (' + (Date.now() - t0) + 'ms)');
 
     this._answerListener = db.ref('signaling/' + this.roomCode + '/answer').on('value', async (snapshot) => {
       if (!snapshot.exists()) return;
@@ -647,21 +720,34 @@ class MultiplayerEngine {
     this._startConnectTimeout();
   }
 
+  // ============================================================
+  // 🔥 ANSWER — WAIT FOR ICE GATHERING
+  // ============================================================
   async _handleOffer(offer) {
     if (!this.peerConnection) return;
 
+    const t0 = Date.now();
     await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+    console.log('📝 [MP] Remote description set (guest)');
 
     const answer = await this.peerConnection.createAnswer();
     await this.peerConnection.setLocalDescription(answer);
+    console.log('📝 [MP] Local answer created');
 
+    // 🔥 Tunggu ICE gathering selesai
+    await this._waitForIceGathering(MP_CONFIG.ICE_GATHERING_TIMEOUT_MS);
+
+    const localDesc = this.peerConnection.localDescription;
     await db.ref('signaling/' + this.roomCode + '/answer').set({
-      type: answer.type,
-      sdp: answer.sdp
+      type: localDesc.type,
+      sdp: localDesc.sdp
     });
-    console.log('📤 [MP] Answer sent');
+    console.log('📤 [MP] Answer sent with ICE (' + (Date.now() - t0) + 'ms)');
   }
 
+  // ============================================================
+  // PING / TIMEOUT
+  // ============================================================
   _startPingLoop() {
     this._lastPingReceived = Date.now();
 
@@ -749,7 +835,7 @@ class MultiplayerEngine {
           db.ref('signaling/' + this.roomCode + '/answer').off('value', this._answerListener);
         }
         if (this._hostIceRef && this._hostIceListener) {
-          this._hostIceRef.off('child_added', this._hostIceListener);
+          this._hostIceRef.off('value', this._hostIceListener);
         }
       } catch(e) {}
     }
@@ -761,11 +847,9 @@ class MultiplayerEngine {
     this._answerListener = null;
     this._hostIceRef = null;
     this._hostIceListener = null;
-    this._guestIceRef = null;
-    this._guestIceListener = null;
 
     if (!keepFirebaseListeners) {
-      // nothing
+      // Ringan
     } else {
       this.role = null;
       this.isHost = false;
@@ -799,6 +883,6 @@ class MultiplayerEngine {
 window.MultiplayerEngine = MultiplayerEngine;
 window.MP = new MultiplayerEngine();
 
-console.log('✅ [MP] multiplayer.js loaded (v18.2)');
+console.log('✅ [MP] multiplayer.js loaded (v20.1)');
 
 })();
