@@ -7,16 +7,16 @@
 //   - Fallback ke cache kalau network gagal
 // ============================================================
 
-const CACHE_VERSION = 'v19.0';
+const CACHE_VERSION = 'v20.0';
 const CACHE_NAME = `pahlawan-bintang-${CACHE_VERSION}`;
 
 // Daftar asset yang wajib tersedia offline
 const PRECACHE_ASSETS = [
   './',
   './index.html',
-  './style.css?v=19.2',
+  './style.css?v=20.0',
   './multiplayer.js?v=18.2',
-  './game.js?v=19.2',
+  './game.js?v=20.0',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -25,7 +25,7 @@ const PRECACHE_ASSETS = [
 // Asset data yang sering berubah (pakai SWR)
 const DATA_ASSETS = [
   './levels.json?v=18.0',
-  './stickers.json?v=18.0'
+  './achievements.json?v=20.0'
 ];
 
 // Domain yang HARUS bypass cache (jangan pernah di-cache)
