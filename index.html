@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css?v=20.1" />
+  <link rel="stylesheet" href="./style.css?v=20.2" />
 </head>
 <body class="no-select">
 
@@ -286,7 +286,7 @@
   <div class="menu-box">
 
     <div class="menu-topbar">
-      <div class="version-badge">v20.0</div>
+      <div class="version-badge">v20.2</div>
       <button id="btn-audio" class="btn-audio" title="Suara" type="button">
         <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
       </button>
@@ -411,7 +411,6 @@
         </div>
       </button>
 
-      <!-- 🔥 MENU STIKER → PENCAPAIAN -->
       <button id="btn-achievements" class="menu-card" type="button">
         <div class="menu-card-inner">
           <div class="menu-card-icon-wrap c-pink">
@@ -543,6 +542,26 @@
 <!-- ============ FLOATING TEXT ============ -->
 <div id="popup-container"></div>
 
+<!-- ============ SPECTATOR OVERLAY (v20.2) ============ -->
+<div id="mp-spectator-overlay" class="hidden">
+  <div class="spectator-box">
+    <div class="spectator-icon-wrap">
+      <svg class="spectator-icon" viewBox="0 0 24 24"><use href="#i-skull"/></svg>
+    </div>
+    <div class="spectator-title">KAMU MATI</div>
+    <div class="spectator-subtitle">Menonton sampai bisa respawn</div>
+    <div class="spectator-countdown" id="spectator-countdown">60</div>
+    <div class="spectator-progress">
+      <div class="spectator-progress-fill" id="spectator-progress-fill"></div>
+    </div>
+    <div class="spectator-hint" id="spectator-hint">Tunggu...</div>
+    <button id="btn-spectator-respawn" class="btn-primary big hidden" type="button">
+      <svg class="ico"><use href="#i-play"/></svg>
+      <span>MULAI MAIN</span>
+    </button>
+  </div>
+</div>
+
 <!-- ============ ACHIEVEMENT TOAST CONTAINER ============ -->
 <div id="achievement-toast-container"></div>
 
@@ -660,7 +679,7 @@
   </div>
 </div>
 
-<!-- ============ MODAL: ACHIEVEMENTS (BARU) ============ -->
+<!-- ============ MODAL: ACHIEVEMENTS ============ -->
 <div id="modal-achievements" class="modal hidden">
   <div class="modal-box modal-achievements-box">
     <h2>
@@ -668,7 +687,6 @@
       PENCAPAIAN
     </h2>
 
-    <!-- Stats bar -->
     <div class="ach-stats-bar">
       <div class="ach-stat">
         <div class="ach-stat-label">TERBUKA</div>
@@ -691,7 +709,6 @@
       </div>
     </div>
 
-    <!-- Category tabs -->
     <div class="ach-tabs" id="ach-tabs">
       <button class="ach-tab active" data-cat="all" type="button">SEMUA</button>
       <button class="ach-tab" data-cat="combat" type="button">PETARUNG</button>
@@ -700,14 +717,13 @@
       <button class="ach-tab" data-cat="special" type="button">SPESIAL</button>
     </div>
 
-    <!-- Achievement grid -->
     <div id="achievement-grid" class="achievement-grid"></div>
 
     <button id="btn-close-achievements" class="btn-secondary" type="button">TUTUP</button>
   </div>
 </div>
 
-<!-- ============ MODAL: ACHIEVEMENT DETAIL (BARU) ============ -->
+<!-- ============ MODAL: ACHIEVEMENT DETAIL ============ -->
 <div id="modal-achievement-detail" class="modal hidden">
   <div class="modal-box modal-achievement-detail-box">
     <div class="ach-detail-icon-wrap" id="ach-detail-icon-wrap">
@@ -1081,9 +1097,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <!-- ============ MULTIPLAYER ENGINE ============ -->
-<script src="./multiplayer.js?v=20.1"></script>
+<script src="./multiplayer.js?v=20.2"></script>
 
 <!-- ============ GAME SCRIPT ============ -->
-<script src="./game.js?v=20.1"></script>
+<script src="./game.js?v=20.2"></script>
 </body>
 </html>
