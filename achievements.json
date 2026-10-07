@@ -1,0 +1,253 @@
+{
+  "version": 1,
+  "categories": [
+    { "id": "combat",    "name": "PETARUNG",  "icon": "i-bolt",   "color": "#ff4757" },
+    { "id": "progress",  "name": "PROGRES",   "icon": "i-trophy", "color": "#ffd700" },
+    { "id": "challenge", "name": "TANTANGAN", "icon": "i-target", "color": "#00d2ff" },
+    { "id": "special",   "name": "SPESIAL",   "icon": "i-star",   "color": "#a55eea" }
+  ],
+  "achievements": [
+    {
+      "id": "first_blood",
+      "title": "Darah Pertama",
+      "desc": "Kalahkan musuh pertamamu",
+      "icon": "i-skull",
+      "category": "combat",
+      "rarity": "common",
+      "condition": { "type": "totalKills", "value": 1 },
+      "reward": { "coins": 50 },
+      "hidden": false
+    },
+    {
+      "id": "kill_100",
+      "title": "Pemburu Muda",
+      "desc": "Kalahkan 100 musuh",
+      "icon": "i-target",
+      "category": "combat",
+      "rarity": "common",
+      "condition": { "type": "totalKills", "value": 100 },
+      "reward": { "coins": 200 },
+      "hidden": false
+    },
+    {
+      "id": "kill_500",
+      "title": "Penghancur",
+      "desc": "Kalahkan 500 musuh",
+      "icon": "i-bomb",
+      "category": "combat",
+      "rarity": "rare",
+      "condition": { "type": "totalKills", "value": 500 },
+      "reward": { "coins": 500 },
+      "hidden": false
+    },
+    {
+      "id": "kill_1000",
+      "title": "Legiun Teror",
+      "desc": "Kalahkan 1000 musuh",
+      "icon": "i-skull",
+      "category": "combat",
+      "rarity": "epic",
+      "condition": { "type": "totalKills", "value": 1000 },
+      "reward": { "coins": 1500 },
+      "hidden": false
+    },
+    {
+      "id": "combo_5",
+      "title": "Kombo Master",
+      "desc": "Capai combo 5× dalam satu sesi",
+      "icon": "i-bolt",
+      "category": "combat",
+      "rarity": "rare",
+      "condition": { "type": "maxCombo", "value": 5 },
+      "reward": { "coins": 300 },
+      "hidden": false
+    },
+    {
+      "id": "combo_10",
+      "title": "Tak Terbendung",
+      "desc": "Capai combo 10× dalam satu sesi",
+      "icon": "i-bolt",
+      "category": "combat",
+      "rarity": "epic",
+      "condition": { "type": "maxCombo", "value": 10 },
+      "reward": { "coins": 800 },
+      "hidden": false
+    },
+    {
+      "id": "boss_3",
+      "title": "Pembunuh Bos",
+      "desc": "Kalahkan 3 bos",
+      "icon": "i-warn",
+      "category": "combat",
+      "rarity": "rare",
+      "condition": { "type": "bossKills", "value": 3 },
+      "reward": { "coins": 500 },
+      "hidden": false
+    },
+    {
+      "id": "boss_all",
+      "title": "Penakluk Galaksi",
+      "desc": "Kalahkan semua bos (6 bos utama)",
+      "icon": "i-trophy",
+      "category": "combat",
+      "rarity": "legendary",
+      "condition": { "type": "bossKills", "value": 6 },
+      "reward": { "coins": 5000 },
+      "hidden": false
+    },
+    {
+      "id": "level_5",
+      "title": "Langkah Pertama",
+      "desc": "Capai Level 5",
+      "icon": "i-star",
+      "category": "progress",
+      "rarity": "common",
+      "condition": { "type": "maxLevelReached", "value": 5 },
+      "reward": { "coins": 200 },
+      "hidden": false
+    },
+    {
+      "id": "level_15",
+      "title": "Pejuang Berpengalaman",
+      "desc": "Capai Level 15",
+      "icon": "i-star",
+      "category": "progress",
+      "rarity": "rare",
+      "condition": { "type": "maxLevelReached", "value": 15 },
+      "reward": { "coins": 800 },
+      "hidden": false
+    },
+    {
+      "id": "level_30",
+      "title": "Pahlawan Legendaris",
+      "desc": "Capai Level 30",
+      "icon": "i-trophy",
+      "category": "progress",
+      "rarity": "legendary",
+      "condition": { "type": "maxLevelReached", "value": 30 },
+      "reward": { "coins": 5000 },
+      "hidden": false
+    },
+    {
+      "id": "coin_1000",
+      "title": "Kolektor",
+      "desc": "Kumpulkan 1000 koin total",
+      "icon": "i-coin",
+      "category": "progress",
+      "rarity": "common",
+      "condition": { "type": "totalCoinsEarned", "value": 1000 },
+      "reward": { "coins": 100 },
+      "hidden": false
+    },
+    {
+      "id": "coin_10000",
+      "title": "Bankir Galaksi",
+      "desc": "Kumpulkan 10000 koin total",
+      "icon": "i-coin",
+      "category": "progress",
+      "rarity": "epic",
+      "condition": { "type": "totalCoinsEarned", "value": 10000 },
+      "reward": { "coins": 1000 },
+      "hidden": false
+    },
+    {
+      "id": "perfect_level",
+      "title": "Tanpa Cela",
+      "desc": "Selesaikan satu level tanpa kena hit",
+      "icon": "i-shield",
+      "category": "challenge",
+      "rarity": "rare",
+      "condition": { "type": "perfectLevels", "value": 1 },
+      "reward": { "coins": 500 },
+      "hidden": false
+    },
+    {
+      "id": "speed_demon",
+      "title": "Setan Kecepatan",
+      "desc": "Selesaikan level dalam waktu < 60 detik",
+      "icon": "i-bolt",
+      "category": "challenge",
+      "rarity": "epic",
+      "condition": { "type": "fastestLevelTime", "value": 60, "comparison": "lte" },
+      "reward": { "coins": 800 },
+      "hidden": false
+    },
+    {
+      "id": "endless_10",
+      "title": "Pendekar Tanpa Akhir",
+      "desc": "Capai Wave 10 di Endless Mode",
+      "icon": "i-star",
+      "category": "challenge",
+      "rarity": "rare",
+      "condition": { "type": "endlessBestWave", "value": 10 },
+      "reward": { "coins": 600 },
+      "hidden": false
+    },
+    {
+      "id": "endless_20",
+      "title": "Melampaui Batas",
+      "desc": "Capai Wave 20 di Endless Mode",
+      "icon": "i-trophy",
+      "category": "challenge",
+      "rarity": "epic",
+      "condition": { "type": "endlessBestWave", "value": 20 },
+      "reward": { "coins": 1500 },
+      "hidden": false
+    },
+    {
+      "id": "daily_7",
+      "title": "Rutin",
+      "desc": "Selesaikan Daily Challenge 7 hari berturut-turut",
+      "icon": "i-target",
+      "category": "challenge",
+      "rarity": "epic",
+      "condition": { "type": "dailyStreak", "value": 7 },
+      "reward": { "coins": 2000 },
+      "hidden": false
+    },
+    {
+      "id": "all_heroes",
+      "title": "Multitalenta",
+      "desc": "Mainkan dengan 5 hero berbeda",
+      "icon": "i-users",
+      "category": "special",
+      "rarity": "rare",
+      "condition": { "type": "heroesUsedCount", "value": 5 },
+      "reward": { "coins": 500 },
+      "hidden": false
+    },
+    {
+      "id": "coop_win",
+      "title": "Kawan Setia",
+      "desc": "Menangkan 1 pertandingan Co-op",
+      "icon": "i-heart",
+      "category": "special",
+      "rarity": "common",
+      "condition": { "type": "coopWins", "value": 1 },
+      "reward": { "coins": 300 },
+      "hidden": false
+    },
+    {
+      "id": "login_7",
+      "title": "Pelanggan Setia",
+      "desc": "Login 7 hari berturut-turut",
+      "icon": "i-heart",
+      "category": "special",
+      "rarity": "epic",
+      "condition": { "type": "loginStreak", "value": 7 },
+      "reward": { "coins": 1500 },
+      "hidden": false
+    },
+    {
+      "id": "secret_ghost",
+      "title": "Rahasia: Sang Hantu",
+      "desc": "Sesuatu yang misterius...",
+      "icon": "i-mask",
+      "category": "special",
+      "rarity": "legendary",
+      "condition": { "type": "totalKills", "value": 3000 },
+      "reward": { "coins": 3000 },
+      "hidden": true
+    }
+  ]
+}
