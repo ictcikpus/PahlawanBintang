@@ -1,16 +1,12 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v20.0
-// "Achievement Edition"
+// PAHLAWAN BINTANG — game.js v20.1
+// "Achievement Edition + Fast Connect"
 // ------------------------------------------------------------
-// Fitur v19.2 (semua dipertahankan):
-//   1-10. Level Persistence, Juice, BGM, Parallax, MP Sync, dll
-// Fitur baru v20.0:
-//   11. Player Statistics Tracking (persistent)
-//   12. Achievement System (auto-check, toast, claim, filter)
-//   13. Login Streak tracking
-//   14. Hero Usage tracking
-//   15. Perfect Level detection
-//   16. Fastest Level Time tracking
+// v20.0 (semua dipertahankan):
+//   1-10. Level Persistence, Juice, BGM, Parallax, MP Sync
+//   11-16. Player Stats, Achievement System, Login Streak, dll
+// v20.1 (baru):
+//   17. MP Status UI feedback (spinner + progress text)
 // =============================================================
 
 // =============================================================
@@ -135,7 +131,6 @@ async function setSavedLevel(levelNum) {
     const el = document.getElementById('saved-level-display');
     if (el) el.innerText = `Level ${levelNum}`;
   }
-  // Track max level reached for achievement
   if (levelNum > PLAYER_STATS.maxLevelReached) {
     PLAYER_STATS.maxLevelReached = levelNum;
     await savePlayerStats();
@@ -149,7 +144,7 @@ async function resetProgress() {
 }
 
 // =============================================================
-// 🔥 PLAYER STATISTICS (untuk Achievement)
+// 🔥 PLAYER STATISTICS
 // =============================================================
 const DEFAULT_PLAYER_STATS = {
   totalKills: 0,
@@ -159,15 +154,14 @@ const DEFAULT_PLAYER_STATS = {
   fastestLevelTime: Infinity,
   totalCoinsEarned: 0,
   maxLevelReached: 1,
-  heroesUsed: [],       // array of hero ids
+  heroesUsed: [],
   coopWins: 0,
   loginStreak: 0,
   lastLoginDate: null,
   dailyStreak: 0,
   lastDailyDate: null,
-  // Achievement state
-  unlockedAchievements: [],  // array of achievement ids
-  claimedAchievements: []    // array of achievement ids
+  unlockedAchievements: [],
+  claimedAchievements: []
 };
 
 let PLAYER_STATS = { ...DEFAULT_PLAYER_STATS };
@@ -177,11 +171,9 @@ async function loadPlayerStats() {
   try {
     const parsed = JSON.parse(raw || '{}');
     PLAYER_STATS = { ...DEFAULT_PLAYER_STATS, ...parsed };
-    // Convert Infinity back (JSON can't store it)
     if (PLAYER_STATS.fastestLevelTime === null || PLAYER_STATS.fastestLevelTime === undefined) {
       PLAYER_STATS.fastestLevelTime = Infinity;
     }
-    // Ensure arrays
     if (!Array.isArray(PLAYER_STATS.heroesUsed)) PLAYER_STATS.heroesUsed = [];
     if (!Array.isArray(PLAYER_STATS.unlockedAchievements)) PLAYER_STATS.unlockedAchievements = [];
     if (!Array.isArray(PLAYER_STATS.claimedAchievements)) PLAYER_STATS.claimedAchievements = [];
@@ -193,7 +185,6 @@ async function loadPlayerStats() {
 
 async function savePlayerStats() {
   const saveData = { ...PLAYER_STATS };
-  // Handle Infinity (JSON safe)
   if (saveData.fastestLevelTime === Infinity) saveData.fastestLevelTime = null;
   try {
     await DB.set('pahlawan_player_stats', JSON.stringify(saveData));
@@ -209,7 +200,7 @@ let ACHIEVEMENTS_DATA = { categories: [], achievements: [] };
 
 async function loadAchievementsData() {
   try {
-    const res = await fetch('./achievements.json?v=20.0');
+    const res = await fetch('./achievements.json?v=20.1');
     if (res.ok) {
       ACHIEVEMENTS_DATA = await res.json();
       console.log('🏆 [Ach] Loaded', ACHIEVEMENTS_DATA.achievements.length, 'achievements');
@@ -219,7 +210,6 @@ async function loadAchievementsData() {
   }
 }
 
-// Get current value of a stat type (for progress display)
 function getStatValue(statType) {
   switch(statType) {
     case 'totalKills': return PLAYER_STATS.totalKills;
@@ -238,7 +228,6 @@ function getStatValue(statType) {
   }
 }
 
-// Check if achievement condition is met
 function isAchievementUnlocked(ach) {
   const cond = ach.condition;
   if (!cond) return false;
@@ -247,23 +236,19 @@ function isAchievementUnlocked(ach) {
   return current >= cond.value;
 }
 
-// Get progress percentage (0..1)
 function getAchievementProgress(ach) {
   const cond = ach.condition;
   if (!cond) return 0;
   const current = getStatValue(cond.type);
   if (cond.comparison === 'lte') {
-    // For "faster than X" type, progress is inverse
-    if (current === 9999) return 0; // never done
+    if (current === 9999) return 0;
     if (current <= cond.value) return 1;
-    // Show some progress based on how close
     return Math.max(0, 1 - (current - cond.value) / 120);
   }
   if (cond.value === 0) return 1;
   return Math.min(1, current / cond.value);
 }
 
-// Format progress text
 function getAchievementProgressText(ach) {
   const cond = ach.condition;
   if (!cond) return '0/0';
@@ -275,7 +260,6 @@ function getAchievementProgressText(ach) {
   return `${Math.min(current, cond.value)}/${cond.value}`;
 }
 
-// Check all achievements and unlock new ones
 async function checkAchievements(silent) {
   if (!ACHIEVEMENTS_DATA.achievements.length) return;
   let changed = false;
@@ -291,7 +275,6 @@ async function checkAchievements(silent) {
   if (changed) {
     await savePlayerStats();
     updateAchievementBadge();
-    // Refresh modal if open
     const modal = document.getElementById('modal-achievements');
     if (modal && !modal.classList.contains('hidden')) {
       renderAchievementGrid(currentAchievementFilter);
@@ -299,7 +282,6 @@ async function checkAchievements(silent) {
   }
 }
 
-// Toast notification
 function showAchievementToast(ach) {
   const container = document.getElementById('achievement-toast-container');
   if (!container) return;
@@ -321,7 +303,6 @@ function showAchievementToast(ach) {
   `;
   container.appendChild(toast);
 
-  // Play unlock sound
   try {
     if (typeof sounds !== 'undefined') sounds.playKillstreak();
   } catch(e) {}
@@ -331,7 +312,6 @@ function showAchievementToast(ach) {
   }, 3800);
 }
 
-// Update the badge counter on menu
 function updateAchievementBadge() {
   const badge = document.getElementById('achievement-badge-count');
   if (!badge) return;
@@ -392,25 +372,19 @@ function renderAchievementGrid(filter) {
   if (!grid) return;
 
   let list = ACHIEVEMENTS_DATA.achievements.slice();
-
-  // Filter hidden: only show if unlocked
   list = list.filter(a => !a.hidden || PLAYER_STATS.unlockedAchievements.includes(a.id));
 
-  // Filter by category
   if (filter && filter !== 'all') {
     list = list.filter(a => a.category === filter);
   }
 
-  // Sort: unlocked & unclaimed first, then unlocked & claimed, then locked
   list.sort((a, b) => {
     const ua = PLAYER_STATS.unlockedAchievements.includes(a.id);
     const ub = PLAYER_STATS.unlockedAchievements.includes(b.id);
     const ca = PLAYER_STATS.claimedAchievements.includes(a.id);
     const cb = PLAYER_STATS.claimedAchievements.includes(b.id);
-    // Unclaimed unlocked first
     if (ua && !ca && !(ub && !cb)) return -1;
     if (ub && !cb && !(ua && !ca)) return 1;
-    // Then claimed
     if (ca && !cb) return -1;
     if (cb && !ca) return 1;
     return 0;
@@ -450,7 +424,6 @@ function renderAchievementGrid(filter) {
     `;
   }).join('');
 
-  // Attach click handlers
   grid.querySelectorAll('.achievement-card').forEach(card => {
     card.onclick = () => {
       const id = card.dataset.achId;
@@ -471,30 +444,23 @@ function openAchievementDetail(achId) {
   const unlocked = PLAYER_STATS.unlockedAchievements.includes(ach.id);
   const claimed = PLAYER_STATS.claimedAchievements.includes(ach.id);
 
-  // Icon
   const iconWrap = document.getElementById('ach-detail-icon-wrap');
-  if (iconWrap) {
-    iconWrap.className = 'ach-detail-icon-wrap rarity-' + ach.rarity;
-  }
-  const iconSvg = document.getElementById('ach-detail-icon');
-  if (iconSvg) {
-    iconSvg.innerHTML = `<use href="#${ach.icon}"/>`;
-  }
+  if (iconWrap) iconWrap.className = 'ach-detail-icon-wrap rarity-' + ach.rarity;
 
-  // Title & desc
+  const iconSvg = document.getElementById('ach-detail-icon');
+  if (iconSvg) iconSvg.innerHTML = `<use href="#${ach.icon}"/>`;
+
   const titleEl = document.getElementById('ach-detail-title');
   if (titleEl) titleEl.innerText = ach.title;
   const descEl = document.getElementById('ach-detail-desc');
   if (descEl) descEl.innerText = ach.desc;
 
-  // Rarity
   const rarityEl = document.getElementById('ach-detail-rarity');
   if (rarityEl) {
     rarityEl.innerText = ach.rarity.toUpperCase();
     rarityEl.className = 'ach-detail-rarity rarity-' + ach.rarity;
   }
 
-  // Progress
   const progress = getAchievementProgress(ach);
   const fill = document.getElementById('ach-detail-progress-fill');
   if (fill) {
@@ -504,11 +470,9 @@ function openAchievementDetail(achId) {
   const progressText = document.getElementById('ach-detail-progress-text');
   if (progressText) progressText.innerText = getAchievementProgressText(ach);
 
-  // Reward
   const rewardEl = document.getElementById('ach-detail-reward-coins');
   if (rewardEl) rewardEl.innerText = ach.reward.coins;
 
-  // Claim button
   const claimBtn = document.getElementById('btn-ach-detail-claim');
   const claimText = claimBtn ? claimBtn.querySelector('span') : null;
   if (claimBtn) {
@@ -535,30 +499,25 @@ async function claimAchievementReward(achId) {
   if (!PLAYER_STATS.unlockedAchievements.includes(achId)) return;
   if (PLAYER_STATS.claimedAchievements.includes(achId)) return;
 
-  // Claim!
   PLAYER_STATS.claimedAchievements.push(achId);
   coins += ach.reward.coins || 0;
   PLAYER_STATS.totalCoinsEarned += ach.reward.coins || 0;
   await DB.set('pahlawan_coins', coins);
   await savePlayerStats();
 
-  // UI Update
   updateShopUI();
   updateHUDValues();
   updateAchievementStatsBar();
   updateAchievementBadge();
   renderAchievementGrid(currentAchievementFilter);
 
-  // Play sound & show floating text
   try {
     sounds.playCoin();
     sounds.playPowerup();
   } catch(e) {}
 
-  // Refresh detail modal
   openAchievementDetail(achId);
 
-  // Show a mini toast
   const container = document.getElementById('achievement-toast-container');
   if (container) {
     const toast = document.createElement('div');
@@ -1078,9 +1037,8 @@ let dailyBossIndex = 0;
 let dailyBossSequence = [];
 let nextBossSpawnTime = 0;
 
-// 🔥 Track level time for speed achievement
 let levelStartTime = 0;
-let levelDamageTaken = 0; // for perfect level detection
+let levelDamageTaken = 0;
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas ? canvas.getContext('2d') : null;
@@ -1214,12 +1172,11 @@ window.addEventListener('load', async () => {
     const todayKey = getTodayKey();
     reviveQuota = await getReviveQuota(todayKey);
 
-    // 🔥 Load player stats & achievements
     await loadPlayerStats();
     await loadAchievementsData();
     await trackLoginStreak();
     await trackHeroUsage(currentActor);
-    await checkAchievements(true); // silent check on boot
+    await checkAchievements(true);
     updateAchievementBadge();
   } catch (e) { console.warn('⚠️ [Boot] Async init partial failure:', e); }
 
@@ -1263,7 +1220,7 @@ window.addEventListener('load', async () => {
   }
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=20.0').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=20.1').catch(err => console.log('SW Fail:', err));
   }
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
@@ -1278,18 +1235,14 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 // =============================================================
-// 🔥 LOGIN STREAK & HERO USAGE TRACKING
+// 🔥 LOGIN STREAK & HERO USAGE
 // =============================================================
 async function trackLoginStreak() {
   const todayKey = getTodayKey();
   const last = PLAYER_STATS.lastLoginDate;
 
-  if (last === todayKey) {
-    // Already logged in today
-    return;
-  }
+  if (last === todayKey) return;
 
-  // Check if yesterday
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yKey = `${yesterday.getFullYear()}${String(yesterday.getMonth()+1).padStart(2,'0')}${String(yesterday.getDate()).padStart(2,'0')}`;
@@ -1418,7 +1371,7 @@ function recolorStars() {
 async function loadGameData() {
   try {
     const [rl] = await Promise.all([
-      fetch('./levels.json?v=20.0')
+      fetch('./levels.json?v=20.1')
     ]);
     if (rl.ok) levelsData = await rl.json();
   } catch (err) { levelsData = generate30Levels(); }
@@ -1485,7 +1438,6 @@ async function setEndlessBest(wave, s) {
   if (wave > best.wave || (wave === best.wave && s > best.score)) {
     await DB.set('pahlawan_endless_best', JSON.stringify({ wave: wave, score: s }));
   }
-  // Update player stats
   if (wave > (PLAYER_STATS.endlessBestWave || 0)) {
     PLAYER_STATS.endlessBestWave = wave;
     await savePlayerStats();
@@ -1549,13 +1501,11 @@ function setupEventListeners() {
     };
   });
 
-  // 🔥 ACHIEVEMENTS MENU
   const bAch = $('btn-achievements');
   if (bAch) bAch.onclick = () => openAchievementModal();
   const bCloseAch = $('btn-close-achievements');
   if (bCloseAch) bCloseAch.onclick = () => $('modal-achievements').classList.add('hidden');
 
-  // Achievement tabs
   document.querySelectorAll('.ach-tab').forEach(tab => {
     tab.onclick = () => {
       document.querySelectorAll('.ach-tab').forEach(t => t.classList.remove('active'));
@@ -1565,14 +1515,12 @@ function setupEventListeners() {
     };
   });
 
-  // Achievement detail close
   const bAchDetailClose = $('btn-ach-detail-close');
   if (bAchDetailClose) bAchDetailClose.onclick = () => {
     $('modal-achievement-detail').classList.add('hidden');
     currentAchievementDetailId = null;
   };
 
-  // Achievement claim
   const bAchClaim = $('btn-ach-detail-claim');
   if (bAchClaim) bAchClaim.onclick = () => {
     if (currentAchievementDetailId) claimAchievementReward(currentAchievementDetailId);
@@ -1978,7 +1926,6 @@ function goToMainMenu() {
     const el = document.getElementById('saved-level-display');
     if (el) el.innerText = `Level ${lvl}`;
   })();
-  // Refresh badge
   updateAchievementBadge();
 }
 
@@ -2121,8 +2068,23 @@ function mpSetupCallbacks() {
     mpSetStatus('mp-connect-status', '⚠️ ' + msg, 'error');
   });
 
+  // 🔥 v20.1 — Status UI feedback dengan progress info
   MP.onStatusChange((state) => {
     console.log('🔄 [MP] State:', state);
+    const msgMap = {
+      'idle':       { text: 'Menunggu...', type: 'info' },
+      'creating':   { text: 'Membuat room...', type: 'info' },
+      'waiting':    { text: 'Menunggu pemain lain...', type: 'info' },
+      'connecting': { text: '🔄 Menghubungkan... (5-10 detik)', type: 'info' },
+      'connected':  { text: '✅ Terhubung!', type: 'success' },
+      'error':      { text: '❌ Gagal terhubung. Coba lagi.', type: 'error' },
+      'closed':     { text: '⚠️ Koneksi terputus', type: 'warning' }
+    };
+    const info = msgMap[state] || { text: state, type: 'info' };
+    mpSetStatus('mp-connect-status', info.text, info.type);
+    if (state === 'connecting' || state === 'connected' || state === 'error') {
+      mpSetStatus('mp-join-status', info.text, info.type);
+    }
   });
 
   MP.onInput((input) => {
@@ -2397,7 +2359,6 @@ function mpEndGame(win, reason) {
 
   if (win && wasRole === 'host') {
     saveCoopScoreToGlobalLeaderboard(playerName, mpRemoteName || 'Guest', score, currentLevelIndex + 1);
-    // Track coop win
     PLAYER_STATS.coopWins++;
     savePlayerStats().then(() => checkAchievements());
   }
@@ -2715,7 +2676,6 @@ function triggerBossSiren() {
 }
 
 function updateComboBoosts() {
-  // Track max combo
   if (combo > PLAYER_STATS.maxCombo) {
     PLAYER_STATS.maxCombo = combo;
     savePlayerStats().then(() => checkAchievements());
@@ -3356,7 +3316,6 @@ function gameLoop() {
           monsters.splice(j, 1);
           updateHUDValues();
 
-          // Achievement checks
           savePlayerStats();
           checkAchievements();
 
@@ -4189,13 +4148,11 @@ async function levelComplete() {
   stopSpawnLoop(); sounds.stopBGM(); sounds.playWin();
   const lc = levelsData[currentLevelIndex] || levelsData[0];
 
-  // 🔥 Track level stats
   const levelTime = (Date.now() - levelStartTime) / 1000;
   if (levelTime < PLAYER_STATS.fastestLevelTime) {
     PLAYER_STATS.fastestLevelTime = levelTime;
     console.log('⚡ [Stats] New fastest level:', levelTime.toFixed(1) + 's');
   }
-  // Perfect level = no damage taken during the level
   if (levelDamageTaken === 0) {
     PLAYER_STATS.perfectLevels++;
     console.log('✨ [Stats] Perfect level!');
@@ -4208,7 +4165,6 @@ async function levelComplete() {
   const stars = (lives === 3 && combo >= 3) ? 3 : (lives === 3 ? 2 : 1);
   try { await setStar(lc.level, stars); } catch(e) {}
 
-  // Check achievements AFTER stats are saved
   await checkAchievements();
 
   const showResult = () => {
@@ -4475,7 +4431,6 @@ async function finalizeDaily(success) {
     coins += bonus; levelCoinsEarned += bonus;
     PLAYER_STATS.totalCoinsEarned += bonus;
 
-    // 🔥 Track daily streak
     const lastDaily = PLAYER_STATS.lastDailyDate;
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
@@ -4818,5 +4773,5 @@ window.addEventListener('load', () => {
 });
 
 // =============================================================
-// END OF FILE — v20.0
+// END OF FILE — v20.1
 // =============================================================
