@@ -1,12 +1,15 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v20.1
-// "Achievement Edition + Fast Connect"
+// PAHLAWAN BINTANG — game.js v20.2
+// "Spectator Edition"
 // ------------------------------------------------------------
 // v20.0 (semua dipertahankan):
-//   1-10. Level Persistence, Juice, BGM, Parallax, MP Sync
-//   11-16. Player Stats, Achievement System, Login Streak, dll
-// v20.1 (baru):
-//   17. MP Status UI feedback (spinner + progress text)
+//   Achievement System, Player Stats, Login Streak, dll
+// v20.1:
+//   MP Status UI feedback (spinner + progress text)
+// v20.2 (baru):
+//   17. Spectator Mode (MP Co-op only)
+//   18. Per-player lives & death countdown (60s)
+//   19. Manual respawn button after countdown
 // =============================================================
 
 // =============================================================
@@ -200,7 +203,7 @@ let ACHIEVEMENTS_DATA = { categories: [], achievements: [] };
 
 async function loadAchievementsData() {
   try {
-    const res = await fetch('./achievements.json?v=20.1');
+    const res = await fetch('./achievements.json?v=20.2');
     if (res.ok) {
       ACHIEVEMENTS_DATA = await res.json();
       console.log('🏆 [Ach] Loaded', ACHIEVEMENTS_DATA.achievements.length, 'achievements');
@@ -303,13 +306,9 @@ function showAchievementToast(ach) {
   `;
   container.appendChild(toast);
 
-  try {
-    if (typeof sounds !== 'undefined') sounds.playKillstreak();
-  } catch(e) {}
+  try { if (typeof sounds !== 'undefined') sounds.playKillstreak(); } catch(e) {}
 
-  setTimeout(() => {
-    if (toast.parentNode) toast.parentNode.removeChild(toast);
-  }, 3800);
+  setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3800);
 }
 
 function updateAchievementBadge() {
@@ -355,16 +354,11 @@ function updateAchievementStatsBar() {
     if (ach && ach.reward && ach.reward.coins) totalReward += ach.reward.coins;
   });
 
-  const el1 = document.getElementById('ach-unlocked-count');
-  if (el1) el1.innerText = unlocked;
-  const el2 = document.getElementById('ach-total-count');
-  if (el2) el2.innerText = total;
-  const el3 = document.getElementById('ach-total-reward');
-  if (el3) el3.innerText = totalReward;
-  const el4 = document.getElementById('ach-claimed-count');
-  if (el4) el4.innerText = claimed;
-  const el5 = document.getElementById('ach-unlocked-count-2');
-  if (el5) el5.innerText = unlocked;
+  const el1 = document.getElementById('ach-unlocked-count'); if (el1) el1.innerText = unlocked;
+  const el2 = document.getElementById('ach-total-count'); if (el2) el2.innerText = total;
+  const el3 = document.getElementById('ach-total-reward'); if (el3) el3.innerText = totalReward;
+  const el4 = document.getElementById('ach-claimed-count'); if (el4) el4.innerText = claimed;
+  const el5 = document.getElementById('ach-unlocked-count-2'); if (el5) el5.innerText = unlocked;
 }
 
 function renderAchievementGrid(filter) {
@@ -450,10 +444,8 @@ function openAchievementDetail(achId) {
   const iconSvg = document.getElementById('ach-detail-icon');
   if (iconSvg) iconSvg.innerHTML = `<use href="#${ach.icon}"/>`;
 
-  const titleEl = document.getElementById('ach-detail-title');
-  if (titleEl) titleEl.innerText = ach.title;
-  const descEl = document.getElementById('ach-detail-desc');
-  if (descEl) descEl.innerText = ach.desc;
+  const titleEl = document.getElementById('ach-detail-title'); if (titleEl) titleEl.innerText = ach.title;
+  const descEl = document.getElementById('ach-detail-desc'); if (descEl) descEl.innerText = ach.desc;
 
   const rarityEl = document.getElementById('ach-detail-rarity');
   if (rarityEl) {
@@ -478,7 +470,6 @@ function openAchievementDetail(achId) {
   if (claimBtn) {
     if (claimed) {
       claimBtn.disabled = true;
-      claimBtn.classList.remove('claimed');
       claimBtn.classList.add('claimed');
       if (claimText) claimText.innerText = 'SUDAH DIKLAIM';
     } else if (unlocked) {
@@ -511,10 +502,7 @@ async function claimAchievementReward(achId) {
   updateAchievementBadge();
   renderAchievementGrid(currentAchievementFilter);
 
-  try {
-    sounds.playCoin();
-    sounds.playPowerup();
-  } catch(e) {}
+  try { sounds.playCoin(); sounds.playPowerup(); } catch(e) {}
 
   openAchievementDetail(achId);
 
@@ -801,6 +789,16 @@ class SoundEngine {
     g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime+0.25);
     o.connect(g); g.connect(this.ctx.destination);
     o.start(); o.stop(this.ctx.currentTime+0.25);
+  }
+  playRespawn() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
+    [392.00,523.25,659.25,783.99].forEach((f,i)=>{
+      const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+      o.type='sine'; o.frequency.setValueAtTime(f,this.ctx.currentTime+i*0.08);
+      g.gain.setValueAtTime(0.24,this.ctx.currentTime+i*0.08);
+      g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+i*0.08+0.2);
+      o.connect(g); g.connect(this.ctx.destination);
+      o.start(this.ctx.currentTime+i*0.08); o.stop(this.ctx.currentTime+i*0.08+0.2);
+    });
   }
 
   _playTone(freq, dur, type='square', vol=0.05, detune=0) {
@@ -1093,7 +1091,7 @@ let mpRemoteShootCooldown = 0;
 let mpRemoteBulletId = 0;
 let mpRemoteHeroType = 'robot';
 
-let mpGuestInput = { left: false, right: false, shoot: false, skill1: false, skill2: false, skill3: false, heroType: 'robot' };
+let mpGuestInput = { left: false, right: false, shoot: false, skill1: false, skill2: false, skill3: false, heroType: 'robot', spectator: false, respawn: false };
 let mpGuestX = 0;
 let mpGuestTargetX = 0;
 let mpGuestHP = 3;
@@ -1122,6 +1120,18 @@ let mpLastAppliedLevel = -1;
 
 let mpEffectQueue = [];
 let mpComboIndicatorState = { text: null, active: false, shownAt: 0 };
+
+// 🔥 v20.2 — Spectator Mode State
+let mpSpectatorMode = false;
+let mpSpectatorReady = false;
+let mpSpectatorTimer = 0;
+let mpSpectatorTickInterval = null;
+
+let mpGuestSpectator = false;
+let mpGuestLives = 3;
+let mpRemoteHostSpectator = false;
+
+const MP_SPECTATOR_WAIT_SECONDS = 60;
 
 // =============================================================
 // 10. BOOTSTRAP
@@ -1220,7 +1230,7 @@ window.addEventListener('load', async () => {
   }
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=20.1').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=20.2').catch(err => console.log('SW Fail:', err));
   }
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
@@ -1240,7 +1250,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
 async function trackLoginStreak() {
   const todayKey = getTodayKey();
   const last = PLAYER_STATS.lastLoginDate;
-
   if (last === todayKey) return;
 
   const yesterday = new Date();
@@ -1370,9 +1379,7 @@ function recolorStars() {
 
 async function loadGameData() {
   try {
-    const [rl] = await Promise.all([
-      fetch('./levels.json?v=20.1')
-    ]);
+    const [rl] = await Promise.all([fetch('./levels.json?v=20.2')]);
     if (rl.ok) levelsData = await rl.json();
   } catch (err) { levelsData = generate30Levels(); }
 }
@@ -1461,6 +1468,123 @@ function triggerHitStop(frames) {
   hitStopFrames = Math.max(hitStopFrames, frames || 3);
   if (mpActive && mpRole === 'host') {
     mpEffectQueue.push({ type: 'hitstop', frames, t: Date.now() });
+  }
+}
+
+// =============================================================
+// 🔥 v20.2 — SPECTATOR MODE
+// =============================================================
+function startSpectatorMode() {
+  console.log('👻 [MP] Entering spectator mode');
+  mpSpectatorMode = true;
+  mpSpectatorReady = false;
+  mpSpectatorTimer = MP_SPECTATOR_WAIT_SECONDS;
+
+  const overlay = document.getElementById('mp-spectator-overlay');
+  if (overlay) overlay.classList.remove('hidden');
+
+  updateSpectatorUI();
+
+  if (mpSpectatorTickInterval) clearInterval(mpSpectatorTickInterval);
+  mpSpectatorTickInterval = setInterval(() => {
+    if (!mpSpectatorMode) {
+      clearInterval(mpSpectatorTickInterval);
+      mpSpectatorTickInterval = null;
+      return;
+    }
+    if (mpSpectatorTimer > 0) {
+      mpSpectatorTimer--;
+      if (mpSpectatorTimer <= 0) {
+        mpSpectatorReady = true;
+        try { sounds.playPowerup(); } catch(e) {}
+      }
+      updateSpectatorUI();
+    } else {
+      clearInterval(mpSpectatorTickInterval);
+      mpSpectatorTickInterval = null;
+    }
+  }, 1000);
+
+  if (mpRole === 'guest') {
+    mpGuestInput.spectator = true;
+  }
+
+  if (mpRole === 'host') {
+    checkBothDead();
+  }
+}
+
+function updateSpectatorUI() {
+  const cd = document.getElementById('spectator-countdown');
+  const hint = document.getElementById('spectator-hint');
+  const btn = document.getElementById('btn-spectator-respawn');
+  const prog = document.getElementById('spectator-progress-fill');
+
+  if (cd) {
+    if (mpSpectatorReady) {
+      cd.innerText = '✓';
+      cd.style.color = '#39ff14';
+      cd.style.textShadow = '0 0 20px #39ff14, 0 0 40px rgba(57,255,20,0.5)';
+    } else {
+      cd.innerText = mpSpectatorTimer;
+      cd.style.color = '#fff';
+      cd.style.textShadow = '0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 138, 0, 0.5)';
+    }
+  }
+  if (prog) {
+    const pct = ((MP_SPECTATOR_WAIT_SECONDS - mpSpectatorTimer) / MP_SPECTATOR_WAIT_SECONDS) * 100;
+    prog.style.width = pct + '%';
+  }
+  if (mpSpectatorReady) {
+    if (btn) btn.classList.remove('hidden');
+    if (hint) hint.innerText = 'Siap respawn! Klik tombol di bawah';
+  } else {
+    if (btn) btn.classList.add('hidden');
+    if (hint) hint.innerText = 'Tunggu ' + mpSpectatorTimer + ' detik lagi...';
+  }
+}
+
+function respawnFromSpectator() {
+  if (!mpSpectatorMode || !mpSpectatorReady) return;
+  console.log('👻 [MP] Respawning from spectator');
+
+  mpSpectatorMode = false;
+  mpSpectatorReady = false;
+  mpSpectatorTimer = 0;
+  if (mpSpectatorTickInterval) {
+    clearInterval(mpSpectatorTickInterval);
+    mpSpectatorTickInterval = null;
+  }
+
+  const overlay = document.getElementById('mp-spectator-overlay');
+  if (overlay) overlay.classList.add('hidden');
+
+  lives = 1;
+  playerHitPoints = PLAYER_MAX_HIT_POINTS;
+  playerHitFlash = 0;
+  isReviveInvuln = true;
+  reviveInvulnTimer = 120;
+  updateLivesDisplay();
+
+  try { sounds.playRespawn(); } catch(e) {}
+
+  if (mpRole === 'guest') {
+    mpGuestInput.respawn = true;
+  } else {
+    // Host respawning locally
+    playerX = VIRTUAL_WIDTH * 0.25;
+    playerTargetX = playerX;
+    spawnFloatingText(playerX, VIRTUAL_HEIGHT - 70 * GAME_SCALE, 'REVIVED!', '#39ff14');
+    triggerScreenFlash(0.5);
+  }
+}
+
+function checkBothDead() {
+  if (!mpActive || gameMode !== 'coop') return;
+  if (mpRole !== 'host') return;
+  if (mpSpectatorMode && mpGuestSpectator) {
+    console.log('💀 [MP] Both players dead — game over');
+    setTimeout(() => mpEndGame(false, 'KEDUA PEMAIN MATI'), 500);
   }
 }
 
@@ -1607,10 +1731,12 @@ function setupEventListeners() {
     };
     canvas.addEventListener('pointerdown', (e) => {
       if (!isGameRunning || isGamePaused) return;
+      if (mpSpectatorMode) return;
       if (e.pointerType === 'touch' || e.buttons > 0) setTargetFromClientX(e.clientX);
     });
     canvas.addEventListener('pointermove', (e) => {
       if (!isGameRunning || isGamePaused) return;
+      if (mpSpectatorMode) return;
       if (e.buttons > 0 || e.pointerType === 'touch') setTargetFromClientX(e.clientX);
     });
   }
@@ -1648,6 +1774,7 @@ function setupEventListeners() {
   const bFreeze = $('btn-freeze');
   if (bFreeze) bFreeze.onclick = () => {
     if (freezeCharges <= 0 || isFrozen || isGamePaused || !isGameRunning) return;
+    if (mpSpectatorMode) return;
     if (mpActive && mpRole === 'guest') {
       freezeCharges--; updateSkillButtonsUI(); mpSendGuestSkill(1); return;
     }
@@ -1661,6 +1788,7 @@ function setupEventListeners() {
   const bShield = $('btn-shield');
   if (bShield) bShield.onclick = () => {
     if (shieldCharges <= 0 || isShieldActive || isGamePaused || !isGameRunning) return;
+    if (mpSpectatorMode) return;
     if (mpActive && mpRole === 'guest') {
       shieldCharges--; updateSkillButtonsUI(); mpSendGuestSkill(2); return;
     }
@@ -1673,6 +1801,7 @@ function setupEventListeners() {
   const bBomb = $('btn-bomb');
   if (bBomb) bBomb.onclick = () => {
     if (bombCharges <= 0 || isGamePaused || !isGameRunning) return;
+    if (mpSpectatorMode) return;
     if (mpActive && mpRole === 'guest') {
       bombCharges--; updateSkillButtonsUI(); mpSendGuestSkill(3); return;
     }
@@ -1791,6 +1920,11 @@ function setupEventListeners() {
   if (bMPStart) bMPStart.onclick = () => mpStartGame();
   const bMPLeave = $('btn-mp-leave');
   if (bMPLeave) bMPLeave.onclick = () => mpLeaveRoom();
+
+  // 🔥 v20.2 — Spectator respawn button
+  const bSpecRespawn = $('btn-spectator-respawn');
+  if (bSpecRespawn) bSpecRespawn.onclick = () => respawnFromSpectator();
+
   document.querySelectorAll('.mp-mode-btn').forEach(btn => {
     btn.onclick = () => {
       document.querySelectorAll('.mp-mode-btn').forEach(b => b.classList.remove('active'));
@@ -1856,6 +1990,7 @@ function buyUpgrade(type) {
 
 function pauseGame() {
   if (!isGameRunning) return;
+  if (mpSpectatorMode) return;
   isGamePaused = true;
   sounds.stopBGM();
   const p = document.getElementById('modal-pause');
@@ -1915,6 +2050,18 @@ function goToMainMenu() {
   mpLastAppliedPhase = null;
   mpLastAppliedLevel = -1;
   mpEffectQueue = [];
+
+  // Reset spectator
+  mpSpectatorMode = false;
+  mpSpectatorReady = false;
+  mpSpectatorTimer = 0;
+  if (mpSpectatorTickInterval) { clearInterval(mpSpectatorTickInterval); mpSpectatorTickInterval = null; }
+  mpGuestSpectator = false;
+  mpGuestLives = 3;
+  mpRemoteHostSpectator = false;
+  const specOverlay = document.getElementById('mp-spectator-overlay');
+  if (specOverlay) specOverlay.classList.add('hidden');
+
   const hud = document.getElementById('hud-overlay'); if (hud) hud.classList.add('hidden');
   const menu = document.getElementById('screen-main-menu'); if (menu) menu.classList.remove('hidden');
   sounds.stopBGM();
@@ -2093,6 +2240,27 @@ function mpSetupCallbacks() {
       mpRemoteHeroType = input.heroType;
       console.log('🎨 [MP] Guest hero type:', mpRemoteHeroType);
     }
+    // 🔥 v20.2: Handle guest spectator state
+    if (input && input.spectator !== undefined) {
+      const wasSpec = mpGuestSpectator;
+      mpGuestSpectator = input.spectator;
+      if (wasSpec !== mpGuestSpectator) {
+        console.log('👻 [MP] Guest spectator:', mpGuestSpectator);
+        if (mpGuestSpectator) checkBothDead();
+      }
+    }
+    // 🔥 v20.2: Handle guest respawn
+    if (input && input.respawn) {
+      console.log('👻 [MP] Guest respawning');
+      mpGuestSpectator = false;
+      mpGuestHP = PLAYER_MAX_HIT_POINTS;
+      mpGuestAlive = true;
+      mpGuestX = VIRTUAL_WIDTH * 0.75;
+      mpGuestTargetX = mpGuestX;
+      mpGuestLives = 1;
+      spawnFloatingText(mpGuestX, VIRTUAL_HEIGHT - 70 * GAME_SCALE, 'PARTNER REVIVED!', '#39ff14');
+      triggerScreenFlash(0.4);
+    }
   });
 
   MP.onState((state) => {
@@ -2143,7 +2311,10 @@ function mpHostSendState() {
     guestXNorm: mpGuestX / W,
     guestHP: mpGuestHP, guestScore: mpGuestScore,
     guestCombo: mpGuestCombo, guestAlive: mpGuestAlive,
+    guestLives: mpGuestLives,                   // 🔥 v20.2
     hostHP: playerHitPoints, hostScore: score,
+    hostSpectator: mpSpectatorMode,             // 🔥 v20.2
+    guestSpectator: mpGuestSpectator,           // 🔥 v20.2
     totalScore: score + mpGuestScore,
     level: currentLevelIndex + 1,
     targetKills: (levelsData[currentLevelIndex] || levelsData[0]).targetKills,
@@ -2207,10 +2378,26 @@ function mpApplyHostState(state) {
   if (state.hostHeroType) mpRemoteHeroType = state.hostHeroType;
 
   if (state.guestXNorm !== undefined) mpGuestX = state.guestXNorm * W;
-  if (state.guestHP !== undefined) mpGuestHP = state.guestHP;
+  if (state.guestHP !== undefined) {
+    mpGuestHP = state.guestHP;
+    // Sync own HP if guest
+    if (!mpSpectatorMode) playerHitPoints = state.guestHP;
+  }
   if (state.guestScore !== undefined) mpGuestScore = state.guestScore;
   if (state.guestCombo !== undefined) mpGuestCombo = state.guestCombo;
   if (state.guestAlive !== undefined) mpGuestAlive = state.guestAlive;
+
+  // 🔥 v20.2: Guest lives sync
+  if (state.guestLives !== undefined) {
+    lives = state.guestLives;
+    mpGuestLives = state.guestLives;
+    updateLivesDisplay();
+  }
+
+  // 🔥 v20.2: Host spectator state
+  if (state.hostSpectator !== undefined) {
+    mpRemoteHostSpectator = state.hostSpectator;
+  }
 
   mpRemoteHostHP = state.hostHP || 0;
   mpRemoteHostScore = state.hostScore || 0;
@@ -2298,9 +2485,17 @@ function mpSendGuestSkill(skillNum) {
 }
 
 function mpHandleGuestDeath() {
-  mpGuestAlive = false;
+  // 🔥 v20.2 — Guest loses a life
+  mpGuestLives--;
   mpGuestHP = PLAYER_MAX_HIT_POINTS;
-  setTimeout(() => { mpGuestAlive = true; mpGuestHP = PLAYER_MAX_HIT_POINTS; }, 2000);
+  mpGuestAlive = true;
+  console.log('💀 [MP] Guest lost life, remaining:', mpGuestLives);
+
+  if (mpGuestLives <= 0) {
+    console.log('👻 [MP] Guest entered spectator mode');
+    mpGuestSpectator = true;
+    checkBothDead();
+  }
 }
 
 function mpHostLevelComplete() {
@@ -2316,6 +2511,16 @@ function mpEndGame(win, reason) {
   if (win) sounds.playWin();
 
   mpFlow.phase = 'result';
+
+  // 🔥 v20.2: Reset spectator
+  mpSpectatorMode = false;
+  mpSpectatorReady = false;
+  mpSpectatorTimer = 0;
+  if (mpSpectatorTickInterval) { clearInterval(mpSpectatorTickInterval); mpSpectatorTickInterval = null; }
+  mpGuestSpectator = false;
+  mpRemoteHostSpectator = false;
+  const specOverlay = document.getElementById('mp-spectator-overlay');
+  if (specOverlay) specOverlay.classList.add('hidden');
 
   const wasRole = mpRole;
   mpActive = false;
@@ -2378,7 +2583,7 @@ function mpActuallyStartCoop() {
   reviveUsedThisRun = false;
   levelKills = 0; levelCoinsEarned = 0;
 
-  mpGuestInput = { left: false, right: false, shoot: false, skill1: false, skill2: false, skill3: false, heroType: 'robot' };
+  mpGuestInput = { left: false, right: false, shoot: false, skill1: false, skill2: false, skill3: false, heroType: 'robot', spectator: false, respawn: false };
   mpGuestX = VIRTUAL_WIDTH * 0.75;
   mpGuestTargetX = mpGuestX;
   mpGuestHP = PLAYER_MAX_HIT_POINTS;
@@ -2390,6 +2595,18 @@ function mpActuallyStartCoop() {
   mpRemoteHeroType = 'robot';
   mpEffectQueue = [];
   mpComboIndicatorState = { text: null, active: false, shownAt: 0 };
+
+  // 🔥 v20.2 — Init spectator state
+  mpSpectatorMode = false;
+  mpSpectatorReady = false;
+  mpSpectatorTimer = 0;
+  if (mpSpectatorTickInterval) { clearInterval(mpSpectatorTickInterval); mpSpectatorTickInterval = null; }
+  mpGuestSpectator = false;
+  mpGuestLives = 3;
+  mpRemoteHostSpectator = false;
+
+  const specOverlay = document.getElementById('mp-spectator-overlay');
+  if (specOverlay) specOverlay.classList.add('hidden');
 
   if (mpRole === 'host') {
     playerX = VIRTUAL_WIDTH * 0.25;
@@ -3081,6 +3298,9 @@ function gameLoop() {
   const H = VIRTUAL_HEIGHT;
   const S = GAME_SCALE;
 
+  // 🔥 v20.2: If local player is spectator, skip own action
+  const localPlayerActive = !mpSpectatorMode;
+
   playerPulse += 0.08;
   const theme = currentTheme;
 
@@ -3107,13 +3327,16 @@ function gameLoop() {
   ctx.fillRect(0, H - groundH - 5, W, 5);
   ctx.globalAlpha = 1;
 
-  if (isMovingLeft) playerTargetX -= playerSpeed;
-  if (isMovingRight) playerTargetX += playerSpeed;
-  playerTargetX = Math.max(40 * S, Math.min(W - 40 * S, playerTargetX));
-  const dx = playerTargetX - playerX;
-  if (Math.abs(dx) > 0.5) playerX += dx * PLAYER_LERP;
-  else playerX = playerTargetX;
-  playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
+  // Player movement — only if active
+  if (localPlayerActive) {
+    if (isMovingLeft) playerTargetX -= playerSpeed;
+    if (isMovingRight) playerTargetX += playerSpeed;
+    playerTargetX = Math.max(40 * S, Math.min(W - 40 * S, playerTargetX));
+    const dx = playerTargetX - playerX;
+    if (Math.abs(dx) > 0.5) playerX += dx * PLAYER_LERP;
+    else playerX = playerTargetX;
+    playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
+  }
   if (playerHitFlash > 0) playerHitFlash--;
 
   if (isSuperShot) { superShotTimer--; if (superShotTimer <= 0) isSuperShot = false; }
@@ -3126,7 +3349,7 @@ function gameLoop() {
 
   const heroPlayerY = H - 45 * S;
 
-  if (mpActive && mpRole === 'host') {
+  if (mpActive && mpRole === 'host' && !mpGuestSpectator) {
     if (mpGuestInput.left) mpGuestTargetX -= playerSpeed;
     if (mpGuestInput.right) mpGuestTargetX += playerSpeed;
     mpGuestTargetX = Math.max(40 * S, Math.min(W - 40 * S, mpGuestTargetX));
@@ -3186,7 +3409,7 @@ function gameLoop() {
   const fireInterval = Math.max(60, (baseInterval - (upgradeFireRate - 1) * 15) * comboFRMult);
   const now = Date.now();
 
-  if (now - lastShotTime > fireInterval) {
+  if (localPlayerActive && now - lastShotTime > fireInterval) {
     const shotY = H - 65 * S;
     if (isMegaShot) {
       bullets.push({ x: playerX, y: shotY, vx: 0, vy: 15 * S, color: '#ff2e88', heroType: currentActor, size: 16 * S, pierce: 3, owner: 'host' });
@@ -3339,7 +3562,7 @@ function gameLoop() {
   for (let i = coinsOnField.length - 1; i >= 0; i--) {
     const c = coinsOnField[i];
     c.trail = (c.trail || 0) + 1;
-    if (magnetPull) {
+    if (magnetPull && localPlayerActive) {
       const range = (isMagnetActive ? 350 : 160) * S;
       const dd = Math.hypot(playerX - c.x, heroPlayerY - c.y);
       if (dd < range) {
@@ -3360,7 +3583,7 @@ function gameLoop() {
     ctx.restore();
 
     const dp = Math.hypot(playerX - c.x, heroPlayerY - c.y);
-    if (dp < c.size + 25 * S) {
+    if (localPlayerActive && dp < c.size + 25 * S) {
       let mult = (gameMode === 'endless' || gameMode === 'daily') ? 2 : 1;
       if (comboBoostActive.coins) mult *= 2;
       coins += mult; levelCoinsEarned += mult;
@@ -3408,7 +3631,7 @@ function gameLoop() {
     ctx.restore();
 
     const dp = Math.hypot(playerX - p.x, heroPlayerY - p.y);
-    if (dp < p.size + 25 * S) {
+    if (localPlayerActive && dp < p.size + 25 * S) {
       sounds.playPowerup();
       triggerScreenFlash(0.25);
       if (p.type === 'supershot') { isSuperShot = true; superShotTimer = 450; spawnFloatingText(playerX, H - 70 * S, 'SUPER SHOT', '#2ed573'); }
@@ -3433,18 +3656,20 @@ function gameLoop() {
     ctx.fillStyle = '#ff4757'; ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = '#ffd700'; ctx.stroke();
 
-    const dh = Math.hypot(playerX - bb.x, heroPlayerY - bb.y);
-    if (dh < 30 * S) {
-      bossBullets.splice(i, 1);
-      if (isShieldActive || isReviveInvuln) {
-        spawnFloatingText(playerX, H - 60 * S, 'BLOCKED', '#ffd700');
-      } else {
-        handlePlayerHit();
-        if (!isGameRunning) { ctx.restore(); return; }
+    if (localPlayerActive) {
+      const dh = Math.hypot(playerX - bb.x, heroPlayerY - bb.y);
+      if (dh < 30 * S) {
+        bossBullets.splice(i, 1);
+        if (isShieldActive || isReviveInvuln) {
+          spawnFloatingText(playerX, H - 60 * S, 'BLOCKED', '#ffd700');
+        } else {
+          handlePlayerHit();
+          if (!isGameRunning) { ctx.restore(); return; }
+        }
+        continue;
       }
-      continue;
     }
-    if (mpActive && mpRole === 'host' && mpGuestAlive) {
+    if (mpActive && mpRole === 'host' && mpGuestAlive && !mpGuestSpectator) {
       const dg = Math.hypot(mpGuestX - bb.x, heroPlayerY - bb.y);
       if (dg < 30 * S) {
         bossBullets.splice(i, 1);
@@ -3456,22 +3681,27 @@ function gameLoop() {
     if (bb.y > H || bb.x < -50 * S || bb.x > W + 50 * S) bossBullets.splice(i, 1);
   }
 
-  ctx.save();
-  const aA = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
-  const aG = ctx.createRadialGradient(playerX, heroPlayerY + 20 * S, 4 * S, playerX, heroPlayerY + 20 * S, 55 * S);
-  aG.addColorStop(0, `rgba(0,210,255,${aA})`);
-  aG.addColorStop(1, 'rgba(0,210,255,0)');
-  ctx.fillStyle = aG;
-  ctx.beginPath();
-  ctx.ellipse(playerX, heroPlayerY + 20 * S, 55 * S, 14 * S, 0, 0, Math.PI*2);
-  ctx.fill();
-  ctx.restore();
+  // Draw local hero aura — only if active
+  if (localPlayerActive) {
+    ctx.save();
+    const aA = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
+    const aG = ctx.createRadialGradient(playerX, heroPlayerY + 20 * S, 4 * S, playerX, heroPlayerY + 20 * S, 55 * S);
+    aG.addColorStop(0, `rgba(0,210,255,${aA})`);
+    aG.addColorStop(1, 'rgba(0,210,255,0)');
+    ctx.fillStyle = aG;
+    ctx.beginPath();
+    ctx.ellipse(playerX, heroPlayerY + 20 * S, 55 * S, 14 * S, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
 
-  drawHeroVector(ctx, playerX, heroPlayerY, currentActor, false);
+    drawHeroVector(ctx, playerX, heroPlayerY, currentActor, false);
+  }
 
+  // Draw guest hero — skip if guest is spectator
   if (mpActive && mpRole === 'host') {
-    if (mpGuestAlive) {
+    if (mpGuestAlive && !mpGuestSpectator) {
       ctx.save();
+      const aA = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
       const gG = ctx.createRadialGradient(mpGuestX, heroPlayerY + 20 * S, 4 * S, mpGuestX, heroPlayerY + 20 * S, 55 * S);
       gG.addColorStop(0, `rgba(255,215,0,${aA})`);
       gG.addColorStop(1, 'rgba(255,215,0,0)');
@@ -3520,9 +3750,9 @@ function gameLoop() {
           }
         } else if (m.shootTimer > 60) {
           m.aimTimer = 36;
-          m.aimTargetX = playerX;
+          m.aimTargetX = localPlayerActive ? playerX : (W / 2);
           m.aimTargetY = heroPlayerY;
-          spawnTelegraph(m.x, m.y+m.size, playerX, heroPlayerY, 36, '#ff2e88');
+          spawnTelegraph(m.x, m.y+m.size, m.aimTargetX, heroPlayerY, 36, '#ff2e88');
         }
         if (m.minionTimer > 300) {
           m.minionTimer = 0;
@@ -3569,9 +3799,9 @@ function gameLoop() {
             m.shootCooldown--;
             if (m.shootCooldown <= 0 && m.y > 40 * S && m.y < H - 100 * S) {
               m.aimTimer = 30;
-              m.aimTargetX = playerX;
+              m.aimTargetX = localPlayerActive ? playerX : (W / 2);
               m.aimTargetY = heroPlayerY;
-              spawnTelegraph(m.x, m.y+m.size, playerX, heroPlayerY, 30, '#00d2d3');
+              spawnTelegraph(m.x, m.y+m.size, m.aimTargetX, heroPlayerY, 30, '#00d2d3');
             }
           }
         }
@@ -3704,11 +3934,14 @@ function gameLoop() {
 
     if (m.y > H - 55 * S && !m.type.startsWith('boss')) {
       monsters.splice(i, 1);
-      if (isShieldActive || isReviveInvuln) {
-        spawnFloatingText(playerX, H - 60 * S, 'BLOCKED', '#ffd700');
-      } else {
-        handlePlayerHit();
-        if (!isGameRunning) { ctx.restore(); return; }
+      // Only damage local player if active
+      if (localPlayerActive) {
+        if (isShieldActive || isReviveInvuln) {
+          spawnFloatingText(playerX, H - 60 * S, 'BLOCKED', '#ffd700');
+        } else {
+          handlePlayerHit();
+          if (!isGameRunning) { ctx.restore(); return; }
+        }
       }
     }
   }
@@ -3791,6 +4024,7 @@ function gameLoopGuest() {
 
   playerPulse += 0.08;
   const theme = currentTheme;
+  const localPlayerActive = !mpSpectatorMode;
 
   ctx.save();
 
@@ -3814,17 +4048,23 @@ function gameLoopGuest() {
 
   if (MP && MP.isConnected) {
     MP.sendInput({
-      left: isMovingLeft, right: isMovingRight,
-      shoot: true, skill1: false, skill2: false, skill3: false,
-      heroType: currentActor
+      left: localPlayerActive ? isMovingLeft : false,
+      right: localPlayerActive ? isMovingRight : false,
+      shoot: localPlayerActive,
+      skill1: false, skill2: false, skill3: false,
+      heroType: currentActor,
+      spectator: mpSpectatorMode,
+      respawn: mpGuestInput.respawn || false
     });
+    mpGuestInput.respawn = false;
   }
 
   const gdx = mpGuestX - playerX;
   if (Math.abs(gdx) > 0.5) playerX += gdx * 0.35;
   else playerX = mpGuestX;
 
-  if (mpRemoteAlive !== false) {
+  // Draw host — skip if host is spectator
+  if (mpRemoteAlive !== false && !mpRemoteHostSpectator) {
     const hostX = mpRemoteX;
     ctx.save();
     const aA = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
@@ -3851,26 +4091,29 @@ function gameLoopGuest() {
   drawRemoteMonsters(ctx, W, H, S, heroPlayerY);
   drawRemoteBullets(ctx, S);
 
-  ctx.save();
-  const aA2 = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
-  const aG2 = ctx.createRadialGradient(playerX, heroPlayerY + 20 * S, 4 * S, playerX, heroPlayerY + 20 * S, 55 * S);
-  aG2.addColorStop(0, `rgba(0,210,255,${aA2})`);
-  aG2.addColorStop(1, 'rgba(0,210,255,0)');
-  ctx.fillStyle = aG2;
-  ctx.beginPath();
-  ctx.ellipse(playerX, heroPlayerY + 20 * S, 55 * S, 14 * S, 0, 0, Math.PI*2);
-  ctx.fill();
-  ctx.restore();
+  // Draw own hero — only if active
+  if (localPlayerActive) {
+    ctx.save();
+    const aA2 = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
+    const aG2 = ctx.createRadialGradient(playerX, heroPlayerY + 20 * S, 4 * S, playerX, heroPlayerY + 20 * S, 55 * S);
+    aG2.addColorStop(0, `rgba(0,210,255,${aA2})`);
+    aG2.addColorStop(1, 'rgba(0,210,255,0)');
+    ctx.fillStyle = aG2;
+    ctx.beginPath();
+    ctx.ellipse(playerX, heroPlayerY + 20 * S, 55 * S, 14 * S, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
 
-  drawHeroVector(ctx, playerX, heroPlayerY, currentActor, false);
+    drawHeroVector(ctx, playerX, heroPlayerY, currentActor, false);
 
-  ctx.save();
-  ctx.font = `bold ${11 * S}px Orbitron, sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffd700';
-  ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
-  ctx.fillText(playerName + ' (Kamu)', playerX, heroPlayerY - 50 * S);
-  ctx.restore();
+    ctx.save();
+    ctx.font = `bold ${11 * S}px Orbitron, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffd700';
+    ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+    ctx.fillText(playerName + ' (Kamu)', playerX, heroPlayerY - 50 * S);
+    ctx.restore();
+  }
 
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
@@ -4068,6 +4311,7 @@ function drawRemoteBullets(ctx, S) {
 function handlePlayerHit() {
   if (isReviveInvuln) return;
   if (isReviveModalOpen) return;
+  if (mpSpectatorMode) return; // 🔥 v20.2: Spectator immune
   levelDamageTaken++;
   const oneLife = (gameMode === 'daily' && currentDailyModifier && currentDailyModifier.id === 'one_life');
   playerHitPoints--; playerHitFlash = 12;
@@ -4086,7 +4330,14 @@ function handlePlayerHit() {
     screenShake = 18;
   }
   updateLivesDisplay();
-  if (lives <= 0) offerReviveOrFail();
+  if (lives <= 0) {
+    // 🔥 v20.2 — In MP coop, trigger spectator instead of revive modal
+    if (mpActive && gameMode === 'coop') {
+      startSpectatorMode();
+    } else {
+      offerReviveOrFail();
+    }
+  }
 }
 
 async function offerReviveOrFail() {
@@ -4773,5 +5024,5 @@ window.addEventListener('load', () => {
 });
 
 // =============================================================
-// END OF FILE — v20.1
+// END OF FILE — v20.2 (Spectator Edition)
 // =============================================================
