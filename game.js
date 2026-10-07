@@ -1,18 +1,16 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v19.2
-// "Butter Smooth Edition"
+// PAHLAWAN BINTANG — game.js v20.0
+// "Achievement Edition"
 // ------------------------------------------------------------
-// Fitur:
-//   1. Level Persistence (auto-save, resume, reset)
-//   2. Hit Stop (frame freeze saat hit besar)
-//   3. Screen Flash (efek juice)
-//   4. Combo Rewards (bonus di combo 3/5/10)
-//   5. BGM per Theme (12 tema musik dinamis)
-//   6. Parallax Starfield (3 layer)
-//   7. MP Effect Sync (flash, hitstop, combo indicator)
-//   8. BGM restart saat theme berubah di guest
-//   9. Low-end device detection (auto-disable berat effects)
-//  10. Tab-hidden animation pause
+// Fitur v19.2 (semua dipertahankan):
+//   1-10. Level Persistence, Juice, BGM, Parallax, MP Sync, dll
+// Fitur baru v20.0:
+//   11. Player Statistics Tracking (persistent)
+//   12. Achievement System (auto-check, toast, claim, filter)
+//   13. Login Streak tracking
+//   14. Hero Usage tracking
+//   15. Perfect Level detection
+//   16. Fastest Level Time tracking
 // =============================================================
 
 // =============================================================
@@ -137,12 +135,447 @@ async function setSavedLevel(levelNum) {
     const el = document.getElementById('saved-level-display');
     if (el) el.innerText = `Level ${levelNum}`;
   }
+  // Track max level reached for achievement
+  if (levelNum > PLAYER_STATS.maxLevelReached) {
+    PLAYER_STATS.maxLevelReached = levelNum;
+    await savePlayerStats();
+  }
 }
 async function resetProgress() {
   await DB.set('pahlawan_last_level', '1');
   console.log('🔄 [Progress] Progress di-reset ke level 1');
   const el = document.getElementById('saved-level-display');
   if (el) el.innerText = 'Level 1';
+}
+
+// =============================================================
+// 🔥 PLAYER STATISTICS (untuk Achievement)
+// =============================================================
+const DEFAULT_PLAYER_STATS = {
+  totalKills: 0,
+  totalBossKills: 0,
+  maxCombo: 0,
+  perfectLevels: 0,
+  fastestLevelTime: Infinity,
+  totalCoinsEarned: 0,
+  maxLevelReached: 1,
+  heroesUsed: [],       // array of hero ids
+  coopWins: 0,
+  loginStreak: 0,
+  lastLoginDate: null,
+  dailyStreak: 0,
+  lastDailyDate: null,
+  // Achievement state
+  unlockedAchievements: [],  // array of achievement ids
+  claimedAchievements: []    // array of achievement ids
+};
+
+let PLAYER_STATS = { ...DEFAULT_PLAYER_STATS };
+
+async function loadPlayerStats() {
+  const raw = await DB.get('pahlawan_player_stats');
+  try {
+    const parsed = JSON.parse(raw || '{}');
+    PLAYER_STATS = { ...DEFAULT_PLAYER_STATS, ...parsed };
+    // Convert Infinity back (JSON can't store it)
+    if (PLAYER_STATS.fastestLevelTime === null || PLAYER_STATS.fastestLevelTime === undefined) {
+      PLAYER_STATS.fastestLevelTime = Infinity;
+    }
+    // Ensure arrays
+    if (!Array.isArray(PLAYER_STATS.heroesUsed)) PLAYER_STATS.heroesUsed = [];
+    if (!Array.isArray(PLAYER_STATS.unlockedAchievements)) PLAYER_STATS.unlockedAchievements = [];
+    if (!Array.isArray(PLAYER_STATS.claimedAchievements)) PLAYER_STATS.claimedAchievements = [];
+  } catch(e) {
+    PLAYER_STATS = { ...DEFAULT_PLAYER_STATS };
+  }
+  console.log('📊 [Stats] Loaded:', PLAYER_STATS);
+}
+
+async function savePlayerStats() {
+  const saveData = { ...PLAYER_STATS };
+  // Handle Infinity (JSON safe)
+  if (saveData.fastestLevelTime === Infinity) saveData.fastestLevelTime = null;
+  try {
+    await DB.set('pahlawan_player_stats', JSON.stringify(saveData));
+  } catch(e) {
+    console.warn('⚠️ [Stats] Save failed:', e);
+  }
+}
+
+// =============================================================
+// 🔥 ACHIEVEMENT SYSTEM
+// =============================================================
+let ACHIEVEMENTS_DATA = { categories: [], achievements: [] };
+
+async function loadAchievementsData() {
+  try {
+    const res = await fetch('./achievements.json?v=20.0');
+    if (res.ok) {
+      ACHIEVEMENTS_DATA = await res.json();
+      console.log('🏆 [Ach] Loaded', ACHIEVEMENTS_DATA.achievements.length, 'achievements');
+    }
+  } catch(e) {
+    console.warn('⚠️ [Ach] Failed to load achievements.json');
+  }
+}
+
+// Get current value of a stat type (for progress display)
+function getStatValue(statType) {
+  switch(statType) {
+    case 'totalKills': return PLAYER_STATS.totalKills;
+    case 'bossKills': return PLAYER_STATS.totalBossKills;
+    case 'maxCombo': return PLAYER_STATS.maxCombo;
+    case 'perfectLevels': return PLAYER_STATS.perfectLevels;
+    case 'fastestLevelTime': return PLAYER_STATS.fastestLevelTime === Infinity ? 9999 : PLAYER_STATS.fastestLevelTime;
+    case 'totalCoinsEarned': return PLAYER_STATS.totalCoinsEarned;
+    case 'maxLevelReached': return PLAYER_STATS.maxLevelReached;
+    case 'heroesUsedCount': return PLAYER_STATS.heroesUsed.length;
+    case 'coopWins': return PLAYER_STATS.coopWins;
+    case 'endlessBestWave': return PLAYER_STATS.endlessBestWave || 0;
+    case 'dailyStreak': return PLAYER_STATS.dailyStreak;
+    case 'loginStreak': return PLAYER_STATS.loginStreak;
+    default: return 0;
+  }
+}
+
+// Check if achievement condition is met
+function isAchievementUnlocked(ach) {
+  const cond = ach.condition;
+  if (!cond) return false;
+  const current = getStatValue(cond.type);
+  if (cond.comparison === 'lte') return current <= cond.value;
+  return current >= cond.value;
+}
+
+// Get progress percentage (0..1)
+function getAchievementProgress(ach) {
+  const cond = ach.condition;
+  if (!cond) return 0;
+  const current = getStatValue(cond.type);
+  if (cond.comparison === 'lte') {
+    // For "faster than X" type, progress is inverse
+    if (current === 9999) return 0; // never done
+    if (current <= cond.value) return 1;
+    // Show some progress based on how close
+    return Math.max(0, 1 - (current - cond.value) / 120);
+  }
+  if (cond.value === 0) return 1;
+  return Math.min(1, current / cond.value);
+}
+
+// Format progress text
+function getAchievementProgressText(ach) {
+  const cond = ach.condition;
+  if (!cond) return '0/0';
+  const current = getStatValue(cond.type);
+  if (cond.comparison === 'lte') {
+    if (current === 9999) return `--/${cond.value}s`;
+    return `${Math.round(current)}s/${cond.value}s`;
+  }
+  return `${Math.min(current, cond.value)}/${cond.value}`;
+}
+
+// Check all achievements and unlock new ones
+async function checkAchievements(silent) {
+  if (!ACHIEVEMENTS_DATA.achievements.length) return;
+  let changed = false;
+  for (const ach of ACHIEVEMENTS_DATA.achievements) {
+    if (PLAYER_STATS.unlockedAchievements.includes(ach.id)) continue;
+    if (isAchievementUnlocked(ach)) {
+      PLAYER_STATS.unlockedAchievements.push(ach.id);
+      changed = true;
+      console.log('🏆 [Ach] Unlocked:', ach.id, ach.title);
+      if (!silent) showAchievementToast(ach);
+    }
+  }
+  if (changed) {
+    await savePlayerStats();
+    updateAchievementBadge();
+    // Refresh modal if open
+    const modal = document.getElementById('modal-achievements');
+    if (modal && !modal.classList.contains('hidden')) {
+      renderAchievementGrid(currentAchievementFilter);
+    }
+  }
+}
+
+// Toast notification
+function showAchievementToast(ach) {
+  const container = document.getElementById('achievement-toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = 'achievement-toast';
+  toast.innerHTML = `
+    <div class="toast-icon-wrap">
+      <svg viewBox="0 0 24 24"><use href="#${ach.icon}"/></svg>
+    </div>
+    <div class="toast-content">
+      <div class="toast-label">PENCAPAIAN TERBUKA</div>
+      <div class="toast-title">${escapeHtml(ach.title)}</div>
+      <div class="toast-reward">
+        +${ach.reward.coins}
+        <svg class="ico-inline gold" viewBox="0 0 24 24" style="width:12px;height:12px;vertical-align:-2px;"><use href="#i-coin"/></svg>
+      </div>
+    </div>
+  `;
+  container.appendChild(toast);
+
+  // Play unlock sound
+  try {
+    if (typeof sounds !== 'undefined') sounds.playKillstreak();
+  } catch(e) {}
+
+  setTimeout(() => {
+    if (toast.parentNode) toast.parentNode.removeChild(toast);
+  }, 3800);
+}
+
+// Update the badge counter on menu
+function updateAchievementBadge() {
+  const badge = document.getElementById('achievement-badge-count');
+  if (!badge) return;
+  const unclaimed = PLAYER_STATS.unlockedAchievements.filter(
+    id => !PLAYER_STATS.claimedAchievements.includes(id)
+  ).length;
+  if (unclaimed > 0) {
+    badge.classList.remove('hidden');
+    badge.innerText = unclaimed;
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+// =============================================================
+// ACHIEVEMENT MODAL UI
+// =============================================================
+let currentAchievementFilter = 'all';
+let currentAchievementDetailId = null;
+
+function openAchievementModal() {
+  const modal = document.getElementById('modal-achievements');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  currentAchievementFilter = 'all';
+  document.querySelectorAll('.ach-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.cat === 'all');
+  });
+  updateAchievementStatsBar();
+  renderAchievementGrid('all');
+}
+
+function updateAchievementStatsBar() {
+  const total = ACHIEVEMENTS_DATA.achievements.length;
+  const unlocked = PLAYER_STATS.unlockedAchievements.length;
+  const claimed = PLAYER_STATS.claimedAchievements.length;
+
+  let totalReward = 0;
+  PLAYER_STATS.claimedAchievements.forEach(id => {
+    const ach = ACHIEVEMENTS_DATA.achievements.find(a => a.id === id);
+    if (ach && ach.reward && ach.reward.coins) totalReward += ach.reward.coins;
+  });
+
+  const el1 = document.getElementById('ach-unlocked-count');
+  if (el1) el1.innerText = unlocked;
+  const el2 = document.getElementById('ach-total-count');
+  if (el2) el2.innerText = total;
+  const el3 = document.getElementById('ach-total-reward');
+  if (el3) el3.innerText = totalReward;
+  const el4 = document.getElementById('ach-claimed-count');
+  if (el4) el4.innerText = claimed;
+  const el5 = document.getElementById('ach-unlocked-count-2');
+  if (el5) el5.innerText = unlocked;
+}
+
+function renderAchievementGrid(filter) {
+  const grid = document.getElementById('achievement-grid');
+  if (!grid) return;
+
+  let list = ACHIEVEMENTS_DATA.achievements.slice();
+
+  // Filter hidden: only show if unlocked
+  list = list.filter(a => !a.hidden || PLAYER_STATS.unlockedAchievements.includes(a.id));
+
+  // Filter by category
+  if (filter && filter !== 'all') {
+    list = list.filter(a => a.category === filter);
+  }
+
+  // Sort: unlocked & unclaimed first, then unlocked & claimed, then locked
+  list.sort((a, b) => {
+    const ua = PLAYER_STATS.unlockedAchievements.includes(a.id);
+    const ub = PLAYER_STATS.unlockedAchievements.includes(b.id);
+    const ca = PLAYER_STATS.claimedAchievements.includes(a.id);
+    const cb = PLAYER_STATS.claimedAchievements.includes(b.id);
+    // Unclaimed unlocked first
+    if (ua && !ca && !(ub && !cb)) return -1;
+    if (ub && !cb && !(ua && !ca)) return 1;
+    // Then claimed
+    if (ca && !cb) return -1;
+    if (cb && !ca) return 1;
+    return 0;
+  });
+
+  if (list.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#93a5c4;font-style:italic;">Belum ada pencapaian di kategori ini.</div>';
+    return;
+  }
+
+  grid.innerHTML = list.map(a => {
+    const unlocked = PLAYER_STATS.unlockedAchievements.includes(a.id);
+    const claimed = PLAYER_STATS.claimedAchievements.includes(a.id);
+    const progress = getAchievementProgress(a);
+    const progressText = getAchievementProgressText(a);
+
+    let cls = 'achievement-card';
+    cls += ` rarity-${a.rarity}`;
+    if (claimed) cls += ' claimed';
+    else if (unlocked) cls += ' unlocked';
+    else cls += ' locked';
+
+    return `
+      <div class="${cls}" data-ach-id="${a.id}">
+        <div class="ach-card-icon-wrap">
+          <svg class="ach-card-icon" viewBox="0 0 24 24"><use href="#${a.icon}"/></svg>
+        </div>
+        <div class="ach-card-title">${escapeHtml(a.title)}</div>
+        <div class="ach-card-desc">${escapeHtml(a.desc)}</div>
+        <div class="ach-card-rarity">${a.rarity.toUpperCase()}</div>
+        <div class="ach-card-progress">
+          <div class="ach-card-progress-fill" style="width:${Math.round(progress*100)}%"></div>
+        </div>
+        <div class="ach-card-progress-text">${progressText}</div>
+        ${unlocked && !claimed ? `<div class="ach-card-reward"><svg style="width:10px;height:10px;" viewBox="0 0 24 24"><use href="#i-coin"/></svg>${a.reward.coins}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  // Attach click handlers
+  grid.querySelectorAll('.achievement-card').forEach(card => {
+    card.onclick = () => {
+      const id = card.dataset.achId;
+      openAchievementDetail(id);
+    };
+  });
+}
+
+function openAchievementDetail(achId) {
+  const ach = ACHIEVEMENTS_DATA.achievements.find(a => a.id === achId);
+  if (!ach) return;
+  currentAchievementDetailId = achId;
+
+  const modal = document.getElementById('modal-achievement-detail');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  const unlocked = PLAYER_STATS.unlockedAchievements.includes(ach.id);
+  const claimed = PLAYER_STATS.claimedAchievements.includes(ach.id);
+
+  // Icon
+  const iconWrap = document.getElementById('ach-detail-icon-wrap');
+  if (iconWrap) {
+    iconWrap.className = 'ach-detail-icon-wrap rarity-' + ach.rarity;
+  }
+  const iconSvg = document.getElementById('ach-detail-icon');
+  if (iconSvg) {
+    iconSvg.innerHTML = `<use href="#${ach.icon}"/>`;
+  }
+
+  // Title & desc
+  const titleEl = document.getElementById('ach-detail-title');
+  if (titleEl) titleEl.innerText = ach.title;
+  const descEl = document.getElementById('ach-detail-desc');
+  if (descEl) descEl.innerText = ach.desc;
+
+  // Rarity
+  const rarityEl = document.getElementById('ach-detail-rarity');
+  if (rarityEl) {
+    rarityEl.innerText = ach.rarity.toUpperCase();
+    rarityEl.className = 'ach-detail-rarity rarity-' + ach.rarity;
+  }
+
+  // Progress
+  const progress = getAchievementProgress(ach);
+  const fill = document.getElementById('ach-detail-progress-fill');
+  if (fill) {
+    fill.style.width = Math.round(progress * 100) + '%';
+    fill.classList.toggle('complete', progress >= 1);
+  }
+  const progressText = document.getElementById('ach-detail-progress-text');
+  if (progressText) progressText.innerText = getAchievementProgressText(ach);
+
+  // Reward
+  const rewardEl = document.getElementById('ach-detail-reward-coins');
+  if (rewardEl) rewardEl.innerText = ach.reward.coins;
+
+  // Claim button
+  const claimBtn = document.getElementById('btn-ach-detail-claim');
+  const claimText = claimBtn ? claimBtn.querySelector('span') : null;
+  if (claimBtn) {
+    if (claimed) {
+      claimBtn.disabled = true;
+      claimBtn.classList.remove('claimed');
+      claimBtn.classList.add('claimed');
+      if (claimText) claimText.innerText = 'SUDAH DIKLAIM';
+    } else if (unlocked) {
+      claimBtn.disabled = false;
+      claimBtn.classList.remove('claimed');
+      if (claimText) claimText.innerText = 'KLAIM REWARD';
+    } else {
+      claimBtn.disabled = true;
+      claimBtn.classList.remove('claimed');
+      if (claimText) claimText.innerText = 'BELUM TERBUKA';
+    }
+  }
+}
+
+async function claimAchievementReward(achId) {
+  const ach = ACHIEVEMENTS_DATA.achievements.find(a => a.id === achId);
+  if (!ach) return;
+  if (!PLAYER_STATS.unlockedAchievements.includes(achId)) return;
+  if (PLAYER_STATS.claimedAchievements.includes(achId)) return;
+
+  // Claim!
+  PLAYER_STATS.claimedAchievements.push(achId);
+  coins += ach.reward.coins || 0;
+  PLAYER_STATS.totalCoinsEarned += ach.reward.coins || 0;
+  await DB.set('pahlawan_coins', coins);
+  await savePlayerStats();
+
+  // UI Update
+  updateShopUI();
+  updateHUDValues();
+  updateAchievementStatsBar();
+  updateAchievementBadge();
+  renderAchievementGrid(currentAchievementFilter);
+
+  // Play sound & show floating text
+  try {
+    sounds.playCoin();
+    sounds.playPowerup();
+  } catch(e) {}
+
+  // Refresh detail modal
+  openAchievementDetail(achId);
+
+  // Show a mini toast
+  const container = document.getElementById('achievement-toast-container');
+  if (container) {
+    const toast = document.createElement('div');
+    toast.className = 'achievement-toast';
+    toast.innerHTML = `
+      <div class="toast-icon-wrap">
+        <svg viewBox="0 0 24 24"><use href="#i-coin"/></svg>
+      </div>
+      <div class="toast-content">
+        <div class="toast-label">REWARD DIKLAIM</div>
+        <div class="toast-title">${escapeHtml(ach.title)}</div>
+        <div class="toast-reward">+${ach.reward.coins} koin</div>
+      </div>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3200);
+  }
 }
 
 // =============================================================
@@ -163,7 +596,6 @@ const LEVEL_THEMES = [
   { id:'omega', name:'FINAL BOSS: OMEGA', bgTop:'#000000', bgBottom:'#2a0033', accent:'#ff0055', accentSoft:'rgba(255,0,85,0.5)', stars:['#ff0055','#ffd700','#00ffff','#ffffff','#ff00ff'], ground:'#0a0010', groundLine:'#ff0055', monsters:['#ff0055','#ffd700','#00ffff','#ff00ff','#39ff14'] }
 ];
 
-// 🔥 BGM per Theme
 const THEME_BGM = {
   cosmic:  { bpm: 138, root: 261.63, scale: [0, 2, 3, 5, 7, 8, 10], waveform: 'square',    bassWave: 'triangle', energy: 1.0 },
   inferno: { bpm: 158, root: 246.94, scale: [0, 1, 3, 5, 7, 8, 10], waveform: 'sawtooth',  bassWave: 'square',   energy: 1.3 },
@@ -246,11 +678,7 @@ function generate30Levels() {
 }
 let levelsData = generate30Levels();
 
-const DEFAULT_STICKERS = [
-  { id:1, title:"Pahlawan Pemula" }, { id:2, title:"Penembak Jitu" },
-  { id:3, title:"Penjelajah Galaksi" }, { id:4, title:"Penakluk Boss 1" },
-  { id:5, title:"Master Kombinasi" }, { id:6, title:"Pahlawan Legendaris" }
-];
+const DEFAULT_STICKERS = [];
 let stickersData = DEFAULT_STICKERS;
 
 const ENEMY_SCORE_TABLE = {
@@ -627,11 +1055,9 @@ let isFrozen = false;
 let freezeFramesRemaining = 0;
 let screenShake = 0;
 
-// 🔥 Juice effects
 let hitStopFrames = 0;
 let screenFlash = 0;
 
-// 🔥 Combo rewards
 let comboBoostActive = { coins: false, firerate: false, magnet: false };
 let comboBoostLastNotified = 0;
 
@@ -651,6 +1077,10 @@ let currentLeaderboardTab = 'global';
 let dailyBossIndex = 0;
 let dailyBossSequence = [];
 let nextBossSpawnTime = 0;
+
+// 🔥 Track level time for speed achievement
+let levelStartTime = 0;
+let levelDamageTaken = 0; // for perfect level detection
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas ? canvas.getContext('2d') : null;
@@ -732,7 +1162,6 @@ let mpFlow = {
 let mpLastAppliedPhase = null;
 let mpLastAppliedLevel = -1;
 
-// 🔥 MP Effect Queue
 let mpEffectQueue = [];
 let mpComboIndicatorState = { text: null, active: false, shownAt: 0 };
 
@@ -741,7 +1170,6 @@ let mpComboIndicatorState = { text: null, active: false, shownAt: 0 };
 // =============================================================
 function bootstrapUI() {
   try {
-    // 🔥 Detect low-end device
     const isLowEnd = (
       (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) ||
       (window.devicePixelRatio >= 3 && window.innerWidth < 500) ||
@@ -752,7 +1180,6 @@ function bootstrapUI() {
       console.log('🐢 [Perf] Low-end device — simplified effects enabled');
     }
 
-    // 🔥 Pause animations saat tab tidak aktif
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         document.body.classList.add('tab-hidden');
@@ -786,6 +1213,14 @@ window.addEventListener('load', async () => {
     playerLoadout = await getLoadout();
     const todayKey = getTodayKey();
     reviveQuota = await getReviveQuota(todayKey);
+
+    // 🔥 Load player stats & achievements
+    await loadPlayerStats();
+    await loadAchievementsData();
+    await trackLoginStreak();
+    await trackHeroUsage(currentActor);
+    await checkAchievements(true); // silent check on boot
+    updateAchievementBadge();
   } catch (e) { console.warn('⚠️ [Boot] Async init partial failure:', e); }
 
   try {
@@ -825,12 +1260,10 @@ window.addEventListener('load', async () => {
     await loadGameData();
   } catch (e) {
     levelsData = generate30Levels();
-    stickersData = DEFAULT_STICKERS;
   }
-  try { updateStickerAlbumUI(); } catch (e) {}
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=19.2').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=20.0').catch(err => console.log('SW Fail:', err));
   }
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
@@ -843,6 +1276,44 @@ window.addEventListener('beforeinstallprompt', (e) => {
   const btn = document.getElementById('btn-pwa-install');
   if (btn) btn.classList.remove('hidden');
 });
+
+// =============================================================
+// 🔥 LOGIN STREAK & HERO USAGE TRACKING
+// =============================================================
+async function trackLoginStreak() {
+  const todayKey = getTodayKey();
+  const last = PLAYER_STATS.lastLoginDate;
+
+  if (last === todayKey) {
+    // Already logged in today
+    return;
+  }
+
+  // Check if yesterday
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yKey = `${yesterday.getFullYear()}${String(yesterday.getMonth()+1).padStart(2,'0')}${String(yesterday.getDate()).padStart(2,'0')}`;
+
+  if (last === yKey) {
+    PLAYER_STATS.loginStreak = (PLAYER_STATS.loginStreak || 0) + 1;
+  } else {
+    PLAYER_STATS.loginStreak = 1;
+  }
+  PLAYER_STATS.lastLoginDate = todayKey;
+  await savePlayerStats();
+  console.log('📅 [Login] Streak:', PLAYER_STATS.loginStreak);
+  await checkAchievements(true);
+}
+
+async function trackHeroUsage(heroId) {
+  if (!heroId) return;
+  if (!PLAYER_STATS.heroesUsed.includes(heroId)) {
+    PLAYER_STATS.heroesUsed.push(heroId);
+    await savePlayerStats();
+    console.log('🎨 [Hero] First time using:', heroId);
+    await checkAchievements();
+  }
+}
 
 // =============================================================
 // RESIZE + DPR
@@ -903,7 +1374,6 @@ function handleOrientationChange() {
   }, 300);
 }
 
-// 🔥 Parallax Starfield
 function initStarfield() {
   stars = [];
   starLayers = [];
@@ -947,12 +1417,11 @@ function recolorStars() {
 
 async function loadGameData() {
   try {
-    const [rl, rs] = await Promise.all([
-      fetch('./levels.json?v=19.2'), fetch('./stickers.json?v=19.2')
+    const [rl] = await Promise.all([
+      fetch('./levels.json?v=20.0')
     ]);
     if (rl.ok) levelsData = await rl.json();
-    if (rs.ok) stickersData = await rs.json();
-  } catch (err) { levelsData = generate30Levels(); stickersData = DEFAULT_STICKERS; }
+  } catch (err) { levelsData = generate30Levels(); }
 }
 
 function updateAudioButtonUI() {
@@ -1016,9 +1485,14 @@ async function setEndlessBest(wave, s) {
   if (wave > best.wave || (wave === best.wave && s > best.score)) {
     await DB.set('pahlawan_endless_best', JSON.stringify({ wave: wave, score: s }));
   }
+  // Update player stats
+  if (wave > (PLAYER_STATS.endlessBestWave || 0)) {
+    PLAYER_STATS.endlessBestWave = wave;
+    await savePlayerStats();
+    await checkAchievements();
+  }
 }
 
-// 🔥 Juice helpers
 function triggerScreenFlash(intensity) {
   screenFlash = Math.min(1, (intensity || 0.5));
   const fl = document.getElementById('screen-flash-overlay');
@@ -1075,8 +1549,34 @@ function setupEventListeners() {
     };
   });
 
-  const bStick = $('btn-stickers'); if (bStick) bStick.onclick = openStickerAlbum;
-  const bCloseStick = $('btn-close-stickers'); if (bCloseStick) bCloseStick.onclick = () => $('modal-stickers').classList.add('hidden');
+  // 🔥 ACHIEVEMENTS MENU
+  const bAch = $('btn-achievements');
+  if (bAch) bAch.onclick = () => openAchievementModal();
+  const bCloseAch = $('btn-close-achievements');
+  if (bCloseAch) bCloseAch.onclick = () => $('modal-achievements').classList.add('hidden');
+
+  // Achievement tabs
+  document.querySelectorAll('.ach-tab').forEach(tab => {
+    tab.onclick = () => {
+      document.querySelectorAll('.ach-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentAchievementFilter = tab.dataset.cat || 'all';
+      renderAchievementGrid(currentAchievementFilter);
+    };
+  });
+
+  // Achievement detail close
+  const bAchDetailClose = $('btn-ach-detail-close');
+  if (bAchDetailClose) bAchDetailClose.onclick = () => {
+    $('modal-achievement-detail').classList.add('hidden');
+    currentAchievementDetailId = null;
+  };
+
+  // Achievement claim
+  const bAchClaim = $('btn-ach-detail-claim');
+  if (bAchClaim) bAchClaim.onclick = () => {
+    if (currentAchievementDetailId) claimAchievementReward(currentAchievementDetailId);
+  };
 
   const bPause = $('btn-pause'); if (bPause) bPause.onclick = pauseGame;
   const bResume = $('btn-resume-game'); if (bResume) bResume.onclick = resumeGame;
@@ -1107,6 +1607,7 @@ function setupEventListeners() {
       currentActor = card.dataset.actor;
       DB.set('pahlawan_actor', currentActor);
       updateActorSelectionUI();
+      trackHeroUsage(currentActor);
     };
   });
 
@@ -1243,6 +1744,8 @@ function setupEventListeners() {
           dropBossLoot(m.x, m.y, parseInt(m.type.replace('boss','')) || 5);
           total += (ENEMY_SCORE_TABLE[m.type] || 150) * combo;
           levelKills++; handleKillStreak();
+          PLAYER_STATS.totalKills++;
+          PLAYER_STATS.totalBossKills++;
           monsters.splice(i, 1);
           monsters.forEach(mn => createBurstParticles3D(mn.x, mn.y, mn.color, 20));
           monsters = [];
@@ -1256,6 +1759,7 @@ function setupEventListeners() {
         createBurstParticles3D(m.x, m.y, m.color, 25);
         total += (ENEMY_SCORE_TABLE[m.type] || 150) * combo;
         levelKills++;
+        PLAYER_STATS.totalKills++;
         if (gameMode === 'endless') endlessKillsThisWave++;
         handleKillStreak();
         monsters.splice(i, 1);
@@ -1264,6 +1768,8 @@ function setupEventListeners() {
     score += total;
     if (total > 0) spawnFloatingText(VIRTUAL_WIDTH/2, VIRTUAL_HEIGHT/2, `BOOM +${total}`, '#ff4757');
     updateHUDValues(); checkLevelObjectives();
+    savePlayerStats();
+    checkAchievements();
   };
 
   const loadoutBtn = $('btn-start-loaded');
@@ -1472,6 +1978,8 @@ function goToMainMenu() {
     const el = document.getElementById('saved-level-display');
     if (el) el.innerText = `Level ${lvl}`;
   })();
+  // Refresh badge
+  updateAchievementBadge();
 }
 
 // =============================================================
@@ -1639,7 +2147,6 @@ function mpSetupCallbacks() {
   });
 }
 
-// HOST: kirim state
 function mpHostSendState() {
   if (!mpActive || mpRole !== 'host') return;
   if (!MP || !MP.isConnected) return;
@@ -1890,6 +2397,9 @@ function mpEndGame(win, reason) {
 
   if (win && wasRole === 'host') {
     saveCoopScoreToGlobalLeaderboard(playerName, mpRemoteName || 'Guest', score, currentLevelIndex + 1);
+    // Track coop win
+    PLAYER_STATS.coopWins++;
+    savePlayerStats().then(() => checkAchievements());
   }
 
   mpRole = null;
@@ -2129,6 +2639,7 @@ function resetLevelState() {
   screenFlash = 0;
   comboBoostActive = { coins: false, firerate: false, magnet: false };
   comboBoostLastNotified = 0;
+  levelDamageTaken = 0;
   const cb = document.getElementById('combo-boost-indicator');
   if (cb) cb.classList.remove('show');
 }
@@ -2143,6 +2654,8 @@ function actuallyStartLevel(levelConfig) {
   playerTargetX = playerX;
   updateSkillButtonsUI();
   isGameRunning = true; isGamePaused = false;
+  levelStartTime = Date.now();
+  levelDamageTaken = 0;
   showLevelIntro(levelConfig);
   sounds.startBGM();
   startSpawnLoop();
@@ -2202,6 +2715,12 @@ function triggerBossSiren() {
 }
 
 function updateComboBoosts() {
+  // Track max combo
+  if (combo > PLAYER_STATS.maxCombo) {
+    PLAYER_STATS.maxCombo = combo;
+    savePlayerStats().then(() => checkAchievements());
+  }
+
   const c3 = combo >= 3;
   const c5 = combo >= 5;
   const c10 = combo >= 10;
@@ -2689,11 +3208,14 @@ function gameLoop() {
         createBurstParticles3D(m.x, m.y, m.color, 25);
         total += (ENEMY_SCORE_TABLE[m.type] || 150) * combo;
         levelKills++;
+        PLAYER_STATS.totalKills++;
         monsters.splice(i, 1);
       }
       score += total;
       if (total > 0) spawnFloatingText(W/2, H/2, `BOOM +${total}`, '#ff4757');
       updateHUDValues(); checkLevelObjectives();
+      savePlayerStats();
+      checkAchievements();
     }
   }
 
@@ -2808,6 +3330,8 @@ function gameLoop() {
           const gained = bp * combo;
           score += gained;
           levelKills++;
+          PLAYER_STATS.totalKills++;
+          if (isB) PLAYER_STATS.totalBossKills++;
           if (gameMode === 'endless') endlessKillsThisWave++;
           handleKillStreak();
           combo = Math.min(MAX_COMBO, combo + 1);
@@ -2831,6 +3355,10 @@ function gameLoop() {
           }
           monsters.splice(j, 1);
           updateHUDValues();
+
+          // Achievement checks
+          savePlayerStats();
+          checkAchievements();
 
           if (isB) {
             dropBossLoot(m.x, m.y, parseInt(m.type.replace('boss','')) || 5);
@@ -2877,6 +3405,7 @@ function gameLoop() {
       let mult = (gameMode === 'endless' || gameMode === 'daily') ? 2 : 1;
       if (comboBoostActive.coins) mult *= 2;
       coins += mult; levelCoinsEarned += mult;
+      PLAYER_STATS.totalCoinsEarned += mult;
       DB.set('pahlawan_coins', coins);
       sounds.playCoin();
       spawnFloatingText(c.x, c.y, `+${mult}`, '#ffd700');
@@ -3260,7 +3789,6 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// 🔥 PARALLAX
 function drawParallaxStars(ctx, W, H) {
   if (!starLayers.length) return;
   starLayers.forEach(layer => {
@@ -3581,6 +4109,7 @@ function drawRemoteBullets(ctx, S) {
 function handlePlayerHit() {
   if (isReviveInvuln) return;
   if (isReviveModalOpen) return;
+  levelDamageTaken++;
   const oneLife = (gameMode === 'daily' && currentDailyModifier && currentDailyModifier.id === 'one_life');
   playerHitPoints--; playerHitFlash = 12;
   combo = 1; updateHUDValues();
@@ -3660,12 +4189,27 @@ async function levelComplete() {
   stopSpawnLoop(); sounds.stopBGM(); sounds.playWin();
   const lc = levelsData[currentLevelIndex] || levelsData[0];
 
-  await setSavedLevel(lc.level + 1);
+  // 🔥 Track level stats
+  const levelTime = (Date.now() - levelStartTime) / 1000;
+  if (levelTime < PLAYER_STATS.fastestLevelTime) {
+    PLAYER_STATS.fastestLevelTime = levelTime;
+    console.log('⚡ [Stats] New fastest level:', levelTime.toFixed(1) + 's');
+  }
+  // Perfect level = no damage taken during the level
+  if (levelDamageTaken === 0) {
+    PLAYER_STATS.perfectLevels++;
+    console.log('✨ [Stats] Perfect level!');
+  }
 
-  unlockSticker(lc.level);
+  await setSavedLevel(lc.level + 1);
+  await savePlayerStats();
+
   saveScoreToGlobalLeaderboard(playerName, score, lc.level);
   const stars = (lives === 3 && combo >= 3) ? 3 : (lives === 3 ? 2 : 1);
   try { await setStar(lc.level, stars); } catch(e) {}
+
+  // Check achievements AFTER stats are saved
+  await checkAchievements();
 
   const showResult = () => {
     const $ = id => document.getElementById(id);
@@ -3763,6 +4307,7 @@ function startEndless() {
       bombCharges = playerLoadout.includes('bomb') ? upgradeBomb : 0;
       updateSkillButtonsUI();
       isGameRunning = true; isGamePaused = false;
+      levelStartTime = Date.now();
       document.getElementById('level-intro-number').innerText = '∞';
       document.getElementById('level-intro-name').innerText = 'ENDLESS MODE';
       document.getElementById('level-intro-mission').innerText = 'SURVIVE AS LONG AS YOU CAN';
@@ -3782,6 +4327,7 @@ async function finalizeEndless() {
   stopSpawnLoop(); sounds.stopBGM(); sounds.playWin();
   await setEndlessBest(endlessWave, score);
   saveEndlessToGlobalLeaderboard(playerName, score, endlessWave);
+  await checkAchievements();
   const $ = id => document.getElementById(id);
   const rt = $('result-title'); if (rt) rt.innerText = "ENDLESS BERAKHIR";
   const rpn = $('result-player-name'); if (rpn) rpn.innerText = playerName;
@@ -3880,6 +4426,7 @@ function startDaily() {
       bombCharges = playerLoadout.includes('bomb') ? upgradeBomb : 0;
       updateSkillButtonsUI();
       isGameRunning = true; isGamePaused = false;
+      levelStartTime = Date.now();
       const b = document.getElementById('level-intro');
       document.getElementById('level-intro-number').innerText = 'BOS 1';
       document.getElementById('level-intro-name').innerText = getBossName(fb);
@@ -3926,8 +4473,24 @@ async function finalizeDaily(success) {
     DB.set('pahlawan_daily_done_' + tk, '1');
     const bonus = 500;
     coins += bonus; levelCoinsEarned += bonus;
+    PLAYER_STATS.totalCoinsEarned += bonus;
+
+    // 🔥 Track daily streak
+    const lastDaily = PLAYER_STATS.lastDailyDate;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yKey = `${yesterday.getFullYear()}${String(yesterday.getMonth()+1).padStart(2,'0')}${String(yesterday.getDate()).padStart(2,'0')}`;
+    if (lastDaily === yKey) {
+      PLAYER_STATS.dailyStreak = (PLAYER_STATS.dailyStreak || 0) + 1;
+    } else if (lastDaily !== tk) {
+      PLAYER_STATS.dailyStreak = 1;
+    }
+    PLAYER_STATS.lastDailyDate = tk;
+
     DB.set('pahlawan_coins', coins);
     saveDailyToGlobalLeaderboard(playerName, score, tk);
+    await savePlayerStats();
+    await checkAchievements();
   }
   const $ = id => document.getElementById(id);
   const rt = $('result-title'); if (rt) rt.innerText = success ? "DAILY MASTER!" : "DAILY GAGAL";
@@ -4241,31 +4804,6 @@ function typeStoryLine(line) {
 }
 
 // =============================================================
-// 27. STICKER
-// =============================================================
-function unlockSticker(id) {
-  let u = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
-  if (!u.includes(id)) {
-    u.push(id); DB.set('pahlawan_stickers', JSON.stringify(u)); updateStickerAlbumUI();
-  }
-}
-function updateStickerAlbumUI() {
-  const u = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
-  const e = document.getElementById('unlocked-count');
-  if (e) e.innerText = u.length;
-}
-function openStickerAlbum() {
-  const u = JSON.parse(localStorage.getItem('pahlawan_stickers') || '[]');
-  const g = document.getElementById('sticker-grid');
-  if (!g) return;
-  g.innerHTML = (stickersData || DEFAULT_STICKERS).map((s, i) => {
-    const un = u.includes(s.id);
-    return `<div class="sticker-card ${un ? '' : 'locked'}" style="animation-delay:${(i*0.03).toFixed(2)}s"><div class="sticker-title">${un ? s.title : 'Terkunci'}</div></div>`;
-  }).join('');
-  document.getElementById('modal-stickers').classList.remove('hidden');
-}
-
-// =============================================================
 // 28. INIT MP CALLBACKS
 // =============================================================
 window.addEventListener('load', () => {
@@ -4280,5 +4818,5 @@ window.addEventListener('load', () => {
 });
 
 // =============================================================
-// END OF FILE — v19.2
+// END OF FILE — v20.0
 // =============================================================
