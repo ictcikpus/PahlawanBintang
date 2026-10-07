@@ -1,6 +1,6 @@
 // =============================================================
 // PAHLAWAN BINTANG — game.js v20.2
-// "Spectator Edition"
+// "Spectator Edition + Sync Pause Fix"
 // ------------------------------------------------------------
 // v20.0 (semua dipertahankan):
 //   Achievement System, Player Stats, Login Streak, dll
@@ -10,6 +10,10 @@
 //   17. Spectator Mode (MP Co-op only)
 //   18. Per-player lives & death countdown (60s)
 //   19. Manual respawn button after countdown
+// v20.2 FIX:
+//   20. Dead player only affects own screen
+//   21. Pause tersinkronisasi ke kedua pemain
+//   22. Input skill guest diperbaiki
 // =============================================================
 
 // =============================================================
@@ -1091,7 +1095,13 @@ let mpRemoteShootCooldown = 0;
 let mpRemoteBulletId = 0;
 let mpRemoteHeroType = 'robot';
 
-let mpGuestInput = { left: false, right: false, shoot: false, skill1: false, skill2: false, skill3: false, heroType: 'robot', spectator: false, respawn: false };
+// 🔥 v20.2 FIX — Tambahkan flag pause/resume
+let mpGuestInput = {
+  left: false, right: false, shoot: false,
+  skill1: false, skill2: false, skill3: false,
+  heroType: 'robot', spectator: false, respawn: false,
+  pause: false, resume: false
+};
 let mpGuestX = 0;
 let mpGuestTargetX = 0;
 let mpGuestHP = 3;
@@ -1472,9 +1482,10 @@ function triggerHitStop(frames) {
 }
 
 // =============================================================
-// 🔥 v20.2 — SPECTATOR MODE
+// 🔥 v20.2 — SPECTATOR MODE (with FIX)
 // =============================================================
 function startSpectatorMode() {
+  if (mpSpectatorMode) return; // FIX: jangan dobel
   console.log('👻 [MP] Entering spectator mode');
   mpSpectatorMode = true;
   mpSpectatorReady = false;
@@ -1514,6 +1525,22 @@ function startSpectatorMode() {
   }
 }
 
+// 🔥 v20.2 FIX — Fungsi baru untuk keluar dari spectator
+function endSpectatorMode() {
+  if (!mpSpectatorMode) return;
+  console.log('👻 [MP] Exiting spectator mode');
+  mpSpectatorMode = false;
+  mpSpectatorReady = false;
+  mpSpectatorTimer = 0;
+  if (mpSpectatorTickInterval) {
+    clearInterval(mpSpectatorTickInterval);
+    mpSpectatorTickInterval = null;
+  }
+  const overlay = document.getElementById('mp-spectator-overlay');
+  if (overlay) overlay.classList.add('hidden');
+  updateSpectatorUI();
+}
+
 function updateSpectatorUI() {
   const cd = document.getElementById('spectator-countdown');
   const hint = document.getElementById('spectator-hint');
@@ -1544,20 +1571,12 @@ function updateSpectatorUI() {
   }
 }
 
+// 🔥 v20.2 FIX — respawnFromSpectator menggunakan endSpectatorMode
 function respawnFromSpectator() {
   if (!mpSpectatorMode || !mpSpectatorReady) return;
   console.log('👻 [MP] Respawning from spectator');
 
-  mpSpectatorMode = false;
-  mpSpectatorReady = false;
-  mpSpectatorTimer = 0;
-  if (mpSpectatorTickInterval) {
-    clearInterval(mpSpectatorTickInterval);
-    mpSpectatorTickInterval = null;
-  }
-
-  const overlay = document.getElementById('mp-spectator-overlay');
-  if (overlay) overlay.classList.add('hidden');
+  endSpectatorMode();
 
   lives = 1;
   playerHitPoints = PLAYER_MAX_HIT_POINTS;
@@ -1570,8 +1589,8 @@ function respawnFromSpectator() {
 
   if (mpRole === 'guest') {
     mpGuestInput.respawn = true;
+    mpGuestSpectator = false;
   } else {
-    // Host respawning locally
     playerX = VIRTUAL_WIDTH * 0.25;
     playerTargetX = playerX;
     spawnFloatingText(playerX, VIRTUAL_HEIGHT - 70 * GAME_SCALE, 'REVIVED!', '#39ff14');
@@ -1921,7 +1940,6 @@ function setupEventListeners() {
   const bMPLeave = $('btn-mp-leave');
   if (bMPLeave) bMPLeave.onclick = () => mpLeaveRoom();
 
-  // 🔥 v20.2 — Spectator respawn button
   const bSpecRespawn = $('btn-spectator-respawn');
   if (bSpecRespawn) bSpecRespawn.onclick = () => respawnFromSpectator();
 
@@ -1988,15 +2006,26 @@ function buyUpgrade(type) {
   sounds.playCoin(); updateShopUI();
 }
 
+// 🔥 v20.2 FIX — Pause disinkronkan ke partner
 function pauseGame() {
   if (!isGameRunning) return;
   if (mpSpectatorMode) return;
+  if (mpActive && mpRole === 'guest') {
+    // Guest: kirim request pause ke host
+    mpGuestInput.pause = true;
+    return;
+  }
   isGamePaused = true;
   sounds.stopBGM();
   const p = document.getElementById('modal-pause');
   if (p) p.classList.remove('hidden');
 }
+// 🔥 v20.2 FIX — Resume disinkronkan ke partner
 function resumeGame() {
+  if (mpActive && mpRole === 'guest') {
+    mpGuestInput.resume = true;
+    return;
+  }
   isGamePaused = false;
   sounds.startBGM();
   const p = document.getElementById('modal-pause');
@@ -2215,7 +2244,6 @@ function mpSetupCallbacks() {
     mpSetStatus('mp-connect-status', '⚠️ ' + msg, 'error');
   });
 
-  // 🔥 v20.1 — Status UI feedback dengan progress info
   MP.onStatusChange((state) => {
     console.log('🔄 [MP] State:', state);
     const msgMap = {
@@ -2235,12 +2263,27 @@ function mpSetupCallbacks() {
   });
 
   MP.onInput((input) => {
+    // 🔥 v20.2 FIX — Handle guest pause/resume request
+    if (input && input.pause) {
+      console.log('⏸️ [MP] Guest requested pause');
+      if (!isGamePaused && isGameRunning && !mpSpectatorMode) {
+        pauseGame();
+      }
+      return;
+    }
+    if (input && input.resume) {
+      console.log('▶️ [MP] Guest requested resume');
+      if (isGamePaused) {
+        resumeGame();
+      }
+      return;
+    }
+
     mpGuestInput = input;
     if (input && input.heroType && input.heroType !== mpRemoteHeroType) {
       mpRemoteHeroType = input.heroType;
       console.log('🎨 [MP] Guest hero type:', mpRemoteHeroType);
     }
-    // 🔥 v20.2: Handle guest spectator state
     if (input && input.spectator !== undefined) {
       const wasSpec = mpGuestSpectator;
       mpGuestSpectator = input.spectator;
@@ -2249,7 +2292,6 @@ function mpSetupCallbacks() {
         if (mpGuestSpectator) checkBothDead();
       }
     }
-    // 🔥 v20.2: Handle guest respawn
     if (input && input.respawn) {
       console.log('👻 [MP] Guest respawning');
       mpGuestSpectator = false;
@@ -2311,10 +2353,10 @@ function mpHostSendState() {
     guestXNorm: mpGuestX / W,
     guestHP: mpGuestHP, guestScore: mpGuestScore,
     guestCombo: mpGuestCombo, guestAlive: mpGuestAlive,
-    guestLives: mpGuestLives,                   // 🔥 v20.2
+    guestLives: mpGuestLives,
     hostHP: playerHitPoints, hostScore: score,
-    hostSpectator: mpSpectatorMode,             // 🔥 v20.2
-    guestSpectator: mpGuestSpectator,           // 🔥 v20.2
+    hostSpectator: mpSpectatorMode,
+    guestSpectator: mpGuestSpectator,
     totalScore: score + mpGuestScore,
     level: currentLevelIndex + 1,
     targetKills: (levelsData[currentLevelIndex] || levelsData[0]).targetKills,
@@ -2380,23 +2422,51 @@ function mpApplyHostState(state) {
   if (state.guestXNorm !== undefined) mpGuestX = state.guestXNorm * W;
   if (state.guestHP !== undefined) {
     mpGuestHP = state.guestHP;
-    // Sync own HP if guest
     if (!mpSpectatorMode) playerHitPoints = state.guestHP;
   }
   if (state.guestScore !== undefined) mpGuestScore = state.guestScore;
   if (state.guestCombo !== undefined) mpGuestCombo = state.guestCombo;
   if (state.guestAlive !== undefined) mpGuestAlive = state.guestAlive;
 
-  // 🔥 v20.2: Guest lives sync
   if (state.guestLives !== undefined) {
     lives = state.guestLives;
     mpGuestLives = state.guestLives;
     updateLivesDisplay();
   }
 
-  // 🔥 v20.2: Host spectator state
   if (state.hostSpectator !== undefined) {
     mpRemoteHostSpectator = state.hostSpectator;
+  }
+
+  // 🔥 v20.2 FIX — Guest masuk/keluar spectator mode sesuai state host
+  if (state.guestSpectator !== undefined && mpRole === 'guest') {
+    const newSpec = state.guestSpectator;
+    if (newSpec !== mpGuestSpectator) {
+      console.log('👻 [MP] Guest spectator state:', mpGuestSpectator, '→', newSpec);
+      mpGuestSpectator = newSpec;
+      if (mpGuestSpectator && !mpSpectatorMode) {
+        startSpectatorMode();
+      } else if (!mpGuestSpectator && mpSpectatorMode) {
+        endSpectatorMode();
+      }
+    }
+  }
+
+  // 🔥 v20.2 FIX — Sync pause state dari host ke guest
+  if (state.gamePaused !== undefined && mpRole === 'guest') {
+    const hostPaused = !!state.gamePaused && state.gameRunning !== false;
+    if (hostPaused && !isGamePaused) {
+      isGamePaused = true;
+      sounds.stopBGM();
+      const p = document.getElementById('modal-pause');
+      if (p) p.classList.remove('hidden');
+    } else if (!hostPaused && isGamePaused && isGameRunning) {
+      isGamePaused = false;
+      sounds.startBGM();
+      const p = document.getElementById('modal-pause');
+      if (p) p.classList.add('hidden');
+      requestAnimationFrame(gameLoop);
+    }
   }
 
   mpRemoteHostHP = state.hostHP || 0;
@@ -2485,7 +2555,6 @@ function mpSendGuestSkill(skillNum) {
 }
 
 function mpHandleGuestDeath() {
-  // 🔥 v20.2 — Guest loses a life
   mpGuestLives--;
   mpGuestHP = PLAYER_MAX_HIT_POINTS;
   mpGuestAlive = true;
@@ -2512,7 +2581,7 @@ function mpEndGame(win, reason) {
 
   mpFlow.phase = 'result';
 
-  // 🔥 v20.2: Reset spectator
+  // Reset spectator
   mpSpectatorMode = false;
   mpSpectatorReady = false;
   mpSpectatorTimer = 0;
@@ -2583,7 +2652,13 @@ function mpActuallyStartCoop() {
   reviveUsedThisRun = false;
   levelKills = 0; levelCoinsEarned = 0;
 
-  mpGuestInput = { left: false, right: false, shoot: false, skill1: false, skill2: false, skill3: false, heroType: 'robot', spectator: false, respawn: false };
+  // 🔥 v20.2 FIX — reset dengan flag pause/resume
+  mpGuestInput = {
+    left: false, right: false, shoot: false,
+    skill1: false, skill2: false, skill3: false,
+    heroType: 'robot', spectator: false, respawn: false,
+    pause: false, resume: false
+  };
   mpGuestX = VIRTUAL_WIDTH * 0.75;
   mpGuestTargetX = mpGuestX;
   mpGuestHP = PLAYER_MAX_HIT_POINTS;
@@ -2596,7 +2671,6 @@ function mpActuallyStartCoop() {
   mpEffectQueue = [];
   mpComboIndicatorState = { text: null, active: false, shownAt: 0 };
 
-  // 🔥 v20.2 — Init spectator state
   mpSpectatorMode = false;
   mpSpectatorReady = false;
   mpSpectatorTimer = 0;
@@ -3298,7 +3372,6 @@ function gameLoop() {
   const H = VIRTUAL_HEIGHT;
   const S = GAME_SCALE;
 
-  // 🔥 v20.2: If local player is spectator, skip own action
   const localPlayerActive = !mpSpectatorMode;
 
   playerPulse += 0.08;
@@ -3327,7 +3400,6 @@ function gameLoop() {
   ctx.fillRect(0, H - groundH - 5, W, 5);
   ctx.globalAlpha = 1;
 
-  // Player movement — only if active
   if (localPlayerActive) {
     if (isMovingLeft) playerTargetX -= playerSpeed;
     if (isMovingRight) playerTargetX += playerSpeed;
@@ -3681,7 +3753,6 @@ function gameLoop() {
     if (bb.y > H || bb.x < -50 * S || bb.x > W + 50 * S) bossBullets.splice(i, 1);
   }
 
-  // Draw local hero aura — only if active
   if (localPlayerActive) {
     ctx.save();
     const aA = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
@@ -3697,7 +3768,6 @@ function gameLoop() {
     drawHeroVector(ctx, playerX, heroPlayerY, currentActor, false);
   }
 
-  // Draw guest hero — skip if guest is spectator
   if (mpActive && mpRole === 'host') {
     if (mpGuestAlive && !mpGuestSpectator) {
       ctx.save();
@@ -3934,7 +4004,6 @@ function gameLoop() {
 
     if (m.y > H - 55 * S && !m.type.startsWith('boss')) {
       monsters.splice(i, 1);
-      // Only damage local player if active
       if (localPlayerActive) {
         if (isShieldActive || isReviveInvuln) {
           spawnFloatingText(playerX, H - 60 * S, 'BLOCKED', '#ffd700');
@@ -4046,24 +4115,34 @@ function gameLoopGuest() {
 
   const heroPlayerY = H - 45 * S;
 
+  // 🔥 v20.2 FIX — kirim semua input (termasuk skill & pause/resume)
   if (MP && MP.isConnected) {
     MP.sendInput({
       left: localPlayerActive ? isMovingLeft : false,
       right: localPlayerActive ? isMovingRight : false,
       shoot: localPlayerActive,
-      skill1: false, skill2: false, skill3: false,
+      skill1: mpGuestInput.skill1 || false,
+      skill2: mpGuestInput.skill2 || false,
+      skill3: mpGuestInput.skill3 || false,
       heroType: currentActor,
       spectator: mpSpectatorMode,
-      respawn: mpGuestInput.respawn || false
+      respawn: mpGuestInput.respawn || false,
+      pause: mpGuestInput.pause || false,
+      resume: mpGuestInput.resume || false
     });
+    mpGuestInput.skill1 = false;
+    mpGuestInput.skill2 = false;
+    mpGuestInput.skill3 = false;
     mpGuestInput.respawn = false;
+    mpGuestInput.pause = false;
+    mpGuestInput.resume = false;
   }
 
   const gdx = mpGuestX - playerX;
   if (Math.abs(gdx) > 0.5) playerX += gdx * 0.35;
   else playerX = mpGuestX;
 
-  // Draw host — skip if host is spectator
+  // Draw host — skip jika host spectator
   if (mpRemoteAlive !== false && !mpRemoteHostSpectator) {
     const hostX = mpRemoteX;
     ctx.save();
@@ -4091,7 +4170,6 @@ function gameLoopGuest() {
   drawRemoteMonsters(ctx, W, H, S, heroPlayerY);
   drawRemoteBullets(ctx, S);
 
-  // Draw own hero — only if active
   if (localPlayerActive) {
     ctx.save();
     const aA2 = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
@@ -4311,7 +4389,7 @@ function drawRemoteBullets(ctx, S) {
 function handlePlayerHit() {
   if (isReviveInvuln) return;
   if (isReviveModalOpen) return;
-  if (mpSpectatorMode) return; // 🔥 v20.2: Spectator immune
+  if (mpSpectatorMode) return;
   levelDamageTaken++;
   const oneLife = (gameMode === 'daily' && currentDailyModifier && currentDailyModifier.id === 'one_life');
   playerHitPoints--; playerHitFlash = 12;
@@ -4331,7 +4409,6 @@ function handlePlayerHit() {
   }
   updateLivesDisplay();
   if (lives <= 0) {
-    // 🔥 v20.2 — In MP coop, trigger spectator instead of revive modal
     if (mpActive && gameMode === 'coop') {
       startSpectatorMode();
     } else {
@@ -5024,5 +5101,5 @@ window.addEventListener('load', () => {
 });
 
 // =============================================================
-// END OF FILE — v20.2 (Spectator Edition)
+// END OF FILE — v20.2 (Spectator Edition + Sync Pause Fix)
 // =============================================================
