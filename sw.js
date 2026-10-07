@@ -7,7 +7,7 @@
 //   - Fallback ke cache kalau network gagal
 // ============================================================
 
-const CACHE_VERSION = 'v20.2';
+const CACHE_VERSION = 'v20.3';
 const CACHE_NAME = `pahlawan-bintang-${CACHE_VERSION}`;
 
 // Daftar asset yang wajib tersedia offline
