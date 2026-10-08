@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css?v=20.6" />
+  <link rel="stylesheet" href="./style.css?v=20.7" />
 </head>
 <body class="no-select">
 
@@ -23,6 +23,7 @@
      ============================================================ -->
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
   <defs>
+    <!-- ============ HEROES LAMA ============ -->
     <symbol id="i-robot" viewBox="0 0 40 40">
       <rect x="8" y="12" width="24" height="20" rx="3" fill="currentColor"/>
       <rect x="12" y="4" width="16" height="10" rx="3" fill="currentColor" opacity=".65"/>
@@ -61,6 +62,51 @@
       <circle cx="25" cy="22" r="1.5" fill="#05061a"/>
       <path d="M17 28 Q20 30 23 28" stroke="#05061a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
     </symbol>
+
+    <!-- ============ HEROES BARU v20.7 ============ -->
+    <symbol id="i-phoenix" viewBox="0 0 40 40">
+      <path d="M20 4 Q14 10 12 18 Q8 16 4 20 Q8 22 12 22 Q12 30 20 36 Q28 30 28 22 Q32 22 36 20 Q32 16 28 18 Q26 10 20 4 Z" fill="currentColor"/>
+      <path d="M20 8 Q16 14 16 20 Q20 18 24 20 Q24 14 20 8 Z" fill="#ffd700" opacity="0.7"/>
+      <circle cx="17" cy="20" r="1.5" fill="#05061a"/>
+      <circle cx="23" cy="20" r="1.5" fill="#05061a"/>
+      <path d="M18 26 L20 28 L22 26" stroke="#05061a" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-ninja" viewBox="0 0 40 40">
+      <path d="M8 12 Q20 4 32 12 L32 26 Q20 36 8 26 Z" fill="currentColor"/>
+      <path d="M6 20 H34 V24 H6 Z" fill="#05061a" opacity="0.85"/>
+      <path d="M10 20 L14 20 M26 20 L30 20" stroke="#c56cf0" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="12" cy="22" r="1.2" fill="#c56cf0"/>
+      <circle cx="28" cy="22" r="1.2" fill="#c56cf0"/>
+      <path d="M14 30 Q20 32 26 30" stroke="#05061a" stroke-width="1" fill="none" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-wizard" viewBox="0 0 40 40">
+      <path d="M20 2 L10 20 L30 20 Z" fill="currentColor"/>
+      <path d="M8 20 Q20 24 32 20 L32 34 Q20 30 8 34 Z" fill="currentColor" opacity="0.6"/>
+      <circle cx="14" cy="26" r="1.5" fill="#05061a"/>
+      <circle cx="26" cy="26" r="1.5" fill="#05061a"/>
+      <circle cx="20" cy="10" r="1.5" fill="#ffd700"/>
+      <circle cx="14" cy="14" r="1" fill="#ffd700" opacity="0.7"/>
+      <circle cx="26" cy="14" r="1" fill="#ffd700" opacity="0.7"/>
+      <path d="M17 30 Q20 32 23 30" stroke="#05061a" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-archer" viewBox="0 0 40 40">
+      <path d="M10 4 Q4 20 10 36" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M10 4 L10 36" stroke="currentColor" stroke-width="1" opacity="0.6"/>
+      <path d="M10 20 L32 20" stroke="#ffd700" stroke-width="2" stroke-linecap="round"/>
+      <path d="M30 16 L36 20 L30 24 Z" fill="#ffd700"/>
+      <circle cx="24" cy="14" r="4" fill="currentColor"/>
+      <circle cx="23" cy="14" r="1" fill="#fff"/>
+    </symbol>
+    <symbol id="i-ghost" viewBox="0 0 40 40">
+      <path d="M20 4 Q8 4 8 18 V34 L12 30 L16 34 L20 30 L24 34 L28 30 L32 34 V18 Q32 4 20 4 Z" fill="currentColor"/>
+      <circle cx="15" cy="18" r="2.5" fill="#05061a"/>
+      <circle cx="25" cy="18" r="2.5" fill="#05061a"/>
+      <circle cx="15" cy="18" r="0.8" fill="#00d2d3"/>
+      <circle cx="25" cy="18" r="0.8" fill="#00d2d3"/>
+      <ellipse cx="20" cy="26" rx="3" ry="4" fill="#05061a" opacity="0.7"/>
+    </symbol>
+
+    <!-- ============ UI ICONS ============ -->
     <symbol id="i-target" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
       <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -286,7 +332,7 @@
   <div class="menu-box">
 
     <div class="menu-topbar">
-      <div class="version-badge">v20.6</div>
+      <div class="version-badge">v20.7</div>
       <button id="btn-audio" class="btn-audio" title="Suara" type="button">
         <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
       </button>
@@ -385,7 +431,6 @@
       <div class="btn-mp-badge">2P</div>
     </button>
 
-    <!-- 🔥 v20.6: Tombol PILIH LEVEL (hanya muncul setelah level 50 selesai) -->
     <button id="btn-level-select" type="button" class="hidden">
       <svg class="ico"><use href="#i-star"/></svg>
       <span>PILIH LEVEL</span>
@@ -594,12 +639,13 @@
   </div>
 </div>
 
-<!-- ============ MODAL: PILIH HERO ============ -->
+<!-- ============ MODAL: PILIH HERO (10 HERO) ============ -->
 <div id="modal-actors" class="modal hidden">
   <div class="modal-box">
     <h2>PILIH HERO</h2>
     <p class="mp-subtitle">Hero terkunci? Selesaikan 20 soal MTK untuk membukanya!</p>
     <div class="actor-grid" id="actor-grid">
+      <!-- 5 HERO LAMA -->
       <div class="actor-card selected unlocked" data-actor="robot">
         <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-robot"/></svg>
         <span>Robot Cyber</span>
@@ -619,6 +665,27 @@
       <div class="actor-card locked" data-actor="unicorn">
         <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-unicorn"/></svg>
         <span>Unicorn Star</span>
+      </div>
+      <!-- 5 HERO BARU v20.7 -->
+      <div class="actor-card locked" data-actor="phoenix">
+        <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-phoenix"/></svg>
+        <span>Phoenix Api</span>
+      </div>
+      <div class="actor-card locked" data-actor="ninja">
+        <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-ninja"/></svg>
+        <span>Shadow Ninja</span>
+      </div>
+      <div class="actor-card locked" data-actor="wizard">
+        <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-wizard"/></svg>
+        <span>Star Wizard</span>
+      </div>
+      <div class="actor-card locked" data-actor="archer">
+        <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-archer"/></svg>
+        <span>Elite Archer</span>
+      </div>
+      <div class="actor-card locked" data-actor="ghost">
+        <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-ghost"/></svg>
+        <span>Void Ghost</span>
       </div>
     </div>
     <button id="btn-close-actors" class="btn-secondary" type="button">TUTUP</button>
@@ -693,7 +760,6 @@
       <svg class="ico-lg gold"><use href="#i-trophy"/></svg>
       PENCAPAIAN
     </h2>
-
     <div class="ach-stats-bar">
       <div class="ach-stat">
         <div class="ach-stat-label">TERBUKA</div>
@@ -715,7 +781,6 @@
         </div>
       </div>
     </div>
-
     <div class="ach-tabs" id="ach-tabs">
       <button class="ach-tab active" data-cat="all" type="button">SEMUA</button>
       <button class="ach-tab" data-cat="combat" type="button">PETARUNG</button>
@@ -723,9 +788,7 @@
       <button class="ach-tab" data-cat="challenge" type="button">TANTANGAN</button>
       <button class="ach-tab" data-cat="special" type="button">SPESIAL</button>
     </div>
-
     <div id="achievement-grid" class="achievement-grid"></div>
-
     <button id="btn-close-achievements" class="btn-secondary" type="button">TUTUP</button>
   </div>
 </div>
@@ -821,7 +884,6 @@
     <button id="btn-retry-level" class="btn-primary btn-retry" type="button">
       <svg class="ico"><use href="#i-refresh"/></svg> <span>ULANG LEVEL INI</span>
     </button>
-    <!-- 🔥 v20.6: Tombol Lihat Sertifikat (hanya muncul setelah selesai semua level) -->
     <button id="btn-view-certificate" class="hidden" type="button">
       <svg class="ico"><use href="#i-trophy"/></svg> <span>LIHAT SERTIFIKAT</span>
     </button>
@@ -900,7 +962,6 @@
   <div class="modal-box">
     <h2><svg class="ico-lg gold"><use href="#i-trophy"/></svg> DAILY CHALLENGE</h2>
     <p class="daily-date" id="daily-date">Memuat...</p>
-
     <div class="daily-boss-preview">
       <div class="daily-boss-slot" data-slot="0">
         <svg class="daily-boss-ico" viewBox="0 0 24 24"><use href="#i-warn"/></svg>
@@ -929,14 +990,12 @@
         </div>
       </div>
     </div>
-
     <div class="daily-progress hidden" id="daily-progress">
       <div class="daily-progress-label">PROGRESS</div>
       <div class="daily-progress-value">
         <strong id="daily-progress-text">0/3 BOS</strong>
       </div>
     </div>
-
     <div class="daily-modifier" id="daily-modifier">
       <div class="daily-mod-icon">
         <svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg>
@@ -946,20 +1005,17 @@
         <small id="daily-mod-desc">Musuh bergerak 2&times; lebih cepat</small>
       </div>
     </div>
-
     <div class="daily-reward">
       <div>&#129689; Reward: <strong>5&times; Koin</strong></div>
       <div>&#127894; Badge: <strong>DAILY MASTER</strong></div>
       <div>&#9200; Reset dalam: <strong id="daily-reset-timer">--:--:--</strong></div>
     </div>
-
     <div class="daily-status">
       <div class="daily-done-badge hidden" id="daily-done-badge">
         <svg viewBox="0 0 24 24" class="daily-check"><use href="#i-check"/></svg>
         <span>SELESAI HARI INI</span>
       </div>
     </div>
-
     <button id="btn-start-daily" class="btn-primary big" type="button">
       <svg class="ico"><use href="#i-play"/></svg>
       <span>MULAI 3 BOS</span>
@@ -976,17 +1032,14 @@
       MAIN BARENG TEMAN
     </h2>
     <p class="mp-subtitle">Co-op 2 pemain · 1 vs 1 PvP · Gratis tanpa server</p>
-
     <button id="btn-mp-create" class="btn-primary big mp-btn" type="button">
       <svg class="ico"><use href="#i-play"/></svg>
       <span>BUAT ROOM (HOST)</span>
     </button>
-
     <button id="btn-mp-join" class="btn-secondary mp-btn" type="button">
       <svg class="ico"><use href="#i-wifi"/></svg>
       <span>MASUK ROOM (GUEST)</span>
     </button>
-
     <div class="mp-mode-select">
       <div class="mp-mode-label">MODE PERMAINAN:</div>
       <div class="mp-mode-buttons">
@@ -998,7 +1051,6 @@
         </button>
       </div>
     </div>
-
     <div class="mp-info-box">
       <div class="mp-info-row">
         <svg viewBox="0 0 24 24" class="mp-info-ico"><use href="#i-wifi"/></svg>
@@ -1013,7 +1065,6 @@
         <span>Keduanya harus online bersamaan</span>
       </div>
     </div>
-
     <button id="btn-mp-close-hub" class="btn-secondary" type="button">TUTUP</button>
   </div>
 </div>
@@ -1023,14 +1074,11 @@
   <div class="modal-box">
     <h2>MASUK ROOM</h2>
     <p class="mp-subtitle">Masukkan kode 4 huruf dari temanmu</p>
-
     <div class="mp-code-input-wrap">
       <input id="mp-code-input" class="mp-code-input" type="text" maxlength="4"
              placeholder="ABCD" autocapitalize="characters" autocomplete="off" spellcheck="false" />
     </div>
-
     <div id="mp-join-status" class="mp-status mp-status-hidden"></div>
-
     <button id="btn-mp-do-join" class="btn-primary big" type="button">
       <svg class="ico"><use href="#i-wifi"/></svg>
       <span>GABUNG</span>
@@ -1043,7 +1091,6 @@
 <div id="modal-mp-lobby" class="modal hidden">
   <div class="modal-box mp-lobby-box">
     <h2 id="mp-lobby-title">ROOM DIBUAT</h2>
-
     <div class="mp-room-code-display">
       <div class="mp-room-code-label">KODE ROOM</div>
       <div class="mp-room-code" id="mp-room-code">----</div>
@@ -1051,7 +1098,6 @@
         <svg viewBox="0 0 24 24"><use href="#i-copy"/></svg>
       </button>
     </div>
-
     <div class="mp-players-list">
       <div class="mp-player-slot" id="mp-slot-host">
         <div class="mp-slot-avatar">🎮</div>
@@ -1070,18 +1116,14 @@
         <div class="mp-slot-status" id="mp-guest-status">—</div>
       </div>
     </div>
-
     <div class="mp-mode-indicator">
       <span>MODE:</span> <strong id="mp-lobby-mode">CO-OP</strong>
     </div>
-
     <div id="mp-connect-status" class="mp-status mp-status-hidden"></div>
-
     <button id="btn-mp-start-game" class="btn-primary big" type="button" disabled>
       <svg class="ico"><use href="#i-play"/></svg>
       <span>MULAI PERMAINAN</span>
     </button>
-
     <button id="btn-mp-leave" class="btn-danger" type="button">
       <svg class="ico"><use href="#i-exit"/></svg>
       <span>KELUAR ROOM</span>
@@ -1103,7 +1145,7 @@
   </div>
 </div>
 
-<!-- ============ MODAL: LEVEL SELECT (v20.6) ============ -->
+<!-- ============ MODAL: LEVEL SELECT ============ -->
 <div id="modal-level-select" class="modal hidden">
   <div class="modal-box">
     <h2>
@@ -1118,7 +1160,7 @@
   </div>
 </div>
 
-<!-- ============ MODAL: MATH QUIZ UNLOCK (v20.6) ============ -->
+<!-- ============ MODAL: MATH QUIZ UNLOCK ============ -->
 <div id="modal-math-quiz" class="modal hidden">
   <div class="modal-box">
     <h2 id="math-quiz-title">
@@ -1128,12 +1170,10 @@
     <p class="mp-subtitle" id="math-quiz-hero-name" style="margin-bottom:12px;">
       Jawab 20 soal untuk membuka hero ini.
     </p>
-
     <div class="math-quiz-header">
       <div class="math-quiz-progress" id="math-quiz-progress">1/20</div>
       <div class="math-quiz-timer" id="math-quiz-timer">60s</div>
     </div>
-
     <div id="math-quiz-body">
       <div class="math-question" id="math-question">1 + 1 = ?</div>
       <div class="math-options" id="math-options">
@@ -1144,7 +1184,6 @@
       </div>
       <div class="math-quiz-feedback" id="math-quiz-feedback"></div>
     </div>
-
     <div id="math-quiz-result-wrap" class="hidden">
       <div class="math-quiz-result" id="math-quiz-result">
         <h3 id="math-quiz-result-title">BERHASIL!</h3>
@@ -1155,12 +1194,11 @@
         <span>SELESAI</span>
       </button>
     </div>
-
     <button id="btn-close-math-quiz" class="btn-secondary" type="button">BATAL</button>
   </div>
 </div>
 
-<!-- ============ MODAL: CERTIFICATE (v20.6) ============ -->
+<!-- ============ MODAL: CERTIFICATE ============ -->
 <div id="modal-certificate" class="modal hidden">
   <div class="modal-box">
     <canvas id="certificate-canvas" width="1600" height="1130"></canvas>
@@ -1188,6 +1226,6 @@
 <script src="./multiplayer.js?v=20.6"></script>
 
 <!-- ============ GAME SCRIPT ============ -->
-<script src="./game.js?v=20.6"></script>
+<script src="./game.js?v=20.7"></script>
 </body>
 </html>
