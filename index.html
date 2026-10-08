@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css?v=20.5" />
+  <link rel="stylesheet" href="./style.css?v=20.6" />
 </head>
 <body class="no-select">
 
@@ -286,7 +286,7 @@
   <div class="menu-box">
 
     <div class="menu-topbar">
-      <div class="version-badge">v20.5</div>
+      <div class="version-badge">v20.6</div>
       <button id="btn-audio" class="btn-audio" title="Suara" type="button">
         <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
       </button>
@@ -383,6 +383,12 @@
         <span class="btn-mp-text">MAIN BARENG TEMAN</span>
       </div>
       <div class="btn-mp-badge">2P</div>
+    </button>
+
+    <!-- 🔥 v20.6: Tombol PILIH LEVEL (hanya muncul setelah level 50 selesai) -->
+    <button id="btn-level-select" type="button" class="hidden">
+      <svg class="ico"><use href="#i-star"/></svg>
+      <span>PILIH LEVEL</span>
     </button>
 
     <div class="menu-grid">
@@ -542,7 +548,7 @@
 <!-- ============ FLOATING TEXT ============ -->
 <div id="popup-container"></div>
 
-<!-- ============ SPECTATOR OVERLAY (v20.5) ============ -->
+<!-- ============ SPECTATOR OVERLAY ============ -->
 <div id="mp-spectator-overlay" class="hidden">
   <div class="spectator-box">
     <div class="spectator-icon-wrap">
@@ -592,24 +598,25 @@
 <div id="modal-actors" class="modal hidden">
   <div class="modal-box">
     <h2>PILIH HERO</h2>
-    <div class="actor-grid">
-      <div class="actor-card selected" data-actor="robot">
+    <p class="mp-subtitle">Hero terkunci? Selesaikan 20 soal MTK untuk membukanya!</p>
+    <div class="actor-grid" id="actor-grid">
+      <div class="actor-card selected unlocked" data-actor="robot">
         <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-robot"/></svg>
         <span>Robot Cyber</span>
       </div>
-      <div class="actor-card" data-actor="cannon">
+      <div class="actor-card locked" data-actor="cannon">
         <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-cannon"/></svg>
         <span>Meriam Bintang</span>
       </div>
-      <div class="actor-card" data-actor="dragon">
+      <div class="actor-card locked" data-actor="dragon">
         <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-dragon"/></svg>
         <span>Cyber Dragon</span>
       </div>
-      <div class="actor-card" data-actor="cat">
+      <div class="actor-card locked" data-actor="cat">
         <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-cat"/></svg>
         <span>Ninja Cat</span>
       </div>
-      <div class="actor-card" data-actor="unicorn">
+      <div class="actor-card locked" data-actor="unicorn">
         <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-unicorn"/></svg>
         <span>Unicorn Star</span>
       </div>
@@ -813,6 +820,10 @@
     </button>
     <button id="btn-retry-level" class="btn-primary btn-retry" type="button">
       <svg class="ico"><use href="#i-refresh"/></svg> <span>ULANG LEVEL INI</span>
+    </button>
+    <!-- 🔥 v20.6: Tombol Lihat Sertifikat (hanya muncul setelah selesai semua level) -->
+    <button id="btn-view-certificate" class="hidden" type="button">
+      <svg class="ico"><use href="#i-trophy"/></svg> <span>LIHAT SERTIFIKAT</span>
     </button>
     <button id="btn-menu" class="btn-danger" type="button">
       <svg class="ico"><use href="#i-home"/></svg> <span>MENU UTAMA</span>
@@ -1092,14 +1103,91 @@
   </div>
 </div>
 
+<!-- ============ MODAL: LEVEL SELECT (v20.6) ============ -->
+<div id="modal-level-select" class="modal hidden">
+  <div class="modal-box">
+    <h2>
+      <svg class="ico-lg"><use href="#i-star"/></svg>
+      PILIH LEVEL
+    </h2>
+    <p class="mp-subtitle" style="margin-bottom:10px;">
+      Semua level terbuka. Pilih level yang ingin dimainkan.
+    </p>
+    <div class="level-grid" id="level-grid"></div>
+    <button id="btn-close-level-select" class="btn-secondary" type="button">TUTUP</button>
+  </div>
+</div>
+
+<!-- ============ MODAL: MATH QUIZ UNLOCK (v20.6) ============ -->
+<div id="modal-math-quiz" class="modal hidden">
+  <div class="modal-box">
+    <h2 id="math-quiz-title">
+      <svg class="ico-lg"><use href="#i-bolt"/></svg>
+      UNLOCK HERO
+    </h2>
+    <p class="mp-subtitle" id="math-quiz-hero-name" style="margin-bottom:12px;">
+      Jawab 20 soal untuk membuka hero ini.
+    </p>
+
+    <div class="math-quiz-header">
+      <div class="math-quiz-progress" id="math-quiz-progress">1/20</div>
+      <div class="math-quiz-timer" id="math-quiz-timer">60s</div>
+    </div>
+
+    <div id="math-quiz-body">
+      <div class="math-question" id="math-question">1 + 1 = ?</div>
+      <div class="math-options" id="math-options">
+        <button class="math-option" type="button" data-idx="0">-</button>
+        <button class="math-option" type="button" data-idx="1">-</button>
+        <button class="math-option" type="button" data-idx="2">-</button>
+        <button class="math-option" type="button" data-idx="3">-</button>
+      </div>
+      <div class="math-quiz-feedback" id="math-quiz-feedback"></div>
+    </div>
+
+    <div id="math-quiz-result-wrap" class="hidden">
+      <div class="math-quiz-result" id="math-quiz-result">
+        <h3 id="math-quiz-result-title">BERHASIL!</h3>
+        <p id="math-quiz-result-desc">Hero terbuka.</p>
+      </div>
+      <button id="btn-math-quiz-action" class="btn-primary big" type="button">
+        <svg class="ico"><use href="#i-play"/></svg>
+        <span>SELESAI</span>
+      </button>
+    </div>
+
+    <button id="btn-close-math-quiz" class="btn-secondary" type="button">BATAL</button>
+  </div>
+</div>
+
+<!-- ============ MODAL: CERTIFICATE (v20.6) ============ -->
+<div id="modal-certificate" class="modal hidden">
+  <div class="modal-box">
+    <canvas id="certificate-canvas" width="1600" height="1130"></canvas>
+    <div class="cert-actions">
+      <button id="btn-cert-download" class="btn-download" type="button">
+        <svg class="ico"><use href="#i-download"/></svg>
+        <span>UNDUH</span>
+      </button>
+      <button id="btn-cert-share" class="btn-share" type="button">
+        <svg class="ico"><use href="#i-play"/></svg>
+        <span>BAGIKAN</span>
+      </button>
+      <button id="btn-cert-close" class="btn-close-cert" type="button">
+        <span>TUTUP</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ FIREBASE SDK ============ -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <!-- ============ MULTIPLAYER ENGINE ============ -->
-<script src="./multiplayer.js?v=20.5"></script>
+<script src="./multiplayer.js?v=20.6"></script>
 
 <!-- ============ GAME SCRIPT ============ -->
-<script src="./game.js?v=20.5"></script>
+<script src="./game.js?v=20.6"></script>
 </body>
 </html>
