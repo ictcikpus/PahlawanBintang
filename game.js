@@ -1,15 +1,12 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v20.6
-// "Extended Edition"
+// PAHLAWAN BINTANG — game.js v20.7
+// "Hero Pack Edition"
 // ------------------------------------------------------------
-// v20.6 NEW:
-//   1. Hero Lock System (5 hero, robot awalnya unlocked)
-//   2. Math Quiz unlock (20 soal per hero, timer 10-60s)
-//   3. Extended levels 31-50 (boss baru)
-//   4. Level Selector (unlock setelah clear level 50)
-//   5. Certificate Generator (canvas PNG download + share)
-//   6. Free level mode (setelah complete semua)
-//   7. Persistent unlock (localStorage)
+// v20.7 NEW:
+//   1. 10 Hero total (5 lama + 5 baru)
+//   2. Soal MTK acak per sesi (generator dinamis)
+//   3. Setiap hero: warna, tembakan, visual, audio berbeda
+//   4. HERO_DATA configuration object
 // =============================================================
 
 // =============================================================
@@ -33,6 +30,282 @@ try {
   console.log("🔥 Firebase Realtime Database Terhubung!");
 } catch(e) {
   console.log("⚠️ Firebase Mode Offline");
+}
+
+// =============================================================
+// 🔥 v20.7 — HERO DATA (10 HERO)
+// =============================================================
+// Setiap hero punya config: warna, gaya tembakan, jumlah peluru,
+// pierce, fire rate, sound, visual FX.
+const HERO_DATA = {
+  // ============ 5 HERO LAMA ============
+  robot: {
+    id: 'robot',
+    name: 'Robot Cyber',
+    desc: 'Hero seimbang dengan laser ganda standar.',
+    color: '#1e90ff',
+    accent: '#70a1ff',
+    bulletType: 'laser-double',
+    bulletCount: 2,
+    bulletPierce: 1,
+    bulletSize: 5,
+    bulletSpeed: 14,
+    fireRate: 160,
+    sound: 'laser',
+    difficulty: 'easy',
+    locked: false,
+    quizTime: 0
+  },
+  cannon: {
+    id: 'cannon',
+    name: 'Meriam Bintang',
+    desc: 'Satu tembakan besar dengan damage tinggi.',
+    color: '#ff4757',
+    accent: '#ffd700',
+    bulletType: 'heavy-shot',
+    bulletCount: 1,
+    bulletPierce: 1,
+    bulletSize: 14,
+    bulletSpeed: 11,
+    fireRate: 210,
+    sound: 'cannonBlast',
+    difficulty: 'medium',
+    locked: true,
+    quizTime: 60
+  },
+  dragon: {
+    id: 'dragon',
+    name: 'Cyber Dragon',
+    desc: 'Napas api tiga arah yang menyebar.',
+    color: '#2ed573',
+    accent: '#7dff8e',
+    bulletType: 'triple-spread',
+    bulletCount: 3,
+    bulletPierce: 1,
+    bulletSize: 6,
+    bulletSpeed: 13,
+    fireRate: 180,
+    sound: 'dragonRoar',
+    difficulty: 'medium',
+    locked: true,
+    quizTime: 45
+  },
+  cat: {
+    id: 'cat',
+    name: 'Ninja Cat',
+    desc: 'Tembakan cepat dengan spread acak ringan.',
+    color: '#ffa502',
+    accent: '#ffd700',
+    bulletType: 'rapid-fire',
+    bulletCount: 1,
+    bulletPierce: 1,
+    bulletSize: 6,
+    bulletSpeed: 15,
+    fireRate: 110,
+    sound: 'rapid',
+    difficulty: 'medium',
+    locked: true,
+    quizTime: 30
+  },
+  unicorn: {
+    id: 'unicorn',
+    name: 'Unicorn Star',
+    desc: 'Tembakan bintang yang menembus 2 musuh.',
+    color: '#a55eea',
+    accent: '#ffd700',
+    bulletType: 'piercing-star',
+    bulletCount: 1,
+    bulletPierce: 2,
+    bulletSize: 8,
+    bulletSpeed: 13,
+    fireRate: 200,
+    sound: 'magicSpark',
+    difficulty: 'medium',
+    locked: true,
+    quizTime: 10
+  },
+
+  // ============ 5 HERO BARU v20.7 ============
+  phoenix: {
+    id: 'phoenix',
+    name: 'Phoenix Api',
+    desc: 'Terbang dari abu, menembak 3 bola api yang membara.',
+    color: '#ff8c00',
+    accent: '#ffd700',
+    bulletType: 'flame-spread',
+    bulletCount: 3,
+    bulletPierce: 1,
+    bulletSize: 7,
+    bulletSpeed: 12,
+    fireRate: 190,
+    sound: 'fireWhoosh',
+    difficulty: 'medium',
+    locked: true,
+    quizTime: 50
+  },
+  ninja: {
+    id: 'ninja',
+    name: 'Shadow Ninja',
+    desc: 'Shuriken cepat berputar, damage senyap.',
+    color: '#1a1a2a',
+    accent: '#c56cf0',
+    bulletType: 'shuriken-spin',
+    bulletCount: 2,
+    bulletPierce: 1,
+    bulletSize: 7,
+    bulletSpeed: 16,
+    fireRate: 130,
+    sound: 'shuriken',
+    difficulty: 'hard',
+    locked: true,
+    quizTime: 55
+  },
+  wizard: {
+    id: 'wizard',
+    name: 'Star Wizard',
+    desc: 'Orb sihir bintang yang menembus dan berkilau.',
+    color: '#00b8d4',
+    accent: '#ffffff',
+    bulletType: 'magic-orb',
+    bulletCount: 1,
+    bulletPierce: 2,
+    bulletSize: 9,
+    bulletSpeed: 13,
+    fireRate: 200,
+    sound: 'arcaneOrb',
+    difficulty: 'medium',
+    locked: true,
+    quizTime: 40
+  },
+  archer: {
+    id: 'archer',
+    name: 'Elite Archer',
+    desc: 'Panah emas yang menembus 3 musuh sekaligus.',
+    color: '#2ed573',
+    accent: '#ffd700',
+    bulletType: 'golden-arrow',
+    bulletCount: 1,
+    bulletPierce: 3,
+    bulletSize: 5,
+    bulletSpeed: 18,
+    fireRate: 220,
+    sound: 'bowRelease',
+    difficulty: 'easy',
+    locked: true,
+    quizTime: 35
+  },
+  ghost: {
+    id: 'ghost',
+    name: 'Void Ghost',
+    desc: 'Soul blast 5 arah yang menyeramkan.',
+    color: '#e6eefc',
+    accent: '#00d2d3',
+    bulletType: 'soul-spread',
+    bulletCount: 5,
+    bulletPierce: 1,
+    bulletSize: 5,
+    bulletSpeed: 11,
+    fireRate: 240,
+    sound: 'ghostWail',
+    difficulty: 'hard',
+    locked: true,
+    quizTime: 58
+  }
+};
+
+// Compile list dari HERO_DATA
+const ALL_HEROES = Object.keys(HERO_DATA);
+
+// Hero yang terbuka tanpa perlu quiz
+const HERO_DEFAULT_UNLOCKED = ['robot'];
+
+// =============================================================
+// 🔥 v20.7 — MATH QUIZ GENERATOR (Random per sesi)
+// =============================================================
+// Setiap sesi buka quiz, soal digenerate acak. Tingkat kesulitan
+// berdasarkan hero difficulty. Tidak ada duplikat soal dalam 1 sesi.
+function generateMathQuestions(heroId, count, difficulty) {
+  const hero = HERO_DATA[heroId];
+  const diffLevel = difficulty || hero.difficulty || 'medium';
+
+  // Range angka berdasarkan difficulty
+  let maxNum = 20, ops = ['+', '-'];
+  if (diffLevel === 'easy') {
+    maxNum = 20; ops = ['+', '-'];
+  } else if (diffLevel === 'medium') {
+    maxNum = 50; ops = ['+', '-', '×'];
+  } else if (diffLevel === 'hard') {
+    maxNum = 100; ops = ['+', '-', '×', '÷'];
+  }
+
+  const questions = [];
+  const seen = new Set();
+
+  let attempts = 0;
+  while (questions.length < count && attempts < count * 20) {
+    attempts++;
+    const op = ops[Math.floor(Math.random() * ops.length)];
+    let a, b, answer, questionText;
+
+    if (op === '+') {
+      a = Math.floor(Math.random() * maxNum) + 1;
+      b = Math.floor(Math.random() * maxNum) + 1;
+      answer = a + b;
+      questionText = `${a} + ${b} = ?`;
+    } else if (op === '-') {
+      a = Math.floor(Math.random() * maxNum) + 10;
+      b = Math.floor(Math.random() * a) + 1;
+      answer = a - b;
+      questionText = `${a} - ${b} = ?`;
+    } else if (op === '×') {
+      const factor = diffLevel === 'hard' ? 12 : (diffLevel === 'medium' ? 9 : 5);
+      a = Math.floor(Math.random() * factor) + 2;
+      b = Math.floor(Math.random() * factor) + 2;
+      answer = a * b;
+      questionText = `${a} × ${b} = ?`;
+    } else { // ÷
+      const factor = diffLevel === 'hard' ? 12 : 9;
+      b = Math.floor(Math.random() * factor) + 2;
+      const quotient = Math.floor(Math.random() * factor) + 2;
+      a = b * quotient;
+      answer = quotient;
+      questionText = `${a} ÷ ${b} = ?`;
+    }
+
+    // Skip duplicate
+    if (seen.has(questionText)) continue;
+    seen.add(questionText);
+
+    // Generate opsi jawaban (1 benar + 3 salah)
+    const opts = new Set([answer]);
+    let guard = 0;
+    while (opts.size < 4 && guard < 50) {
+      guard++;
+      const delta = Math.floor(Math.random() * Math.max(4, Math.floor(answer * 0.3))) + 1;
+      const sign = Math.random() < 0.5 ? -1 : 1;
+      const fake = answer + sign * delta;
+      if (fake > 0 && fake !== answer) opts.add(fake);
+    }
+    // Fallback kalau gagal
+    while (opts.size < 4) {
+      opts.add(answer + opts.size + 1);
+    }
+
+    questions.push({
+      q: questionText,
+      a: answer,
+      opts: Array.from(opts)
+    });
+  }
+
+  // Shuffle urutan soal
+  for (let i = questions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [questions[i], questions[j]] = [questions[j], questions[i]];
+  }
+
+  console.log('🧮 [Quiz] Generated', questions.length, 'random questions for', heroId, '(', diffLevel, ')');
+  return questions;
 }
 
 // =============================================================
@@ -120,15 +393,11 @@ async function getLoadout() {
 async function setLoadout(arr) { await DB.set('pahlawan_loadout', JSON.stringify(arr)); }
 
 // =============================================================
-// 🔥 v20.6 — HERO LOCK SYSTEM
+// 🔥 v20.7 — HERO LOCK SYSTEM (10 HERO)
 // =============================================================
-const ALL_HEROES = ['robot', 'cannon', 'dragon', 'cat', 'unicorn'];
-const HERO_DEFAULT_UNLOCKED = ['robot'];
-
-// Cache untuk unlock state (sync dengan localStorage)
 let unlockedHeroes = [];
-let gameCompleted = false;          // true setelah clear level 50
-let bestCertificateData = null;     // data untuk sertifikat
+let gameCompleted = false;
+let bestCertificateData = null;
 
 async function loadUnlockedHeroes() {
   const raw = await DB.get('pahlawan_unlocked_heroes');
@@ -136,7 +405,6 @@ async function loadUnlockedHeroes() {
     const arr = JSON.parse(raw || 'null');
     if (Array.isArray(arr) && arr.length > 0) {
       unlockedHeroes = arr.filter(h => ALL_HEROES.includes(h));
-      // Pastikan minimal robot terbuka
       if (!unlockedHeroes.includes('robot')) unlockedHeroes.push('robot');
     } else {
       unlockedHeroes = [...HERO_DEFAULT_UNLOCKED];
@@ -163,118 +431,6 @@ async function unlockHero(heroId) {
 function isHeroUnlocked(heroId) {
   return unlockedHeroes.includes(heroId);
 }
-
-// =============================================================
-// 🔥 v20.6 — MATH QUIZ DATA (20 soal unik per hero)
-// =============================================================
-// Setiap hero punya 20 soal unik. Soal MTK dasar untuk anak SD.
-// Timer: robot = skip (auto unlock), lainnya 10-60 detik configurable.
-const MATH_QUIZ_DATA = {
-  cannon: {
-    heroName: 'Meriam Bintang',
-    timeLimit: 60,
-    questions: [
-      { q: '5 + 7 = ?', a: 12, opts: [10, 12, 14, 15] },
-      { q: '15 - 8 = ?', a: 7, opts: [6, 7, 8, 9] },
-      { q: '6 × 4 = ?', a: 24, opts: [20, 22, 24, 26] },
-      { q: '36 ÷ 6 = ?', a: 6, opts: [4, 5, 6, 9] },
-      { q: '9 + 8 = ?', a: 17, opts: [15, 16, 17, 18] },
-      { q: '20 - 13 = ?', a: 7, opts: [5, 6, 7, 8] },
-      { q: '7 × 3 = ?', a: 21, opts: [18, 20, 21, 24] },
-      { q: '48 ÷ 8 = ?', a: 6, opts: [5, 6, 7, 8] },
-      { q: '13 + 9 = ?', a: 22, opts: [20, 21, 22, 23] },
-      { q: '25 - 17 = ?', a: 8, opts: [6, 7, 8, 9] },
-      { q: '8 × 5 = ?', a: 40, opts: [35, 38, 40, 45] },
-      { q: '63 ÷ 9 = ?', a: 7, opts: [6, 7, 8, 9] },
-      { q: '18 + 15 = ?', a: 33, opts: [31, 32, 33, 34] },
-      { q: '42 - 25 = ?', a: 17, opts: [15, 16, 17, 18] },
-      { q: '4 × 7 = ?', a: 28, opts: [24, 26, 28, 32] },
-      { q: '72 ÷ 8 = ?', a: 9, opts: [7, 8, 9, 10] },
-      { q: '27 + 16 = ?', a: 43, opts: [41, 42, 43, 44] },
-      { q: '55 - 28 = ?', a: 27, opts: [25, 26, 27, 28] },
-      { q: '9 × 6 = ?', a: 54, opts: [48, 52, 54, 56] },
-      { q: '81 ÷ 9 = ?', a: 9, opts: [7, 8, 9, 10] }
-    ]
-  },
-  dragon: {
-    heroName: 'Cyber Dragon',
-    timeLimit: 45,
-    questions: [
-      { q: '7 + 9 = ?', a: 16, opts: [14, 15, 16, 17] },
-      { q: '23 - 14 = ?', a: 9, opts: [7, 8, 9, 10] },
-      { q: '5 × 6 = ?', a: 30, opts: [25, 28, 30, 35] },
-      { q: '42 ÷ 7 = ?', a: 6, opts: [5, 6, 7, 8] },
-      { q: '14 + 18 = ?', a: 32, opts: [30, 31, 32, 34] },
-      { q: '38 - 19 = ?', a: 19, opts: [17, 18, 19, 20] },
-      { q: '8 × 4 = ?', a: 32, opts: [28, 30, 32, 36] },
-      { q: '56 ÷ 8 = ?', a: 7, opts: [6, 7, 8, 9] },
-      { q: '19 + 24 = ?', a: 43, opts: [40, 42, 43, 44] },
-      { q: '47 - 28 = ?', a: 19, opts: [17, 18, 19, 20] },
-      { q: '6 × 7 = ?', a: 42, opts: [36, 40, 42, 48] },
-      { q: '64 ÷ 8 = ?', a: 8, opts: [6, 7, 8, 9] },
-      { q: '32 + 19 = ?', a: 51, opts: [49, 50, 51, 52] },
-      { q: '61 - 34 = ?', a: 27, opts: [25, 26, 27, 28] },
-      { q: '9 × 3 = ?', a: 27, opts: [24, 26, 27, 30] },
-      { q: '45 ÷ 9 = ?', a: 5, opts: [4, 5, 6, 7] },
-      { q: '28 + 35 = ?', a: 63, opts: [61, 62, 63, 64] },
-      { q: '74 - 46 = ?', a: 28, opts: [26, 27, 28, 29] },
-      { q: '11 × 3 = ?', a: 33, opts: [30, 32, 33, 36] },
-      { q: '99 ÷ 11 = ?', a: 9, opts: [7, 8, 9, 11] }
-    ]
-  },
-  cat: {
-    heroName: 'Ninja Cat',
-    timeLimit: 30,
-    questions: [
-      { q: '8 + 6 = ?', a: 14, opts: [12, 13, 14, 15] },
-      { q: '17 - 9 = ?', a: 8, opts: [6, 7, 8, 9] },
-      { q: '6 × 8 = ?', a: 48, opts: [42, 46, 48, 52] },
-      { q: '54 ÷ 9 = ?', a: 6, opts: [5, 6, 7, 8] },
-      { q: '21 + 17 = ?', a: 38, opts: [36, 37, 38, 39] },
-      { q: '44 - 26 = ?', a: 18, opts: [16, 17, 18, 19] },
-      { q: '7 × 7 = ?', a: 49, opts: [42, 48, 49, 56] },
-      { q: '63 ÷ 7 = ?', a: 9, opts: [7, 8, 9, 10] },
-      { q: '26 + 19 = ?', a: 45, opts: [43, 44, 45, 46] },
-      { q: '53 - 37 = ?', a: 16, opts: [14, 15, 16, 17] },
-      { q: '9 × 8 = ?', a: 72, opts: [64, 70, 72, 80] },
-      { q: '81 ÷ 9 = ?', a: 9, opts: [7, 8, 9, 10] },
-      { q: '34 + 28 = ?', a: 62, opts: [60, 61, 62, 63] },
-      { q: '72 - 45 = ?', a: 27, opts: [25, 26, 27, 28] },
-      { q: '12 × 5 = ?', a: 60, opts: [55, 58, 60, 65] },
-      { q: '90 ÷ 10 = ?', a: 9, opts: [7, 8, 9, 10] },
-      { q: '45 + 37 = ?', a: 82, opts: [80, 81, 82, 83] },
-      { q: '96 - 58 = ?', a: 38, opts: [36, 37, 38, 39] },
-      { q: '13 × 4 = ?', a: 52, opts: [48, 50, 52, 54] },
-      { q: '88 ÷ 8 = ?', a: 11, opts: [9, 10, 11, 12] }
-    ]
-  },
-  unicorn: {
-    heroName: 'Unicorn Star',
-    timeLimit: 10,
-    questions: [
-      { q: '6 + 8 = ?', a: 14, opts: [12, 13, 14, 15] },
-      { q: '15 - 7 = ?', a: 8, opts: [6, 7, 8, 9] },
-      { q: '4 × 9 = ?', a: 36, opts: [32, 34, 36, 40] },
-      { q: '48 ÷ 6 = ?', a: 8, opts: [6, 7, 8, 9] },
-      { q: '12 + 19 = ?', a: 31, opts: [29, 30, 31, 32] },
-      { q: '39 - 21 = ?', a: 18, opts: [16, 17, 18, 19] },
-      { q: '7 × 8 = ?', a: 56, opts: [48, 54, 56, 64] },
-      { q: '64 ÷ 8 = ?', a: 8, opts: [6, 7, 8, 9] },
-      { q: '27 + 24 = ?', a: 51, opts: [49, 50, 51, 52] },
-      { q: '52 - 35 = ?', a: 17, opts: [15, 16, 17, 18] },
-      { q: '8 × 8 = ?', a: 64, opts: [56, 60, 64, 72] },
-      { q: '72 ÷ 9 = ?', a: 8, opts: [6, 7, 8, 9] },
-      { q: '38 + 27 = ?', a: 65, opts: [63, 64, 65, 66] },
-      { q: '83 - 47 = ?', a: 36, opts: [34, 35, 36, 37] },
-      { q: '14 × 3 = ?', a: 42, opts: [38, 40, 42, 45] },
-      { q: '96 ÷ 12 = ?', a: 8, opts: [6, 7, 8, 9] },
-      { q: '53 + 38 = ?', a: 91, opts: [89, 90, 91, 92] },
-      { q: '100 - 64 = ?', a: 36, opts: [34, 35, 36, 38] },
-      { q: '15 × 4 = ?', a: 60, opts: [55, 58, 60, 64] },
-      { q: '121 ÷ 11 = ?', a: 11, opts: [9, 10, 11, 12] }
-    ]
-  }
-};
 
 // =============================================================
 // 🔥 LEVEL PERSISTENCE
@@ -304,7 +460,7 @@ async function resetProgress() {
 }
 
 // =============================================================
-// 🔥 GAME COMPLETED STATE (untuk certificate & free level)
+// 🔥 GAME COMPLETED STATE
 // =============================================================
 async function checkGameCompleted() {
   const raw = await DB.get('pahlawan_game_completed');
@@ -322,7 +478,6 @@ async function markGameCompleted(scoreVal) {
     date: new Date().toISOString(),
     dateStr: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
   };
-  // Simpan hanya jika skor lebih tinggi atau belum ada
   if (!bestCertificateData || scoreVal > (bestCertificateData.score || 0)) {
     bestCertificateData = certData;
     await DB.set('pahlawan_certificate_data', JSON.stringify(certData));
@@ -388,7 +543,7 @@ let ACHIEVEMENTS_DATA = { categories: [], achievements: [] };
 
 async function loadAchievementsData() {
   try {
-    const res = await fetch('./achievements.json?v=20.6');
+    const res = await fetch('./achievements.json?v=20.7');
     if (res.ok) {
       ACHIEVEMENTS_DATA = await res.json();
       console.log('🏆 [Ach] Loaded', ACHIEVEMENTS_DATA.achievements.length, 'achievements');
@@ -665,7 +820,7 @@ async function claimAchievementReward(achId) {
 }
 
 // =============================================================
-// 3. TEMA LEVEL — Extended untuk 50 Level
+// 3. TEMA LEVEL
 // =============================================================
 const LEVEL_THEMES = [
   { id:'cosmic', name:'COSMIC SECTOR', bgTop:'#05061a', bgBottom:'#0e1035', accent:'#00d2ff', accentSoft:'rgba(0,210,255,0.35)', stars:['#ffffff','#70a1ff','#ffd700','#00d2d3'], ground:'#2f3640', groundLine:'#00d2ff', monsters:['#ff4757','#2ed573','#ffa502','#1e90ff','#a55eea'] },
@@ -680,7 +835,6 @@ const LEVEL_THEMES = [
   { id:'solar', name:'BOSS: SOLAR', bgTop:'#1a0a00', bgBottom:'#5a1e00', accent:'#ffaa00', accentSoft:'rgba(255,170,0,0.45)', stars:['#ffaa00','#ff6600','#ffd700','#ffffff'], ground:'#2e1400', groundLine:'#ffaa00', monsters:['#ffaa00','#ff6600','#ffd700','#ff2200'] },
   { id:'phantom', name:'PHANTOM REALM', bgTop:'#0a0015', bgBottom:'#23003a', accent:'#ff2e88', accentSoft:'rgba(255,46,136,0.4)', stars:['#ff2e88','#a55eea','#ffffff','#ff9ad4'], ground:'#1f0a2a', groundLine:'#ff2e88', monsters:['#ff2e88','#a55eea','#c86bff','#ff9ad4'] },
   { id:'omega', name:'FINAL BOSS: OMEGA', bgTop:'#000000', bgBottom:'#2a0033', accent:'#ff0055', accentSoft:'rgba(255,0,85,0.5)', stars:['#ff0055','#ffd700','#00ffff','#ffffff','#ff00ff'], ground:'#0a0010', groundLine:'#ff0055', monsters:['#ff0055','#ffd700','#00ffff','#ff00ff','#39ff14'] },
-  // 🔥 v20.6 — Extended themes 31-50
   { id:'quantum', name:'QUANTUM RIFT', bgTop:'#020818', bgBottom:'#0a1a3a', accent:'#00ffff', accentSoft:'rgba(0,255,255,0.4)', stars:['#00ffff','#ffffff','#ff00ff','#00ff88'], ground:'#041028', groundLine:'#00ffff', monsters:['#00ffff','#ff00ff','#00ff88','#ffffff'] },
   { id:'abyss', name:'BOSS: ABYSS', bgTop:'#000005', bgBottom:'#0a0020', accent:'#8b00ff', accentSoft:'rgba(139,0,255,0.5)', stars:['#8b00ff','#ffffff','#00ffff','#ff00ff'], ground:'#05001a', groundLine:'#8b00ff', monsters:['#8b00ff','#00ffff','#ff00ff','#ffffff'] },
   { id:'chronos', name:'CHRONOS STREAM', bgTop:'#100018', bgBottom:'#3a0060', accent:'#ff00aa', accentSoft:'rgba(255,0,170,0.4)', stars:['#ff00aa','#00ffff','#ffffff','#ffaaff'], ground:'#20003a', groundLine:'#ff00aa', monsters:['#ff00aa','#00ffff','#ffaaff','#ffffff'] },
@@ -709,23 +863,18 @@ const THEME_BGM = {
 };
 
 function getThemeForLevel(levelNum) {
-  // Boss levels 5,10,15,...,50
   if (levelNum % 5 === 0) {
-    const bossIndex = levelNum / 5; // 1..10
-    // Level 1-30: pakai index 1,3,5,7,9,11
-    // Level 31-50: pakai index 13,15,17,19 (abyss, nemesis, +2 extra)
     if (levelNum === 5)  return LEVEL_THEMES[1];
     if (levelNum === 10) return LEVEL_THEMES[3];
     if (levelNum === 15) return LEVEL_THEMES[5];
     if (levelNum === 20) return LEVEL_THEMES[7];
     if (levelNum === 25) return LEVEL_THEMES[9];
     if (levelNum === 30) return LEVEL_THEMES[11];
-    if (levelNum === 35) return LEVEL_THEMES[13]; // abyss
-    if (levelNum === 40) return LEVEL_THEMES[15]; // nemesis
-    if (levelNum === 45) return LEVEL_THEMES[13]; // abyss (reuse)
-    if (levelNum === 50) return LEVEL_THEMES[16]; // eternity (final final)
+    if (levelNum === 35) return LEVEL_THEMES[13];
+    if (levelNum === 40) return LEVEL_THEMES[15];
+    if (levelNum === 45) return LEVEL_THEMES[13];
+    if (levelNum === 50) return LEVEL_THEMES[16];
   }
-  // Non-boss: rotate antar normal themes
   const normalThemes = [0, 2, 4, 6, 8, 10, 12, 14];
   const group = Math.floor((levelNum - 1) / 5);
   return LEVEL_THEMES[normalThemes[group % normalThemes.length]];
@@ -743,7 +892,7 @@ function getBossBaseHp(n) {
 }
 
 // =============================================================
-// 4. STORY — Extended sampai level 50
+// 4. STORY
 // =============================================================
 const STORY = {
   1:  { before:{ speaker:'VEGA', portrait:'i-vega', lines:['Pahlawan... gelombang Void datang dari Nebula.','Selamatkan 5 sektor. Kita satu-satunya harapan.'] },
@@ -761,7 +910,6 @@ const STORY = {
   25: { before:{ speaker:'VILLAIN', portrait:'i-villain', lines:['Aku adalah Void itu sendiri.','Setiap pahlawan yang kau kalahkan... adalah aku.'] } },
   30: { before:{ speaker:'VILLAIN', portrait:'i-villain', lines:['Ini akhirnya. Kau vs aku. Takdir atau kehancuran.'] },
         after:{ speaker:'PAHLAWAN', portrait:'i-hero-portrait', lines:['Damai... akhirnya.'] } },
-  // 🔥 v20.6 Extended
   33: { before:{ speaker:'VEGA', portrait:'i-vega', lines:['Kau mengira ini sudah selesai?','Void memiliki lapisan yang lebih dalam.'] } },
   35: { before:{ speaker:'VILLAIN', portrait:'i-villain', lines:['Selamat datang di Abyss.','Di sini, bahkan cahaya pun mati.'] },
         after:{ speaker:'PAHLAWAN', portrait:'i-hero-portrait', lines:['Aku masih berdiri.'] } },
@@ -776,7 +924,7 @@ const STORY = {
 };
 
 // =============================================================
-// 5. LEVEL GENERATOR — Extended sampai 50
+// 5. LEVEL GENERATOR
 // =============================================================
 function generate30Levels() {
   const levels = [];
@@ -824,7 +972,7 @@ const DAILY_BOSS_SEQUENCES = [
 ];
 
 // =============================================================
-// 6. SOUND ENGINE
+// 6. SOUND ENGINE (v20.7 — extended untuk hero baru)
 // =============================================================
 class SoundEngine {
   constructor() {
@@ -1003,6 +1151,97 @@ class SoundEngine {
       o.start(this.ctx.currentTime+i*0.08); o.stop(this.ctx.currentTime+i*0.08+0.25);
     });
   }
+
+  // ============ v20.7 — HERO SOUNDS BARU ============
+  playCannonBlast() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+    o.type='square'; o.frequency.setValueAtTime(180,this.ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(45,this.ctx.currentTime+0.25);
+    g.gain.setValueAtTime(0.35,this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.25);
+    o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.25);
+  }
+  playDragonRoar() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+    o.type='sawtooth'; o.frequency.setValueAtTime(120,this.ctx.currentTime);
+    o.frequency.linearRampToValueAtTime(400,this.ctx.currentTime+0.15);
+    o.frequency.linearRampToValueAtTime(90,this.ctx.currentTime+0.25);
+    g.gain.setValueAtTime(0.22,this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.25);
+    o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.25);
+  }
+  playRapid() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+    o.type='square'; o.frequency.setValueAtTime(1200,this.ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(600,this.ctx.currentTime+0.04);
+    g.gain.setValueAtTime(0.08,this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.04);
+    o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.04);
+  }
+  playMagicSpark() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
+    [1046, 1568, 2093].forEach((f, i) => {
+      const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+      o.type='sine'; o.frequency.setValueAtTime(f, this.ctx.currentTime + i*0.02);
+      g.gain.setValueAtTime(0.09, this.ctx.currentTime + i*0.02);
+      g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i*0.02 + 0.1);
+      o.connect(g); g.connect(this.ctx.destination);
+      o.start(this.ctx.currentTime + i*0.02); o.stop(this.ctx.currentTime + i*0.02 + 0.1);
+    });
+  }
+  playFireWhoosh() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+    o.type='sawtooth'; o.frequency.setValueAtTime(600,this.ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(150,this.ctx.currentTime+0.2);
+    g.gain.setValueAtTime(0.15,this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.2);
+    o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.2);
+  }
+  playShuriken() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+    o.type='square'; o.frequency.setValueAtTime(1400,this.ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(400,this.ctx.currentTime+0.1);
+    g.gain.setValueAtTime(0.1,this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.1);
+    o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.1);
+  }
+  playArcaneOrb() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(440,this.ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(1760,this.ctx.currentTime+0.3);
+    g.gain.setValueAtTime(0.14,this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.3);
+    o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.3);
+  }
+  playBowRelease() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+    o.type='triangle'; o.frequency.setValueAtTime(1800,this.ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(200,this.ctx.currentTime+0.09);
+    g.gain.setValueAtTime(0.15,this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+0.09);
+    o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.09);
+  }
+  playGhostWail() { if (this.isMuted) return; this.init(); if (!this.ctx) return;
+    const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(600,this.ctx.currentTime);
+    o.frequency.linearRampToValueAtTime(200,this.ctx.currentTime+0.5);
+    g.gain.setValueAtTime(0.15,this.ctx.currentTime);
+    g.gain.linearRampToValueAtTime(0.05,this.ctx.currentTime+0.3);
+    g.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+0.5);
+    o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+0.5);
+  }
+
+  // Dispatch berdasarkan sound name
+  playHeroShoot(heroId) {
+    const hero = HERO_DATA[heroId];
+    if (!hero) { this.playLaser(); return; }
+    switch (hero.sound) {
+      case 'laser': this.playLaser(); break;
+      case 'cannonBlast': this.playCannonBlast(); break;
+      case 'dragonRoar': this.playDragonRoar(); break;
+      case 'rapid': this.playRapid(); break;
+      case 'magicSpark': this.playMagicSpark(); break;
+      case 'fireWhoosh': this.playFireWhoosh(); break;
+      case 'shuriken': this.playShuriken(); break;
+      case 'arcaneOrb': this.playArcaneOrb(); break;
+      case 'bowRelease': this.playBowRelease(); break;
+      case 'ghostWail': this.playGhostWail(); break;
+      default: this.playLaser();
+    }
+  }
+
   _playTone(freq, dur, type='square', vol=0.05, detune=0) {
     if (!this.ctx) return;
     const o=this.ctx.createOscillator(), g=this.ctx.createGain();
@@ -1213,6 +1452,9 @@ let isMovingRight = false;
 let currentActor = localStorage.getItem('pahlawan_actor') || 'robot';
 let playerName = localStorage.getItem('pahlawan_nama') || 'Pahlawan';
 
+// Validasi actor (kalau actor lama hilang)
+if (!HERO_DATA[currentActor]) currentActor = 'robot';
+
 let endlessWave = 1;
 let endlessKillsThisWave = 0;
 const ENDLESS_KILLS_PER_WAVE = 15;
@@ -1241,13 +1483,11 @@ let VIRTUAL_WIDTH  = 0;
 let VIRTUAL_HEIGHT = 0;
 let GAME_SCALE     = 1;
 
-const actorMap = {
-  robot:   { name:'Robot Cyber',     color:'#1e90ff' },
-  cannon:  { name:'Meriam Bintang',  color:'#ff4757' },
-  dragon:  { name:'Cyber Dragon',    color:'#2ed573' },
-  cat:     { name:'Ninja Cat',       color:'#ffa502' },
-  unicorn: { name:'Unicorn Star',    color:'#a55eea' }
-};
+// Actor map (untuk display name)
+const actorMap = {};
+ALL_HEROES.forEach(id => {
+  actorMap[id] = { name: HERO_DATA[id].name, color: HERO_DATA[id].color };
+});
 
 let storyQueue = [];
 let storyOnDone = null;
@@ -1264,7 +1504,7 @@ let isReviveModalOpen = false;
 
 let lbMigratedThisSession = { global: false, endless: false, daily: false, coop: false };
 
-// 🔥 v20.6 — Math Quiz state
+// Math quiz state
 let mathQuizState = {
   heroId: null,
   questions: [],
@@ -1395,6 +1635,7 @@ window.addEventListener('load', async () => {
     await checkAchievements(true);
     updateAchievementBadge();
     updateLevelSelectButton();
+    updateActorGridUI();
   } catch (e) { console.warn('⚠️ [Boot] Async init partial failure:', e); }
 
   try {
@@ -1569,7 +1810,7 @@ function recolorStars() {
 
 async function loadGameData() {
   try {
-    const [rl] = await Promise.all([fetch('./levels.json?v=20.6')]);
+    const [rl] = await Promise.all([fetch('./levels.json?v=20.7')]);
     if (rl.ok) levelsData = await rl.json();
   } catch (err) { levelsData = generate30Levels(); }
 }
@@ -1587,7 +1828,6 @@ function updateReviveQuotaUI() {
   if (el) el.innerText = reviveQuota;
 }
 
-// 🔥 v20.6 — Show/hide level select button
 function updateLevelSelectButton() {
   const btn = document.getElementById('btn-level-select');
   if (!btn) return;
@@ -1670,7 +1910,7 @@ function triggerHitStop(frames) {
 }
 
 // =============================================================
-// 🔥 v20.6 — SPECTATOR MODE (ISOLATED)
+// 🔥 SPECTATOR MODE
 // =============================================================
 function setSpectatorOverlayVisible(visible) {
   const overlay = document.getElementById('mp-spectator-overlay');
@@ -1820,17 +2060,20 @@ function checkBothDead() {
 }
 
 // =============================================================
-// 🔥 v20.6 — MATH QUIZ SYSTEM
+// 🔥 MATH QUIZ SYSTEM (v20.7 — Random)
 // =============================================================
 function startMathQuiz(heroId) {
-  if (!MATH_QUIZ_DATA[heroId]) {
-    console.warn('⚠️ [Quiz] No quiz data for', heroId);
+  const hero = HERO_DATA[heroId];
+  if (!hero) {
+    console.warn('⚠️ [Quiz] No hero data for', heroId);
     return;
   }
+
+  // Generate 20 soal acak berdasarkan difficulty hero
   mathQuizState.heroId = heroId;
-  mathQuizState.questions = [...MATH_QUIZ_DATA[heroId].questions];
+  mathQuizState.questions = generateMathQuestions(heroId, 20, hero.difficulty);
   mathQuizState.currentIdx = 0;
-  mathQuizState.timeLimit = MATH_QUIZ_DATA[heroId].timeLimit;
+  mathQuizState.timeLimit = hero.quizTime || 60;
   mathQuizState.timerRemaining = mathQuizState.timeLimit;
   mathQuizState.correctCount = 0;
   mathQuizState.answered = false;
@@ -1842,7 +2085,9 @@ function startMathQuiz(heroId) {
   const resultWrap = document.getElementById('math-quiz-result-wrap');
   const closeBtn = document.getElementById('btn-close-math-quiz');
 
-  if (heroNameEl) heroNameEl.innerText = `Buka "${MATH_QUIZ_DATA[heroId].heroName}" — Jawab 20 soal dalam ${mathQuizState.timeLimit} detik`;
+  if (heroNameEl) {
+    heroNameEl.innerText = `Buka "${hero.name}" — Jawab 20 soal dalam ${mathQuizState.timeLimit} detik (${hero.difficulty.toUpperCase()})`;
+  }
   if (bodyEl) bodyEl.classList.remove('hidden');
   if (resultWrap) resultWrap.classList.add('hidden');
   if (closeBtn) { closeBtn.classList.remove('hidden'); closeBtn.innerText = 'BATAL'; }
@@ -1939,10 +2184,9 @@ function answerMath(btn, val, correctVal) {
     mathQuizState.answered = false;
     mathQuizState.currentIdx++;
     if (mathQuizState.currentIdx >= mathQuizState.questions.length) {
-      // Semua soal selesai
       clearInterval(mathQuizState.timerInterval);
       mathQuizState.timerInterval = null;
-      const success = mathQuizState.correctCount >= 18; // Lulus: min 18/20 benar
+      const success = mathQuizState.correctCount >= 18;
       endMathQuiz(success, success ? 'LULUS!' : `Hanya ${mathQuizState.correctCount}/20 benar`);
     } else {
       renderMathQuestion();
@@ -1974,7 +2218,7 @@ async function endMathQuiz(success, reason) {
     try { sounds.playUnlock(); } catch(e) {}
     if (resultBox) resultBox.className = 'math-quiz-result win';
     if (resultTitle) resultTitle.innerText = '🎉 HERO TERBUKA!';
-    if (resultDesc) resultDesc.innerText = `${MATH_QUIZ_DATA[mathQuizState.heroId].heroName} sekarang bisa kamu pilih!`;
+    if (resultDesc) resultDesc.innerText = `${HERO_DATA[mathQuizState.heroId].name} sekarang bisa kamu pilih!`;
     if (actionBtn) {
       actionBtn.onclick = () => {
         closeMathQuiz();
@@ -1985,16 +2229,13 @@ async function endMathQuiz(success, reason) {
     }
     triggerVibrate([80, 40, 80, 40, 200]);
     triggerScreenFlash(0.5);
-    PLAYER_STATS.heroesUsed = PLAYER_STATS.heroesUsed || [];
     await checkAchievements();
   } else {
     if (resultBox) resultBox.className = 'math-quiz-result lose';
     if (resultTitle) resultTitle.innerText = '❌ BELUM BERHASIL';
     if (resultDesc) resultDesc.innerText = reason + '. Coba lagi ya!';
     if (actionBtn) {
-      actionBtn.onclick = () => {
-        closeMathQuiz();
-      };
+      actionBtn.onclick = () => closeMathQuiz();
       actionBtn.querySelector('span').innerText = 'TUTUP';
     }
   }
@@ -2014,7 +2255,7 @@ function closeMathQuiz() {
 }
 
 // =============================================================
-// 🔥 v20.6 — LEVEL SELECTOR
+// 🔥 LEVEL SELECTOR
 // =============================================================
 async function openLevelSelect() {
   const modal = document.getElementById('modal-level-select');
@@ -2046,9 +2287,7 @@ async function renderLevelGrid() {
     let starHtml = '';
     if (isUnlocked) {
       starHtml = '<div class="lvl-stars">';
-      for (let s = 0; s < 3; s++) {
-        starHtml += `<span class="lvl-star ${s < lvlStars ? 'on' : ''}">★</span>`;
-      }
+      for (let s = 0; s < 3; s++) starHtml += `<span class="lvl-star ${s < lvlStars ? 'on' : ''}">★</span>`;
       starHtml += '</div>';
     } else {
       starHtml = '<div class="lvl-stars">🔒</div>';
@@ -2081,7 +2320,6 @@ async function jumpToLevel(levelNum) {
   if (levelNum < 1 || levelNum > 50) return;
   console.log('🎯 [LevelSelect] Jump ke level', levelNum);
   currentLevelIndex = levelNum - 1;
-  // Reset state untuk level baru
   lives = 3;
   playerHitPoints = PLAYER_MAX_HIT_POINTS;
   playerHitFlash = 0;
@@ -2096,7 +2334,7 @@ async function jumpToLevel(levelNum) {
 }
 
 // =============================================================
-// 🔥 v20.6 — ACTOR GRID UI
+// 🔥 ACTOR GRID UI
 // =============================================================
 function updateActorGridUI() {
   const cards = document.querySelectorAll('.actor-card');
@@ -2110,18 +2348,22 @@ function updateActorGridUI() {
 
 // =============================================================
 // END OF PART 1 — Sections 1-17
-// Lanjut ke Part 2 (Sections 18-28) di response berikutnya
+// Lanjut ke Part 2 (Sections 18-34) di response berikutnya
 // =============================================================
 
 // =============================================================
-// 18. DRAW HERO
+// 18. DRAW HERO (10 HERO VISUAL BERBEDA)
 // =============================================================
 function drawHeroVector(ctx, x, y, type, isRemote) {
+  const hero = HERO_DATA[type] || HERO_DATA.robot;
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(GAME_SCALE, GAME_SCALE);
   if (isRemote) ctx.globalAlpha = 0.85;
+
   const rageMode = !isRemote && lives === 1 && playerHitPoints === 1;
+
+  // ============ ROBOT ============
   if (type === 'robot') {
     ctx.fillStyle = '#1e90ff'; ctx.fillRect(-18, -10, 36, 28);
     ctx.fillStyle = '#70a1ff'; ctx.fillRect(-12, -26, 24, 16);
@@ -2130,11 +2372,15 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
     ctx.fillRect(-24, -8, 6, 16); ctx.fillRect(18, -8, 6, 16);
     ctx.fillStyle = '#ff4757';
     ctx.beginPath(); ctx.moveTo(-10, 18); ctx.lineTo(0, 30 + Math.random()*6); ctx.lineTo(10, 18); ctx.fill();
+
+  // ============ CANNON ============
   } else if (type === 'cannon') {
     ctx.fillStyle = '#ff4757';
     ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(24, 15); ctx.lineTo(-24, 15); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#2f3542'; ctx.fillRect(-16, -18, 5, 20); ctx.fillRect(11, -18, 5, 20);
     ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(0, -2, 6, 0, Math.PI*2); ctx.fill();
+
+  // ============ DRAGON ============
   } else if (type === 'dragon') {
     ctx.fillStyle = '#2ed573';
     ctx.beginPath();
@@ -2142,6 +2388,8 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
     ctx.lineTo(-12, 18); ctx.lineTo(-28, -5); ctx.lineTo(-16, 10);
     ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#ff4757'; ctx.fillRect(-7, -12, 4, 4); ctx.fillRect(3, -12, 4, 4);
+
+  // ============ CAT ============
   } else if (type === 'cat') {
     ctx.fillStyle = '#ffa502';
     ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI*2); ctx.fill();
@@ -2149,12 +2397,182 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
     ctx.beginPath(); ctx.moveTo(14, -8); ctx.lineTo(8, -24); ctx.lineTo(2, -12); ctx.fill();
     ctx.fillStyle = '#2f3542'; ctx.fillRect(-12, -6, 24, 8);
     ctx.fillStyle = '#fff'; ctx.fillRect(-8, -4, 4, 4); ctx.fillRect(4, -4, 4, 4);
-  } else {
+
+  // ============ UNICORN ============
+  } else if (type === 'unicorn') {
     ctx.fillStyle = '#a55eea';
     ctx.beginPath(); ctx.arc(0, 2, 18, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = '#ffd700';
     ctx.beginPath(); ctx.moveTo(0, -32); ctx.lineTo(5, -12); ctx.lineTo(-5, -12); ctx.closePath(); ctx.fill();
+
+  // ============ PHOENIX (NEW) ============
+  } else if (type === 'phoenix') {
+    // Wings
+    ctx.fillStyle = '#ff8c00';
+    ctx.beginPath();
+    ctx.moveTo(-22, -5);
+    ctx.lineTo(-32, -18);
+    ctx.lineTo(-26, 0);
+    ctx.lineTo(-30, 8);
+    ctx.lineTo(-16, 6);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(22, -5);
+    ctx.lineTo(32, -18);
+    ctx.lineTo(26, 0);
+    ctx.lineTo(30, 8);
+    ctx.lineTo(16, 6);
+    ctx.closePath(); ctx.fill();
+    // Body
+    ctx.fillStyle = '#ff6600';
+    ctx.beginPath(); ctx.ellipse(0, 0, 14, 16, 0, 0, Math.PI*2); ctx.fill();
+    // Head
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath(); ctx.arc(0, -16, 10, 0, Math.PI*2); ctx.fill();
+    // Beak
+    ctx.fillStyle = '#ff8c00';
+    ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(4, -26); ctx.lineTo(-4, -26); ctx.closePath(); ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#000'; ctx.fillRect(-5, -19, 2, 2); ctx.fillRect(3, -19, 2, 2);
+    // Crown
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath(); ctx.moveTo(-6, -26); ctx.lineTo(-3, -32); ctx.lineTo(0, -28); ctx.lineTo(3, -32); ctx.lineTo(6, -26); ctx.closePath(); ctx.fill();
+    // Tail
+    ctx.fillStyle = '#ff4500';
+    ctx.beginPath(); ctx.moveTo(0, 16); ctx.lineTo(-8, 26); ctx.lineTo(0, 22); ctx.lineTo(8, 26); ctx.closePath(); ctx.fill();
+
+  // ============ NINJA (NEW) ============
+  } else if (type === 'ninja') {
+    // Shadow aura
+    ctx.fillStyle = 'rgba(165, 94, 234, 0.3)';
+    ctx.beginPath(); ctx.arc(0, 0, 24, 0, Math.PI*2); ctx.fill();
+    // Body
+    ctx.fillStyle = '#1a1a2a';
+    ctx.beginPath(); ctx.ellipse(0, 2, 16, 18, 0, 0, Math.PI*2); ctx.fill();
+    // Head
+    ctx.fillStyle = '#0d0d1a';
+    ctx.beginPath(); ctx.arc(0, -12, 12, 0, Math.PI*2); ctx.fill();
+    // Mask band
+    ctx.fillStyle = '#c56cf0';
+    ctx.fillRect(-12, -14, 24, 5);
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(-7, -12, 5, 3);
+    ctx.fillRect(2, -12, 5, 3);
+    ctx.fillStyle = '#c56cf0';
+    ctx.fillRect(-6, -11, 3, 1);
+    ctx.fillRect(3, -11, 3, 1);
+    // Scarf
+    ctx.fillStyle = '#c56cf0';
+    ctx.beginPath(); ctx.moveTo(8, -6); ctx.lineTo(22, -12); ctx.lineTo(24, -6); ctx.lineTo(10, 0); ctx.closePath(); ctx.fill();
+    // Sword on back
+    ctx.strokeStyle = '#666'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-14, -8); ctx.lineTo(-22, 12); ctx.stroke();
+
+  // ============ WIZARD (NEW) ============
+  } else if (type === 'wizard') {
+    // Magic aura
+    ctx.fillStyle = 'rgba(0, 184, 212, 0.25)';
+    ctx.beginPath(); ctx.arc(0, 0, 26 + Math.sin(playerPulse*2)*2, 0, Math.PI*2); ctx.fill();
+    // Robe
+    ctx.fillStyle = '#00b8d4';
+    ctx.beginPath(); ctx.moveTo(-16, 22); ctx.lineTo(-8, -8); ctx.lineTo(8, -8); ctx.lineTo(16, 22); ctx.closePath(); ctx.fill();
+    // Hat
+    ctx.fillStyle = '#0095b8';
+    ctx.beginPath(); ctx.moveTo(-14, -8); ctx.lineTo(0, -34); ctx.lineTo(14, -8); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#00b8d4';
+    ctx.fillRect(-16, -12, 32, 5);
+    // Star on hat
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    for (let s = 0; s < 5; s++) {
+      const a = (Math.PI*2/5)*s - Math.PI/2;
+      const px = Math.cos(a)*5, py = -22 + Math.sin(a)*5;
+      s === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      const a2 = a + Math.PI/5;
+      ctx.lineTo(Math.cos(a2)*2, -22 + Math.sin(a2)*2);
+    }
+    ctx.closePath(); ctx.fill();
+    // Face
+    ctx.fillStyle = '#ffd8b0';
+    ctx.beginPath(); ctx.arc(0, -2, 8, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#000'; ctx.fillRect(-3, -3, 2, 2); ctx.fillRect(1, -3, 2, 2);
+    // Staff
+    ctx.strokeStyle = '#8b4513'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-14, -10); ctx.lineTo(-16, 22); ctx.stroke();
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath(); ctx.arc(-14, -14, 5, 0, Math.PI*2); ctx.fill();
+
+  // ============ ARCHER (NEW) ============
+  } else if (type === 'archer') {
+    // Body
+    ctx.fillStyle = '#2ed573';
+    ctx.beginPath(); ctx.ellipse(0, 4, 14, 18, 0, 0, Math.PI*2); ctx.fill();
+    // Head
+    ctx.fillStyle = '#ffd8b0';
+    ctx.beginPath(); ctx.arc(0, -12, 11, 0, Math.PI*2); ctx.fill();
+    // Hood
+    ctx.fillStyle = '#1abc4e';
+    ctx.beginPath();
+    ctx.moveTo(-12, -14);
+    ctx.lineTo(-10, -24);
+    ctx.lineTo(0, -28);
+    ctx.lineTo(10, -24);
+    ctx.lineTo(12, -14);
+    ctx.lineTo(0, -20);
+    ctx.closePath(); ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#000'; ctx.fillRect(-4, -13, 2, 2); ctx.fillRect(2, -13, 2, 2);
+    // Bow
+    ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(-16, -2, 12, -Math.PI/3, Math.PI/3); ctx.stroke();
+    // Bow string
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-16 + Math.cos(-Math.PI/3)*12, -2 + Math.sin(-Math.PI/3)*12);
+    ctx.lineTo(-16, 4);
+    ctx.lineTo(-16 + Math.cos(Math.PI/3)*12, -2 + Math.sin(Math.PI/3)*12);
+    ctx.stroke();
+    // Arrow
+    ctx.strokeStyle = '#8b4513'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-16, -2); ctx.lineTo(-32, -2); ctx.stroke();
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath(); ctx.moveTo(-32, -2); ctx.lineTo(-38, -5); ctx.lineTo(-38, 1); ctx.closePath(); ctx.fill();
+
+  // ============ GHOST (NEW) ============
+  } else if (type === 'ghost') {
+    // Ghostly aura
+    ctx.fillStyle = `rgba(0, 210, 211, ${0.15 + Math.sin(playerPulse*3)*0.1})`;
+    ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI*2); ctx.fill();
+    // Body (wavy bottom)
+    ctx.fillStyle = 'rgba(230, 238, 252, 0.85)';
+    ctx.beginPath();
+    ctx.moveTo(-16, -8);
+    ctx.quadraticCurveTo(-20, -20, 0, -22);
+    ctx.quadraticCurveTo(20, -20, 16, -8);
+    ctx.lineTo(16, 16);
+    // Wavy bottom
+    const waveOffset = Math.sin(playerPulse * 2) * 2;
+    ctx.lineTo(12, 12 + waveOffset);
+    ctx.lineTo(8, 18);
+    ctx.lineTo(4, 12 - waveOffset);
+    ctx.lineTo(0, 18);
+    ctx.lineTo(-4, 12 + waveOffset);
+    ctx.lineTo(-8, 18);
+    ctx.lineTo(-12, 12 - waveOffset);
+    ctx.closePath();
+    ctx.fill();
+    // Eyes (glowing)
+    ctx.fillStyle = '#00d2d3';
+    ctx.shadowColor = '#00d2d3'; ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.arc(-6, -6, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(6, -6, 3, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    // Mouth
+    ctx.fillStyle = '#0a0015';
+    ctx.beginPath(); ctx.ellipse(0, 4, 3, 5, 0, 0, Math.PI*2); ctx.fill();
   }
+
+  // Rage mode overlay
   if (rageMode) {
     ctx.save();
     ctx.globalAlpha = 0.35 + Math.sin(playerPulse * 3) * 0.15;
@@ -2162,6 +2580,8 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
     ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI*2); ctx.fill();
     ctx.restore();
   }
+
+  // Shield / invuln hex
   if (!isRemote && (isShieldActive || isReviveInvuln)) {
     ctx.save();
     ctx.beginPath();
@@ -2178,11 +2598,197 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
     ctx.stroke();
     ctx.restore();
   }
+
+  // Magnet ring
   if (!isRemote && isMagnetActive) {
     ctx.beginPath(); ctx.arc(0, -2, 42, 0, Math.PI*2);
     ctx.strokeStyle = '#ffa502'; ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 4]); ctx.lineDashOffset = -playerPulse;
     ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+  }
+  ctx.restore();
+}
+
+// =============================================================
+// 🔥 v20.7 — BULLET SPAWNER PER HERO
+// =============================================================
+function spawnHeroBullets(heroId, originX, originY, targetDir, owner) {
+  const hero = HERO_DATA[heroId] || HERO_DATA.robot;
+  const S = GAME_SCALE;
+  const bulletsToAdd = [];
+  const bt = hero.bulletType;
+  const size = hero.bulletSize * S;
+  const speed = hero.bulletSpeed * S;
+  const pierce = hero.bulletPierce;
+
+  switch (bt) {
+    case 'laser-double':
+      bulletsToAdd.push({ x: originX - 8 * S, y: originY, vx: 0, vy: speed, color: hero.color, heroType: heroId, size, pierce, owner });
+      bulletsToAdd.push({ x: originX + 8 * S, y: originY, vx: 0, vy: speed, color: hero.color, heroType: heroId, size, pierce, owner });
+      break;
+
+    case 'heavy-shot':
+      bulletsToAdd.push({ x: originX, y: originY, vx: 0, vy: speed, color: hero.color, heroType: heroId, size, pierce, owner });
+      break;
+
+    case 'triple-spread':
+      bulletsToAdd.push({ x: originX - 10 * S, y: originY, vx: -2 * S, vy: speed, color: hero.color, heroType: heroId, size, pierce, owner });
+      bulletsToAdd.push({ x: originX,        y: originY, vx: 0,      vy: speed + 1 * S, color: hero.color, heroType: heroId, size: size + 1, pierce, owner });
+      bulletsToAdd.push({ x: originX + 10 * S, y: originY, vx: 2 * S, vy: speed, color: hero.color, heroType: heroId, size, pierce, owner });
+      break;
+
+    case 'rapid-fire':
+      bulletsToAdd.push({
+        x: originX, y: originY,
+        vx: (Math.random()-0.5)*1.2 * S, vy: speed,
+        color: hero.color, heroType: heroId, size, pierce, rot: 0, owner
+      });
+      break;
+
+    case 'piercing-star':
+      bulletsToAdd.push({ x: originX, y: originY, vx: 0, vy: speed, color: hero.color, heroType: heroId, size, pierce: 2, owner });
+      break;
+
+    case 'flame-spread':
+      bulletsToAdd.push({ x: originX - 12 * S, y: originY, vx: -1.8 * S, vy: speed, color: '#ff6600', heroType: heroId, size, pierce, owner });
+      bulletsToAdd.push({ x: originX,        y: originY, vx: 0,       vy: speed + 1 * S, color: '#ff8c00', heroType: heroId, size: size + 1, pierce, owner });
+      bulletsToAdd.push({ x: originX + 12 * S, y: originY, vx: 1.8 * S, vy: speed, color: '#ff6600', heroType: heroId, size, pierce, owner });
+      break;
+
+    case 'shuriken-spin':
+      bulletsToAdd.push({ x: originX - 6 * S, y: originY, vx: -1 * S, vy: speed, color: '#c56cf0', heroType: heroId, size, pierce, rot: 0, owner });
+      bulletsToAdd.push({ x: originX + 6 * S, y: originY, vx: 1 * S,  vy: speed, color: '#c56cf0', heroType: heroId, size, pierce, rot: 0, owner });
+      break;
+
+    case 'magic-orb':
+      bulletsToAdd.push({ x: originX, y: originY, vx: 0, vy: speed, color: hero.color, heroType: heroId, size, pierce: 2, owner });
+      break;
+
+    case 'golden-arrow':
+      bulletsToAdd.push({ x: originX, y: originY, vx: 0, vy: speed, color: '#ffd700', heroType: heroId, size, pierce: 3, owner });
+      break;
+
+    case 'soul-spread':
+      // 5-way spread
+      for (let i = -2; i <= 2; i++) {
+        const angle = i * 0.28;
+        bulletsToAdd.push({
+          x: originX, y: originY,
+          vx: Math.sin(angle) * speed, vy: Math.cos(angle) * speed,
+          color: i === 0 ? '#00d2d3' : hero.color,
+          heroType: heroId, size, pierce, owner
+        });
+      }
+      break;
+
+    default:
+      bulletsToAdd.push({ x: originX, y: originY, vx: 0, vy: speed, color: hero.color, heroType: heroId, size, pierce, owner });
+  }
+
+  // Push all
+  bulletsToAdd.forEach(b => bullets.push(b));
+  return bulletsToAdd.length;
+}
+
+// =============================================================
+// 🔥 v20.7 — DRAW BULLET PER HERO
+// =============================================================
+function drawBullet(ctx, b, S) {
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  const heroType = b.heroType;
+
+  if (heroType === 'cat') {
+    b.rot = (b.rot || 0) + 0.3; ctx.rotate(b.rot);
+    ctx.fillStyle = b.color;
+    ctx.fillRect(-6 * S, -2 * S, 12 * S, 4 * S);
+    ctx.fillRect(-2 * S, -6 * S, 4 * S, 12 * S);
+
+  } else if (heroType === 'cannon') {
+    ctx.beginPath(); ctx.arc(0, 0, b.size, 0, Math.PI*2);
+    ctx.fillStyle = '#ffd700'; ctx.fill();
+    ctx.lineWidth = 3 * S; ctx.strokeStyle = '#ff4757'; ctx.stroke();
+
+  } else if (heroType === 'unicorn') {
+    ctx.fillStyle = '#a55eea';
+    ctx.beginPath(); ctx.arc(0, 0, b.size, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(0, 0, b.size * 0.4, 0, Math.PI*2); ctx.fill();
+
+  } else if (heroType === 'phoenix') {
+    // Fireball with glow
+    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, b.size * 2);
+    glow.addColorStop(0, 'rgba(255, 215, 0, 0.9)');
+    glow.addColorStop(0.5, 'rgba(255, 140, 0, 0.6)');
+    glow.addColorStop(1, 'rgba(255, 60, 0, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(0, 0, b.size * 2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath(); ctx.arc(0, 0, b.size * 0.7, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ff4500';
+    ctx.beginPath(); ctx.arc(0, 0, b.size * 0.4, 0, Math.PI*2); ctx.fill();
+
+  } else if (heroType === 'ninja') {
+    // Spinning shuriken
+    b.rot = (b.rot || 0) + 0.4; ctx.rotate(b.rot);
+    ctx.fillStyle = '#c56cf0';
+    for (let i = 0; i < 4; i++) {
+      ctx.save();
+      ctx.rotate((Math.PI/2) * i);
+      ctx.beginPath();
+      ctx.moveTo(0, -b.size);
+      ctx.lineTo(b.size * 0.3, -b.size * 0.3);
+      ctx.lineTo(0, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(0, 0, b.size * 0.3, 0, Math.PI*2); ctx.fill();
+
+  } else if (heroType === 'wizard') {
+    // Magic orb with sparkle
+    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, b.size * 1.8);
+    glow.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    glow.addColorStop(0.4, 'rgba(0, 184, 212, 0.8)');
+    glow.addColorStop(1, 'rgba(0, 100, 180, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(0, 0, b.size * 1.8, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(0, 0, b.size * 0.5, 0, Math.PI*2); ctx.fill();
+
+  } else if (heroType === 'archer') {
+    // Golden arrow
+    ctx.strokeStyle = '#8b4513'; ctx.lineWidth = 2 * S;
+    ctx.beginPath(); ctx.moveTo(0, b.size*1.5); ctx.lineTo(0, -b.size*1.5); ctx.stroke();
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.moveTo(0, -b.size*2); ctx.lineTo(-b.size*0.6, -b.size*1); ctx.lineTo(b.size*0.6, -b.size*1);
+    ctx.closePath(); ctx.fill();
+    // Fletching
+    ctx.fillStyle = '#2ed573';
+    ctx.beginPath();
+    ctx.moveTo(0, b.size*1.5); ctx.lineTo(-b.size*0.8, b.size*2.3); ctx.lineTo(-b.size*0.2, b.size*1.7);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0, b.size*1.5); ctx.lineTo(b.size*0.8, b.size*2.3); ctx.lineTo(b.size*0.2, b.size*1.7);
+    ctx.closePath(); ctx.fill();
+
+  } else if (heroType === 'ghost') {
+    // Soul blast
+    const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, b.size * 1.8);
+    glow.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+    glow.addColorStop(0.4, 'rgba(0, 210, 211, 0.7)');
+    glow.addColorStop(1, 'rgba(0, 100, 150, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(0, 0, b.size * 1.8, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#e6eefc';
+    ctx.beginPath(); ctx.arc(0, 0, b.size * 0.6, 0, Math.PI*2); ctx.fill();
+
+  } else {
+    // Default laser
+    ctx.beginPath(); ctx.moveTo(0, 10 * S); ctx.lineTo(0, -10 * S);
+    ctx.lineWidth = b.size; ctx.strokeStyle = b.color; ctx.stroke();
   }
   ctx.restore();
 }
@@ -2257,6 +2863,7 @@ function gameLoop() {
 
   const heroPlayerY = H - 45 * S;
 
+  // Guest input handling (host processes)
   if (mpActive && mpRole === 'host' && !mpRemoteGuestSpectator) {
     if (mpGuestInput.left) mpGuestTargetX -= playerSpeed;
     if (mpGuestInput.right) mpGuestTargetX += playerSpeed;
@@ -2267,12 +2874,10 @@ function gameLoop() {
     if (mpGuestShootCd > 0) mpGuestShootCd--;
 
     if (mpGuestInput.shoot && mpGuestShootCd <= 0 && mpGuestAlive) {
-      const interval = Math.max(70, 160 - (upgradeFireRate - 1) * 15);
-      mpGuestShootCd = Math.round(interval / 16);
-      bullets.push({
-        x: mpGuestX, y: H - 65 * S, vx: 0, vy: 13 * S,
-        color: '#ffd700', heroType: mpRemoteHeroType, size: 5 * S, pierce: 1, owner: 'guest'
-      });
+      const gHero = HERO_DATA[mpRemoteHeroType] || HERO_DATA.robot;
+      const gInterval = Math.max(60, (gHero.fireRate - (upgradeFireRate - 1) * 15));
+      mpGuestShootCd = Math.round(gInterval / 16);
+      spawnHeroBullets(mpRemoteHeroType, mpGuestX, H - 65 * S, 1, 'guest');
     }
 
     if (mpGuestInput.skill1) {
@@ -2303,15 +2908,15 @@ function gameLoop() {
     }
   }
 
-  let baseInterval = 160;
-  if (currentActor === 'cat') baseInterval = 110;
-  else if (currentActor === 'cannon') baseInterval = 210;
+  // Local shooting (using hero data)
+  const hero = HERO_DATA[currentActor] || HERO_DATA.robot;
   const comboFRMult = comboBoostActive.firerate ? 0.8 : 1.0;
-  const fireInterval = Math.max(60, (baseInterval - (upgradeFireRate - 1) * 15) * comboFRMult);
+  const fireInterval = Math.max(60, (hero.fireRate - (upgradeFireRate - 1) * 15) * comboFRMult);
   const now = Date.now();
 
   if (localPlayerActive && now - lastShotTime > fireInterval) {
     const shotY = H - 65 * S;
+
     if (isMegaShot) {
       bullets.push({ x: playerX, y: shotY, vx: 0, vy: 15 * S, color: '#ff2e88', heroType: currentActor, size: 16 * S, pierce: 3, owner: 'host' });
       bullets.push({ x: playerX, y: shotY, vx: 0, vy: 15 * S, color: '#ffd700', heroType: currentActor, size: 8 * S, pierce: 3, owner: 'host' });
@@ -2320,30 +2925,21 @@ function gameLoop() {
       bullets.push({ x: playerX,            y: shotY, vx: 0,        vy: 13 * S, color: '#ffd700', heroType: currentActor, size: 8 * S, pierce: 1, owner: 'host' });
       bullets.push({ x: playerX + 16 * S, y: shotY, vx: 2.5 * S,  vy: 12 * S, color: '#00d2d3', heroType: currentActor, size: 7 * S, pierce: 1, owner: 'host' });
     } else {
-      if (currentActor === 'robot') {
-        bullets.push({ x: playerX - 8 * S, y: shotY, vx: 0, vy: 14 * S, color: '#1e90ff', heroType: 'robot', size: 5 * S, pierce: 1, owner: 'host' });
-        bullets.push({ x: playerX + 8 * S, y: shotY, vx: 0, vy: 14 * S, color: '#1e90ff', heroType: 'robot', size: 5 * S, pierce: 1, owner: 'host' });
-      } else if (currentActor === 'cannon') {
-        bullets.push({ x: playerX, y: shotY, vx: 0, vy: 11 * S, color: '#ff4757', heroType: 'cannon', size: 14 * S, pierce: 1, owner: 'host' });
-      } else if (currentActor === 'dragon') {
-        bullets.push({ x: playerX - 10 * S, y: shotY, vx: -2 * S, vy: 12 * S, color: '#2ed573', heroType: 'dragon', size: 6 * S, pierce: 1, owner: 'host' });
-        bullets.push({ x: playerX,         y: shotY, vx: 0,      vy: 13 * S, color: '#2ed573', heroType: 'dragon', size: 7 * S, pierce: 1, owner: 'host' });
-        bullets.push({ x: playerX + 10 * S, y: shotY, vx: 2 * S, vy: 12 * S, color: '#2ed573', heroType: 'dragon', size: 6 * S, pierce: 1, owner: 'host' });
-      } else if (currentActor === 'cat') {
-        bullets.push({ x: playerX, y: shotY, vx: (Math.random()-0.5)*1.2 * S, vy: 15 * S, color: '#ffa502', heroType: 'cat', size: 6 * S, pierce: 1, rot: 0, owner: 'host' });
-      } else if (currentActor === 'unicorn') {
-        bullets.push({ x: playerX, y: shotY, vx: 0, vy: 13 * S, color: '#a55eea', heroType: 'unicorn', size: 8 * S, pierce: 2, owner: 'host' });
-      }
+      spawnHeroBullets(currentActor, playerX, shotY, 1, 'host');
     }
-    muzzleFlashes.push({ x: playerX, y: shotY, radius: 16 * S, opacity: 1.0 });
-    sounds.playLaser();
+
+    muzzleFlashes.push({ x: playerX, y: shotY, radius: 16 * S, opacity: 1.0, color: hero.color });
+    sounds.playHeroShoot(currentActor);
     lastShotTime = now;
   }
 
   for (let i = muzzleFlashes.length - 1; i >= 0; i--) {
     const f = muzzleFlashes[i];
     ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,215,0,${f.opacity})`; ctx.fill();
+    ctx.fillStyle = f.color ? f.color : `rgba(255,215,0,${f.opacity})`;
+    ctx.globalAlpha = f.opacity;
+    ctx.fill();
+    ctx.globalAlpha = 1;
     f.opacity -= 0.25;
     if (f.opacity <= 0) muzzleFlashes.splice(i, 1);
   }
@@ -2362,30 +2958,12 @@ function gameLoop() {
     if (t.progress >= t.duration) telegraphs.splice(i, 1);
   }
 
+  // Bullets — update + collision
   for (let i = bullets.length - 1; i >= 0; i--) {
     const b = bullets[i];
     b.y -= b.vy; b.x += b.vx;
-    ctx.save();
-    ctx.translate(b.x, b.y);
-    if (b.heroType === 'cat') {
-      b.rot = (b.rot || 0) + 0.3; ctx.rotate(b.rot);
-      ctx.fillStyle = b.color;
-      ctx.fillRect(-6 * S, -2 * S, 12 * S, 4 * S);
-      ctx.fillRect(-2 * S, -6 * S, 4 * S, 12 * S);
-    } else if (b.heroType === 'cannon') {
-      ctx.beginPath(); ctx.arc(0, 0, b.size, 0, Math.PI*2);
-      ctx.fillStyle = '#ffd700'; ctx.fill();
-      ctx.lineWidth = 3 * S; ctx.strokeStyle = '#ff4757'; ctx.stroke();
-    } else if (b.heroType === 'unicorn') {
-      ctx.fillStyle = '#a55eea';
-      ctx.beginPath(); ctx.arc(0, 0, b.size, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(0, 0, b.size * 0.4, 0, Math.PI*2); ctx.fill();
-    } else {
-      ctx.beginPath(); ctx.moveTo(0, 10 * S); ctx.lineTo(0, -10 * S);
-      ctx.lineWidth = b.size; ctx.strokeStyle = b.color; ctx.stroke();
-    }
-    ctx.restore();
+
+    drawBullet(ctx, b, S);
 
     if (b.y < -20 * S || b.x < -20 * S || b.x > W + 20 * S) { bullets.splice(i, 1); continue; }
 
@@ -2453,6 +3031,7 @@ function gameLoop() {
     if (consumed) continue;
   }
 
+  // Coins
   const magnetPull = isMagnetActive || (currentActor === 'cat') || comboBoostActive.magnet;
   for (let i = coinsOnField.length - 1; i >= 0; i--) {
     const c = coinsOnField[i];
@@ -2493,6 +3072,7 @@ function gameLoop() {
     if (c.y > H) coinsOnField.splice(i, 1);
   }
 
+  // Powerups
   for (let i = powerups.length - 1; i >= 0; i--) {
     const p = powerups[i];
     p.y += p.speed;
@@ -2540,6 +3120,7 @@ function gameLoop() {
     if (p.y > H) powerups.splice(i, 1);
   }
 
+  // Boss bullets
   for (let i = bossBullets.length - 1; i >= 0; i--) {
     const bb = bossBullets[i];
     bb.y += bb.vy; bb.x += bb.vx;
@@ -2570,6 +3151,7 @@ function gameLoop() {
     if (bb.y > H || bb.x < -50 * S || bb.x > W + 50 * S) bossBullets.splice(i, 1);
   }
 
+  // Draw local hero
   if (localPlayerActive) {
     ctx.save();
     const aA = 0.35 + Math.sin(playerPulse * 1.4) * 0.15;
@@ -2584,6 +3166,7 @@ function gameLoop() {
     drawHeroVector(ctx, playerX, heroPlayerY, currentActor, false);
   }
 
+  // Draw guest hero
   if (mpActive && mpRole === 'host') {
     if (mpGuestAlive && !mpRemoteGuestSpectator) {
       ctx.save();
@@ -2607,6 +3190,7 @@ function gameLoop() {
     }
   }
 
+  // Monsters
   for (let i = monsters.length - 1; i >= 0; i--) {
     const m = monsters[i];
     m.timeAlive += 0.05;
@@ -2819,6 +3403,7 @@ function gameLoop() {
     }
   }
 
+  // Particles
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.x += p.vx; p.y += p.vy;
@@ -3001,7 +3586,7 @@ function gameLoopGuest() {
 }
 
 // =============================================================
-// 19c. DRAW HELPERS
+// 19c. DRAW REMOTE HELPERS
 // =============================================================
 function drawRemoteMonsters(ctx, W, H, S, heroPlayerY) {
   for (let i = 0; i < mpRemoteMonsters.length; i++) {
@@ -3129,29 +3714,7 @@ function drawRemoteBullets(ctx, S) {
   for (let i = 0; i < mpRemoteBullets.length; i++) {
     const b = mpRemoteBullets[i];
     if (!b) continue;
-    ctx.save();
-    ctx.translate(b.x, b.y);
-    if (b.heroType === 'cat') {
-      ctx.rotate((Date.now() * 0.01) % (Math.PI * 2));
-      ctx.fillStyle = b.color;
-      ctx.fillRect(-6 * S, -2 * S, 12 * S, 4 * S);
-      ctx.fillRect(-2 * S, -6 * S, 4 * S, 12 * S);
-    } else if (b.heroType === 'cannon') {
-      ctx.beginPath(); ctx.arc(0, 0, b.size, 0, Math.PI*2);
-      ctx.fillStyle = '#ffd700'; ctx.fill();
-      ctx.lineWidth = 3 * S; ctx.strokeStyle = '#ff4757'; ctx.stroke();
-    } else if (b.heroType === 'unicorn') {
-      ctx.fillStyle = '#a55eea';
-      ctx.beginPath(); ctx.arc(0, 0, b.size, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(0, 0, b.size * 0.4, 0, Math.PI*2); ctx.fill();
-    } else {
-      ctx.beginPath();
-      ctx.moveTo(0, 10 * S);
-      ctx.lineTo(0, -10 * S);
-      ctx.lineWidth = b.size; ctx.strokeStyle = b.color; ctx.stroke();
-    }
-    ctx.restore();
+    drawBullet(ctx, b, S);
   }
 }
 
@@ -3253,7 +3816,6 @@ async function levelComplete() {
   const stars = (lives === 3 && combo >= 3) ? 3 : (lives === 3 ? 2 : 1);
   try { await setStar(lc.level, stars); } catch(e) {}
 
-  // 🔥 v20.6 — Kalau selesai level 50, mark game completed
   const isFinalLevel = (lc.level === 50);
   if (isFinalLevel) {
     await markGameCompleted(score);
@@ -3288,7 +3850,6 @@ async function levelComplete() {
     }
     const rb = $('btn-retry-level'); if (rb) rb.classList.remove('hidden');
 
-    // 🔥 v20.6 — Tampilkan tombol sertifikat kalau final level
     const certBtn = $('btn-view-certificate');
     if (certBtn) {
       if (isFinalLevel) certBtn.classList.remove('hidden');
@@ -3847,11 +4408,10 @@ function typeStoryLine(line) {
 }
 
 // =============================================================
-// 27. CERTIFICATE GENERATOR (v20.6 NEW)
+// 27. CERTIFICATE GENERATOR
 // =============================================================
 async function openCertificate() {
   if (!bestCertificateData) {
-    // Kalau belum ada, ambil dari stats saat ini
     bestCertificateData = {
       name: playerName,
       score: score,
@@ -3875,14 +4435,12 @@ function renderCertificate(data) {
   const W = canvas.width;
   const H = canvas.height;
 
-  // Background parchment
   const bgGrad = ctx.createRadialGradient(W/2, H/2, 100, W/2, H/2, Math.max(W, H) * 0.7);
   bgGrad.addColorStop(0, '#fdf8e7');
   bgGrad.addColorStop(1, '#e8dcb8');
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, W, H);
 
-  // Outer border
   ctx.strokeStyle = '#8a6a00';
   ctx.lineWidth = 14;
   ctx.strokeRect(40, 40, W - 80, H - 80);
@@ -3893,7 +4451,6 @@ function renderCertificate(data) {
   ctx.lineWidth = 2;
   ctx.strokeRect(75, 75, W - 150, H - 150);
 
-  // Corner ornaments
   const corners = [[100, 100], [W-100, 100], [100, H-100], [W-100, H-100]];
   corners.forEach(([x, y]) => {
     ctx.beginPath();
@@ -3907,7 +4464,6 @@ function renderCertificate(data) {
     ctx.fill();
   });
 
-  // Top decoration: stars
   const starY = 180;
   const starSize = 40;
   ctx.fillStyle = '#ffd700';
@@ -3915,12 +4471,10 @@ function renderCertificate(data) {
     const x = W/2 + (i - 2) * 100;
     drawStar(ctx, x, starY, starSize, 5);
   }
-  // Big trophy above
   ctx.font = '80px serif';
   ctx.textAlign = 'center';
   ctx.fillText('🏆', W/2, starY - 100);
 
-  // Title
   ctx.fillStyle = '#8a6a00';
   ctx.font = 'bold 72px "Orbitron", serif';
   ctx.textAlign = 'center';
@@ -3930,7 +4484,6 @@ function renderCertificate(data) {
   ctx.font = 'bold 40px "Orbitron", serif';
   ctx.fillText('PENYELESAIAN GAME', W/2, 420);
 
-  // Divider
   ctx.strokeStyle = '#8a6a00';
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -3938,17 +4491,14 @@ function renderCertificate(data) {
   ctx.lineTo(W/2 + 400, 450);
   ctx.stroke();
 
-  // Body
   ctx.fillStyle = '#3a2a00';
   ctx.font = '32px "Rajdhani", serif';
   ctx.fillText('Dengan ini menyatakan bahwa', W/2, 520);
 
-  // Player name
   ctx.fillStyle = '#0a0a3a';
   ctx.font = 'bold 88px "Orbitron", serif';
   ctx.fillText('"' + (data.name || 'Pahlawan') + '"', W/2, 630);
 
-  // Underline
   ctx.strokeStyle = '#ffd700';
   ctx.lineWidth = 4;
   ctx.beginPath();
@@ -3956,29 +4506,24 @@ function renderCertificate(data) {
   ctx.lineTo(W/2 + 450, 660);
   ctx.stroke();
 
-  // Achievement text
   ctx.fillStyle = '#3a2a00';
   ctx.font = '32px "Rajdhani", serif';
   ctx.fillText('Telah berhasil menyelesaikan seluruh 50 level', W/2, 720);
   ctx.fillText('dalam game PAHLAWAN BINTANG', W/2, 765);
 
-  // Score
   ctx.fillStyle = '#8a6a00';
   ctx.font = 'bold 44px "Orbitron", serif';
   ctx.fillText('SKOR TERTINGGI: ' + (data.score || 0), W/2, 860);
 
-  // Date
   ctx.fillStyle = '#5a4a00';
   ctx.font = '28px "Rajdhani", serif';
   ctx.fillText('Diberikan pada ' + (data.dateStr || new Date().toLocaleDateString('id-ID')), W/2, 920);
 
-  // Signature
   ctx.fillStyle = '#3a2a00';
   ctx.font = '24px "Rajdhani", serif';
   ctx.textAlign = 'left';
   ctx.fillText('Tertanda,', W/2 + 250, 1000);
 
-  // Fake signature
   ctx.strokeStyle = '#0a0a3a';
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -3992,7 +4537,6 @@ function renderCertificate(data) {
   ctx.textAlign = 'left';
   ctx.fillText('VEGA - Komandan Galaksi', W/2 + 220, 1080);
 
-  // Bottom-left: seal
   ctx.save();
   ctx.translate(220, 1000);
   ctx.beginPath();
@@ -4060,7 +4604,6 @@ async function shareCertificate() {
       });
       console.log('📤 [Cert] Shared via Web Share API');
     } else {
-      // Fallback: download
       downloadCertificate();
     }
   } catch(e) {
@@ -4104,12 +4647,10 @@ function setupEventListeners() {
       const heroId = card.dataset.actor;
       if (!heroId) return;
       if (!isHeroUnlocked(heroId)) {
-        // 🔥 v20.6 — Locked hero → start math quiz
         console.log('🔒 [Hero] Locked:', heroId, '→ mulai quiz');
         startMathQuiz(heroId);
         return;
       }
-      // Unlocked hero → select normally
       document.querySelectorAll('.actor-card').forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
       currentActor = heroId;
@@ -4122,18 +4663,6 @@ function setupEventListeners() {
   // ========== MATH QUIZ MODAL ==========
   const bCloseMath = $('btn-close-math-quiz');
   if (bCloseMath) bCloseMath.onclick = () => closeMathQuiz();
-  const bMathAction = $('btn-math-quiz-action');
-  if (bMathAction) {
-    bMathAction.onclick = () => {
-      if (mathQuizState.unlockedSuccessfully) {
-        closeMathQuiz();
-        updateActorGridUI();
-        updateActorSelectionUI();
-      } else {
-        closeMathQuiz();
-      }
-    };
-  }
 
   // ========== MODAL: SHOP ==========
   const bShop = $('btn-shop'); if (bShop) bShop.onclick = () => { updateShopUI(); $('modal-shop').classList.remove('hidden'); };
@@ -4475,7 +5004,7 @@ function setupEventListeners() {
 }
 
 // =============================================================
-// 29. OTHER UI HELPERS (dari v20.5)
+// 29. UI HELPERS (LANJUTAN)
 // =============================================================
 function applyThemeToDocument(theme) {
   const root = document.documentElement;
@@ -4590,7 +5119,7 @@ function requestFullscreenAndLandscape() {
 }
 
 function updateActorSelectionUI() {
-  const name = actorMap[currentActor] ? actorMap[currentActor].name : 'Robot Cyber';
+  const name = HERO_DATA[currentActor] ? HERO_DATA[currentActor].name : 'Robot Cyber';
   const el = document.getElementById('selected-actor-name'); if (el) el.innerText = name;
   const ph = document.getElementById('pause-hero-name'); if (ph) ph.innerText = name;
 }
@@ -5645,5 +6174,5 @@ window.addEventListener('load', () => {
 });
 
 // =============================================================
-// END OF FILE — v20.6 (Extended Edition)
+// END OF FILE — v20.7 (Hero Pack Edition)
 // =============================================================
