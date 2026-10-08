@@ -1,35 +1,32 @@
 // ============================================================
-// PAHLAWAN BINTANG — Service Worker v20.5
+// PAHLAWAN BINTANG — Service Worker v20.6
 // Strategy:
 //   - App shell (HTML/CSS/JS lokal) → Cache First (offline ready)
 //   - JSON data (levels/achievements) → Stale-While-Revalidate
 //   - Firebase & Google Fonts → Network Only
 //   - Fallback ke cache kalau network gagal
 // ------------------------------------------------------------
-// v20.5 FIX:
-//   - Sync semua versi dengan index.html (?v=20.5)
-//   - Hapus referensi 'event' yang tidak ada di networkFirst()
-//   - Tambah logic skipWaiting via message agar update lancar
+// v20.6:
+//   - Sync semua versi ke ?v=20.6
 // ============================================================
 
-const CACHE_VERSION = 'v20.5';
+const CACHE_VERSION = 'v20.6';
 const CACHE_NAME = `pahlawan-bintang-${CACHE_VERSION}`;
 
-// ✅ Semua versi HARUS sama dengan index.html (?v=20.5)
 const PRECACHE_ASSETS = [
   './',
-  './index.html?v=20.5',
-  './style.css?v=20.5',
-  './multiplayer.js?v=20.5',
-  './game.js?v=20.5',
+  './index.html?v=20.6',
+  './style.css?v=20.6',
+  './multiplayer.js?v=20.6',
+  './game.js?v=20.6',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
 ];
 
 const DATA_ASSETS = [
-  './levels.json?v=20.5',
-  './achievements.json?v=20.5'
+  './levels.json?v=20.6',
+  './achievements.json?v=20.6'
 ];
 
 const BYPASS_HOSTS = [
@@ -94,35 +91,29 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (!url.protocol.startsWith('http')) return;
 
-  // Firebase / Google Fonts → network only
   if (BYPASS_HOSTS.some((host) => url.hostname.includes(host))) {
     event.respondWith(fetch(req).catch(() => new Response('', { status: 503 })));
     return;
   }
 
-  // Cross-origin lain → network only
   if (url.origin !== self.location.origin) {
     event.respondWith(fetch(req).catch(() => new Response('', { status: 503 })));
     return;
   }
 
-  // JSON → Stale-While-Revalidate
   if (url.pathname.endsWith('.json')) {
     event.respondWith(staleWhileRevalidate(req));
     return;
   }
 
-  // HTML navigation → Network First
   if (req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html')) {
     event.respondWith(networkFirst(req));
     return;
   }
 
-  // Asset statis → Cache First
   event.respondWith(cacheFirst(req));
 });
 
-// ✅ FIX: hapus referensi event yang tidak ada
 async function networkFirst(request) {
   try {
     const res = await fetch(request);
@@ -134,7 +125,7 @@ async function networkFirst(request) {
   } catch (e) {
     const cached = await caches.match(request);
     if (cached) return cached;
-    const indexCached = await caches.match('./index.html?v=20.5') ||
+    const indexCached = await caches.match('./index.html?v=20.6') ||
                         await caches.match('./index.html');
     if (indexCached) return indexCached;
     return new Response('Offline', { status: 503, statusText: 'Offline' });
@@ -145,7 +136,6 @@ async function cacheFirst(request) {
   try {
     const cached = await caches.match(request, { ignoreSearch: false });
     if (cached) return cached;
-
     const res = await fetch(request);
     if (res && res.ok && res.status === 200) {
       const clone = res.clone();
