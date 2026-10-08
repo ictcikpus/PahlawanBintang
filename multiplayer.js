@@ -1,13 +1,9 @@
 // ============================================================
-// PAHLAWAN BINTANG — multiplayer.js v20.5
+// PAHLAWAN BINTANG — multiplayer.js v20.6
 // "Full Sync Edition"
 // ------------------------------------------------------------
-// v20.5 FIX:
-//   1. sendInput() FORWARD SEMUA field (spectator/respawn/pause/resume)
-//   2. _handleMessage('input') FORWARD SEMUA field ke game.js
-//   3. Dual DataChannel: control (reliable) + state (unreliable)
-//      → pesan pause/respawn/spectator tidak akan hilang
-//   4. Cleanup state yang benar saat leaveRoom
+// v20.6:
+//   - Sync versi ke v20.6 (logika sama dengan v20.5)
 // ============================================================
 
 (function() {
@@ -62,9 +58,9 @@ class MultiplayerEngine {
     this.remotePeerKey = null;
 
     this.peerConnection = null;
-    this.dataChannel = null;       // kontrol utama (kompatibilitas)
-    this.controlChannel = null;    // 🔥 FIX B3: reliable untuk pause/respawn/spectator
-    this.stateChannel = null;      // 🔥 FIX B3: unreliable untuk input/state
+    this.dataChannel = null;
+    this.controlChannel = null;
+    this.stateChannel = null;
 
     this.connectionState = 'idle';
     this.isConnected = false;
@@ -96,12 +92,9 @@ class MultiplayerEngine {
     this._onRoomJoined = null;
     this._onRoomFull = null;
 
-    console.log('🎮 [MP] MultiplayerEngine initialized (v20.5)');
+    console.log('🎮 [MP] MultiplayerEngine initialized (v20.6)');
   }
 
-  // ============================================================
-  // PUBLIC API
-  // ============================================================
   async createRoom(mode, playerName) {
     if (typeof db === 'undefined' || !db) throw new Error('Firebase tidak siap. Cek koneksi internet.');
     this._cleanup(false);
@@ -233,15 +226,12 @@ class MultiplayerEngine {
     } catch(e) { console.warn('⚠️ [MP] startGame error:', e); }
   }
 
-  // 🔥 v20.5 FIX B1: FORWARD SEMUA FIELD
   sendInput(input) {
     if (!this.isConnected) return;
     const now = Date.now();
     if (now - this._lastInputSent < MP_CONFIG.INPUT_THROTTLE_MS) return;
     this._lastInputSent = now;
 
-    // Kirim semua field penting. Control flags (pause/resume/respawn)
-    // akan dirutekan ke channel reliable via _routeMessage.
     this.sendMessage({
       type: 'input',
       left: !!input.left,
@@ -251,10 +241,10 @@ class MultiplayerEngine {
       skill2: !!input.skill2,
       skill3: !!input.skill3,
       heroType: input.heroType || 'robot',
-      spectator: !!input.spectator,   // 🔥 NEW
-      respawn: !!input.respawn,        // 🔥 NEW
-      pause: !!input.pause,            // 🔥 NEW
-      resume: !!input.resume,          // 🔥 NEW
+      spectator: !!input.spectator,
+      respawn: !!input.respawn,
+      pause: !!input.pause,
+      resume: !!input.resume,
       t: now
     });
   }
@@ -267,14 +257,12 @@ class MultiplayerEngine {
     this.sendMessage({ type: 'state', t: now, data: state });
   }
 
-  // 🔥 v20.5: Route message ke channel yang tepat
   sendMessage(msg) {
     if (!msg || !msg.type) return false;
     const isControl = ['hello','leave','ready','start','ping','pong',
                        'pause','resume','respawn','spectator_flag'].includes(msg.type);
-    // Input dengan control flag juga dianggap control
     const hasControlFlag = msg.type === 'input' &&
-                          (msg.pause || msg.resume || msg.respawn || msg.spectator !== undefined);
+                          (msg.pause || msg.resume || msg.respawn);
 
     const ch = (isControl || hasControlFlag) && this.controlChannel
       ? this.controlChannel
@@ -286,9 +274,6 @@ class MultiplayerEngine {
     catch(e) { console.warn('⚠️ [MP] send error:', e); return false; }
   }
 
-  // ============================================================
-  // CALLBACKS
-  // ============================================================
   onState(cb)       { this._onState = cb; }
   onInput(cb)       { this._onInput = cb; }
   onConnect(cb)     { this._onConnect = cb; }
@@ -300,9 +285,6 @@ class MultiplayerEngine {
   onRoomJoined(cb)  { this._onRoomJoined = cb; }
   onRoomFull(cb)    { this._onRoomFull = cb; }
 
-  // ============================================================
-  // PRIVATE
-  // ============================================================
   _makePlayerKey(name) {
     return 'p_' + (name || 'player').toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 20) +
            '_' + Math.random().toString(36).slice(2, 6);
@@ -425,7 +407,6 @@ class MultiplayerEngine {
     });
   }
 
-  // 🔥 v20.5 FIX B3: Dua DataChannel — control (reliable) + state (unreliable)
   async _setupPeerConnection() {
     if (this.peerConnection) return;
     console.log('🔧 [MP] Setting up PeerConnection as', this.role);
@@ -469,24 +450,22 @@ class MultiplayerEngine {
     };
 
     if (this.isHost) {
-      // Host: buat 2 channel
       this.controlChannel = this.peerConnection.createDataChannel('control', {
-        ordered: true  // reliable untuk kontrol
+        ordered: true
       });
       this.stateChannel = this.peerConnection.createDataChannel('state', {
         ordered: false,
-        maxRetransmits: 0  // unreliable untuk game state
+        maxRetransmits: 0
       });
       this._setupControlChannel(this.controlChannel);
       this._setupStateChannel(this.stateChannel);
     } else {
-      // Guest: dengarkan 2 channel
       this.peerConnection.ondatachannel = (event) => {
         const ch = event.channel;
         console.log('📡 [MP] DataChannel received:', ch.label);
         if (ch.label === 'control') this._setupControlChannel(ch);
         else if (ch.label === 'state') this._setupStateChannel(ch);
-        else this._setupStateChannel(ch); // fallback
+        else this._setupStateChannel(ch);
       };
     }
 
@@ -512,7 +491,7 @@ class MultiplayerEngine {
 
   _setupStateChannel(channel) {
     this.stateChannel = channel;
-    this.dataChannel = channel; // compat
+    this.dataChannel = channel;
     channel.onopen = () => {
       console.log('✅ [MP] State channel OPEN');
       this._checkFullyConnected();
@@ -528,7 +507,6 @@ class MultiplayerEngine {
     };
   }
 
-  // Called when BOTH channels are open
   _checkFullyConnected() {
     const ctrl = this.controlChannel && this.controlChannel.readyState === 'open';
     const st = this.stateChannel && this.stateChannel.readyState === 'open';
@@ -555,7 +533,6 @@ class MultiplayerEngine {
     }
   }
 
-  // 🔥 v20.5 FIX B2: FORWARD SEMUA FIELD ke game.js
   _handleMessage(msg) {
     if (!msg || !msg.type) return;
     switch (msg.type) {
@@ -582,7 +559,6 @@ class MultiplayerEngine {
               skill2: !!msg.skill2,
               skill3: !!msg.skill3,
               heroType: msg.heroType || 'robot',
-              // 🔥 FIX B2: forward SEMUA field kontrol
               spectator: msg.spectator !== undefined ? !!msg.spectator : undefined,
               respawn: !!msg.respawn,
               pause: !!msg.pause,
@@ -622,7 +598,7 @@ class MultiplayerEngine {
       for (const cand of candidates) {
         if (cand && typeof cand === 'object') {
           try { await this.peerConnection.addIceCandidate(new RTCIceCandidate(cand)); }
-          catch(e) { /* ignore duplicate */ }
+          catch(e) {}
         }
       }
     });
@@ -714,7 +690,6 @@ class MultiplayerEngine {
     this._setState('closed');
   }
 
-  // 🔥 v20.5: cleanup yang benar
   _cleanup(clearState) {
     this._stopPingLoop();
     this._clearConnectTimeout();
@@ -750,7 +725,6 @@ class MultiplayerEngine {
     this._answerListener = null;
     this._hostIceRef = null; this._hostIceListener = null;
 
-    // 🔥 FIX: Selalu reset state saat cleanup penuh
     if (clearState) {
       this.role = null;
       this.isHost = false;
@@ -781,5 +755,5 @@ class MultiplayerEngine {
 
 window.MultiplayerEngine = MultiplayerEngine;
 window.MP = new MultiplayerEngine();
-console.log('✅ [MP] multiplayer.js loaded (v20.5)');
+console.log('✅ [MP] multiplayer.js loaded (v20.6)');
 })();
