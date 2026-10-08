@@ -7,14 +7,14 @@
 //   - Fallback ke cache kalau network gagal
 // ============================================================
 
-const CACHE_VERSION = 'v20.3';
+const CACHE_VERSION = 'v20.4';
 const CACHE_NAME = `pahlawan-bintang-${CACHE_VERSION}`;
 
 // Daftar asset yang wajib tersedia offline
 const PRECACHE_ASSETS = [
   './',
   './index.html',
-  './style.css?v=20.3',
+  './style.css?v=20.4',
   './multiplayer.js?v=20.2',
   './game.js?v=20.3',
   './manifest.json',
