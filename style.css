@@ -1,33 +1,24 @@
 /* =============================================================
-   PAHLAWAN BINTANG — v20.3 Landscape UI Patch
-   Ringan, defensive, tanpa ubah HTML
+   PAHLAWAN BINTANG — v20.4 Landscape Layout Fix
+   Match dengan struktur HTML aktual
    ============================================================= */
 
 /* ---------------------------------------------------------------
-   1. VARIABLE & BASE (landscape-first)
+   1. ROOT VARIABLES (kompatibel landscape)
    --------------------------------------------------------------- */
 :root {
-  --ls-safe-top: env(safe-area-inset-top, 0px);
-  --ls-safe-bottom: env(safe-area-inset-bottom, 0px);
-  --ls-safe-left: env(safe-area-inset-left, 0px);
-  --ls-safe-right: env(safe-area-inset-right, 0px);
   --ls-pad: clamp(6px, 1.6vmin, 14px);
-  --ls-radius: clamp(8px, 1.6vmin, 14px);
-  --ls-font-xs: clamp(9px, 1.5vmin, 12px);
-  --ls-font-sm: clamp(11px, 1.8vmin, 14px);
-  --ls-font-md: clamp(13px, 2.2vmin, 17px);
-  --ls-font-lg: clamp(16px, 3.2vmin, 24px);
-  --ls-font-xl: clamp(22px, 5vmin, 42px);
-  --ls-icon-sm: clamp(14px, 2.6vmin, 20px);
-  --ls-icon-md: clamp(20px, 3.6vmin, 30px);
-  --ls-icon-lg: clamp(28px, 5.4vmin, 44px);
-  --ls-btn-h: clamp(32px, 6.5vmin, 46px);
-  --ls-tap: 44px; /* minimum tap target */
+  --ls-gap: clamp(4px, 1vmin, 10px);
+  --ls-radius: clamp(6px, 1.4vmin, 12px);
+  --ls-font-xs: clamp(9px, 1.4vmin, 12px);
+  --ls-font-sm: clamp(11px, 1.7vmin, 14px);
+  --ls-font-md: clamp(13px, 2vmin, 16px);
+  --ls-font-lg: clamp(15px, 2.6vmin, 22px);
+  --ls-font-xl: clamp(20px, 4.5vmin, 36px);
+  --ls-tap: 40px;
 }
 
-/* Pastikan body tidak overflow & bisa scroll bila perlu */
 html, body {
-  height: 100%;
   height: 100dvh;
   overflow: hidden;
   overscroll-behavior: none;
@@ -35,396 +26,253 @@ html, body {
   text-size-adjust: 100%;
 }
 
-/* Utility universal */
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-
-/* Semua svg use fallback size */
-svg.ico, svg[viewBox] {
-  width: var(--ls-icon-sm);
-  height: var(--ls-icon-sm);
-  flex-shrink: 0;
-}
-svg.ico { width: var(--ls-icon-md); height: var(--ls-icon-md); }
-svg.ico-lg { width: var(--ls-icon-lg); height: var(--ls-icon-lg); }
-
 /* ---------------------------------------------------------------
-   2. OVERLAY / MODAL BASE — selalu muat dalam 1 layar
+   2. MODAL BASE — paling umum, harus work di semua orientation
    --------------------------------------------------------------- */
-.modal,
-.modal-overlay,
-[id^="modal-"],
-#narrative-overlay,
-#ad-overlay,
-#killstreak-overlay,
-#boss-warning-overlay,
-#level-intro,
-#loading-screen {
+.modal {
   position: fixed;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--ls-pad);
-  padding-top: calc(var(--ls-pad) + var(--ls-safe-top));
-  padding-bottom: calc(var(--ls-pad) + var(--ls-safe-bottom));
-  padding-left: calc(var(--ls-pad) + var(--ls-safe-left));
-  padding-right: calc(var(--ls-pad) + var(--ls-safe-right));
-  overflow: hidden;
   z-index: 100;
+  background: rgba(0, 0, 0, 0.7);
+  overflow: hidden;
 }
 
-/* Modal hidden state wajib benar-benar display:none */
 .modal.hidden,
-.modal-overlay.hidden,
-[id^="modal-"].hidden,
 #narrative-overlay.hidden,
 #ad-overlay.hidden,
-#killstreak-overlay.hidden,
 #boss-warning-overlay.hidden,
 #level-intro.hidden,
+#killstreak-overlay.hidden,
 #mp-spectator-overlay.hidden {
   display: none !important;
   pointer-events: none !important;
-  visibility: hidden !important;
 }
 
-/* Panel konten di dalam modal — auto scroll bila konten panjang */
-.modal > .modal-content,
-.modal-overlay > .modal-content,
-.modal > .modal-panel,
-[id^="modal-"] > div:first-child,
-[id^="modal-"] > .modal-box,
-[id^="modal-"] > .modal-inner {
-  max-height: calc(100dvh - 2 * var(--ls-pad) - var(--ls-safe-top) - var(--ls-safe-bottom));
-  max-width: min(96vw, 640px);
+.modal > .modal-box {
+  width: min(96vw, 560px);
+  max-height: calc(100dvh - 2 * var(--ls-pad));
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding: var(--ls-pad);
+  padding: clamp(10px, 2vmin, 20px);
   border-radius: var(--ls-radius);
-  /* scrollbar tipis supaya tidak makan ruang */
-  scrollbar-width: thin;
 }
-.modal > div::-webkit-scrollbar,
-[id^="modal-"] > div::-webkit-scrollbar { width: 4px; }
-.modal > div::-webkit-scrollbar-thumb,
-[id^="modal-"] > div::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 
 /* ---------------------------------------------------------------
-   3. MAIN MENU — grid 2 kolom di landscape
+   3. MAIN MENU — 2 kolom landscape, 1 kolom portrait
    --------------------------------------------------------------- */
-#screen-main-menu {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  grid-template-columns: 1fr minmax(260px, 42%);
-  grid-template-rows: auto 1fr auto;
-  gap: var(--ls-pad);
-  padding: calc(var(--ls-pad) + var(--ls-safe-top)) calc(var(--ls-pad) + var(--ls-safe-right))
-           calc(var(--ls-pad) + var(--ls-safe-bottom)) calc(var(--ls-pad) + var(--ls-safe-left));
-  overflow: hidden;
+
+/* Hanya jika landscape */
+@media (orientation: landscape) {
+
+  #screen-main-menu {
+    position: fixed;
+    inset: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  #screen-main-menu .space-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  #screen-main-menu .menu-box {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    margin: 0;
+    padding: var(--ls-pad);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 44%);
+    grid-template-rows: auto auto auto auto auto auto;
+    grid-template-areas:
+      "logo    input"
+      "logo    play"
+      "title   mp"
+      "title   grid"
+      "tagline install"
+      "tagline footer";
+    column-gap: clamp(8px, 1.8vmin, 20px);
+    row-gap: var(--ls-gap);
+    align-content: center;
+    overflow: hidden;
+  }
+
+  #screen-main-menu .menu-topbar {
+    position: absolute;
+    top: var(--ls-pad);
+    right: var(--ls-pad);
+    z-index: 10;
+  }
+
+  #screen-main-menu .hero-logo {
+    grid-area: logo;
+    align-self: center;
+    justify-self: center;
+    width: min(100%, 40vmin);
+    height: min(100%, 40vmin);
+    max-width: 40vmin;
+    max-height: 40vmin;
+    aspect-ratio: 1 / 1;
+  }
+
+  #screen-main-menu .title-stack {
+    grid-area: title;
+    align-self: center;
+    justify-self: center;
+    text-align: center;
+    margin: 0;
+  }
+
+  #screen-main-menu .title-stack .title-row {
+    font-size: clamp(16px, 4vmin, 32px);
+    line-height: 1;
+    margin: 0;
+    letter-spacing: 0.05em;
+  }
+
+  #screen-main-menu .title-separator {
+    margin: 4px 0;
+  }
+
+  #screen-main-menu .tagline {
+    grid-area: tagline;
+    align-self: end;
+    justify-self: center;
+    text-align: center;
+    margin: 0;
+    font-size: var(--ls-font-xs);
+    line-height: 1.2;
+  }
+
+  #screen-main-menu .input-wrap {
+    grid-area: input;
+    width: 100%;
+  }
+
+  #screen-main-menu #btn-prepare-play {
+    grid-area: play;
+    width: 100%;
+    min-height: clamp(36px, 6.5vmin, 46px);
+    height: auto;
+    padding: 6px 10px;
+  }
+
+  #screen-main-menu #btn-multiplayer {
+    grid-area: mp;
+    width: 100%;
+    min-height: clamp(32px, 5.5vmin, 42px);
+    height: auto;
+    padding: 4px 10px;
+  }
+
+  #screen-main-menu .menu-grid {
+    grid-area: grid;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--ls-gap);
+    width: 100%;
+  }
+
+  #screen-main-menu .menu-grid .menu-card {
+    aspect-ratio: 1 / 0.85;
+    min-height: 0;
+    min-width: 0;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  #screen-main-menu .menu-card .menu-card-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 2px;
+    width: 100%;
+    height: 100%;
+  }
+
+  #screen-main-menu .menu-card .menu-card-icon-wrap {
+    width: clamp(20px, 3.5vmin, 30px);
+    height: clamp(20px, 3.5vmin, 30px);
+  }
+
+  #screen-main-menu .menu-card .menu-card-icon {
+    width: 100%;
+    height: 100%;
+  }
+
+  #screen-main-menu .menu-card .menu-card-label {
+    font-size: clamp(8px, 1.2vmin, 11px);
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  #screen-main-menu #btn-pwa-install {
+    grid-area: install;
+    width: 100%;
+    min-height: 30px;
+    padding: 4px 8px;
+    font-size: var(--ls-font-xs);
+  }
+
+  #screen-main-menu .menu-footer {
+    grid-area: footer;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: clamp(8px, 1.2vmin, 11px);
+    text-align: center;
+    margin: 0;
+    padding: 0;
+  }
+
+  #screen-main-menu .menu-footer .footer-dot {
+    display: none;
+  }
 }
 
-/* Title di kiri atas */
-#screen-main-menu .menu-title,
-#screen-main-menu h1,
-#screen-main-menu .game-logo {
-  grid-column: 1 / 2;
-  grid-row: 1 / 2;
-  align-self: start;
-  margin: 0;
-  font-size: var(--ls-font-xl);
-  line-height: 1;
-}
-
-/* Tombol utama di kolom kanan (kolom aksi) */
-#screen-main-menu .menu-buttons,
-#screen-main-menu .btn-group,
-#screen-main-menu .menu-actions {
-  grid-column: 2 / 3;
-  grid-row: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--ls-pad);
-  align-self: stretch;
-  justify-content: center;
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-/* Tombol Play besar */
-#btn-prepare-play {
-  min-height: var(--ls-btn-h);
-  height: auto;
-  padding: var(--ls-pad) calc(var(--ls-pad) * 1.6);
-  font-size: var(--ls-font-md);
-  border-radius: var(--ls-radius);
-}
-
-/* Grid tombol menu sekunder (Shop, Leaderboard, dll) */
-#screen-main-menu .menu-secondary,
-#screen-main-menu .icon-buttons,
-#screen-main-menu .menu-icons {
-  grid-column: 1 / 2;
-  grid-row: 2 / 3;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
-  gap: var(--ls-pad);
-  align-self: end;
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-/* Tombol menu sekunder — pastikan tap target 44px */
-#btn-shop, #btn-leaderboard, #btn-achievements, #btn-multiplayer,
-#btn-endless, #btn-daily, #btn-select-actor, #btn-audio, #btn-pwa-install {
-  min-height: var(--ls-tap);
-  min-width: var(--ls-tap);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: var(--ls-radius);
-  font-size: var(--ls-font-xs);
-}
-
-/* Player name input */
-#player-name-input {
-  height: var(--ls-btn-h);
-  padding: 6px 10px;
-  font-size: var(--ls-font-sm);
-  border-radius: var(--ls-radius);
-}
-
-/* ---------------------------------------------------------------
-   4. LOADOUT MODAL — kartu skill 2-3 kolom di landscape
-   --------------------------------------------------------------- */
-#modal-loadout > div,
-#modal-loadout .modal-content {
-  max-width: min(92vw, 720px);
-  width: 100%;
-}
-
-/* Grid kartu skill */
-#modal-loadout .loadout-cards,
-#modal-loadout .skill-grid,
-#modal-loadout .loadout-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: var(--ls-pad);
-  margin: var(--ls-pad) 0;
-}
-
-.loadout-card {
-  min-height: 84px;
-  padding: var(--ls-pad);
-  border-radius: var(--ls-radius);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  font-size: var(--ls-font-xs);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
-  cursor: pointer;
-}
-.loadout-card svg { width: var(--ls-icon-md); height: var(--ls-icon-md); }
-.loadout-card.selected { transform: translateY(-2px); }
-.loadout-card:active { transform: scale(0.96); }
-
-#btn-start-loaded {
-  min-height: var(--ls-btn-h);
-  width: 100%;
-  font-size: var(--ls-font-md);
-  border-radius: var(--ls-radius);
-}
-
-/* ---------------------------------------------------------------
-   5. SHOP MODAL — item grid landscape
-   --------------------------------------------------------------- */
-#modal-shop > div {
-  max-width: min(96vw, 720px);
-  width: 100%;
-}
-#modal-shop .shop-grid,
-#modal-shop .shop-items,
-#modal-shop .upgrades-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--ls-pad);
-}
-#modal-shop .shop-item,
-#modal-shop .upgrade-item {
-  padding: var(--ls-pad);
-  border-radius: var(--ls-radius);
-  display: flex;
-  align-items: center;
-  gap: var(--ls-pad);
-  min-height: 56px;
-}
-#modal-shop .shop-item svg { width: var(--ls-icon-md); height: var(--ls-icon-md); }
-#btn-buy-firerate, #btn-buy-shield, #btn-buy-bomb, #btn-buy-freeze {
-  min-height: var(--ls-tap);
-  padding: 4px 12px;
-  font-size: var(--ls-font-xs);
-  border-radius: calc(var(--ls-radius) * 0.75);
-}
-
-/* ---------------------------------------------------------------
-   6. ACTORS MODAL — grid hero landscape
-   --------------------------------------------------------------- */
-#modal-actors > div {
-  max-width: min(96vw, 720px);
-}
-#modal-actors .actors-grid,
-#modal-actors .actor-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-  gap: var(--ls-pad);
-}
-.actor-card {
-  aspect-ratio: 1 / 1;
-  padding: 6px;
-  border-radius: var(--ls-radius);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  font-size: var(--ls-font-xs);
-  cursor: pointer;
-}
-.actor-card canvas, .actor-card img, .actor-card svg { width: 60%; height: auto; }
-
-/* ---------------------------------------------------------------
-   7. ACHIEVEMENTS / LEADERBOARD — tabel & grid landscape
-   --------------------------------------------------------------- */
-#modal-achievements > div,
-#modal-leaderboard > div {
-  max-width: min(96vw, 760px);
-  width: 100%;
-}
-
-/* Tabs di atas */
-.ach-tab, .lb-tab {
-  padding: 6px 12px;
-  font-size: var(--ls-font-xs);
-  min-height: 32px;
-  border-radius: var(--ls-radius);
-}
-
-/* Grid achievement card landscape */
-#achievement-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: var(--ls-pad);
-  max-height: calc(100dvh - 200px);
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-/* Tabel leaderboard — compact rows */
-#leaderboard-body tr { height: 30px; font-size: var(--ls-font-xs); }
-#leaderboard-body td { padding: 4px 6px; }
-
-/* ---------------------------------------------------------------
-   8. DAILY / ENDLESS / RESULT MODAL
-   --------------------------------------------------------------- */
-#modal-daily > div,
-#modal-endless > div,
-#modal-result > div {
-  max-width: min(94vw, 640px);
-  width: 100%;
-  max-height: calc(100dvh - 2 * var(--ls-pad));
-  overflow-y: auto;
-}
-
-/* Daily boss slots — 3 kolom horizontal */
-#modal-daily .daily-bosses,
-#modal-daily .boss-list {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--ls-pad);
-}
-.daily-boss-slot {
-  padding: var(--ls-pad);
-  border-radius: var(--ls-radius);
-  text-align: center;
-  font-size: var(--ls-font-xs);
-  min-height: 70px;
-}
-
-/* Result stars */
-#result-stars svg.star-mini {
-  width: var(--ls-icon-md);
-  height: var(--ls-icon-md);
-}
-#result-icon svg { width: var(--ls-icon-lg); height: var(--ls-icon-lg); }
-
-/* ---------------------------------------------------------------
-   9. MULTIPLAYER MODALS
-   --------------------------------------------------------------- */
-#modal-mp-hub > div,
-#modal-mp-join > div,
-#modal-mp-lobby > div {
-  max-width: min(94vw, 560px);
-  width: 100%;
-  max-height: calc(100dvh - 2 * var(--ls-pad));
-  overflow-y: auto;
-}
-
-#mp-code-input {
-  height: var(--ls-btn-h);
-  font-size: var(--ls-font-lg);
-  letter-spacing: 6px;
-  text-align: center;
-  padding: 4px;
-  border-radius: var(--ls-radius);
-}
-
-/* Lobby slots */
-.mp-slot {
-  min-height: 56px;
-  padding: var(--ls-pad);
-  border-radius: var(--ls-radius);
-  font-size: var(--ls-font-xs);
+/* Landscape sangat kecil — sembunyikan elemen dekoratif */
+@media (orientation: landscape) and (max-height: 400px) {
+  #screen-main-menu .hero-logo {
+    display: none;
+  }
+  #screen-main-menu .menu-box {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 44%);
+    grid-template-areas:
+      "title   input"
+      "title   play"
+      "title   mp"
+      "tagline grid"
+      "tagline install"
+      ".       footer";
+  }
+  #screen-main-menu .title-stack .title-row {
+    font-size: clamp(14px, 5vmin, 22px);
+  }
 }
 
 /* ---------------------------------------------------------------
-   10. SPECTATOR OVERLAY — fullscreen, ringan, tidak blur
-   --------------------------------------------------------------- */
-#mp-spectator-overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--ls-pad);
-  background: rgba(0, 0, 0, 0.72);
-  /* TANPA blur — ringan */
-  z-index: 500;
-  padding: var(--ls-pad);
-}
-
-#mp-spectator-overlay svg,
-#spectator-countdown {
-  font-size: var(--ls-font-xl);
-}
-
-#btn-spectator-respawn {
-  min-height: var(--ls-btn-h);
-  min-width: 180px;
-  padding: 8px 20px;
-  font-size: var(--ls-font-md);
-  border-radius: var(--ls-radius);
-}
-
-/* ---------------------------------------------------------------
-   11. HUD — pastikan tidak menutupi tombol & cukup dalam 1 layar
+   4. HUD OVERLAY
    --------------------------------------------------------------- */
 #hud-overlay {
   position: fixed;
@@ -432,129 +280,580 @@ svg.ico-lg { width: var(--ls-icon-lg); height: var(--ls-icon-lg); }
   pointer-events: none;
   z-index: 60;
 }
-#hud-overlay > * { pointer-events: auto; }
 
-/* Top HUD row */
-#hud-top {
+.hud-top {
   position: absolute;
-  top: calc(var(--ls-pad) + var(--ls-safe-top));
-  left: calc(var(--ls-pad) + var(--ls-safe-left));
-  right: calc(var(--ls-pad) + var(--ls-safe-right));
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--ls-pad);
-  height: clamp(28px, 6vmin, 40px);
+  padding: var(--ls-pad);
+  padding-top: calc(var(--ls-pad) + env(safe-area-inset-top, 0px));
+  padding-left: calc(var(--ls-pad) + env(safe-area-inset-left, 0px));
+  padding-right: calc(var(--ls-pad) + env(safe-area-inset-right, 0px));
+  pointer-events: none;
 }
-#hud-top svg { width: var(--ls-icon-sm); height: var(--ls-icon-sm); }
 
-/* Skill buttons di kiri bawah */
-#hud-skills, #skill-bar {
-  position: absolute;
-  bottom: calc(var(--ls-pad) + var(--ls-safe-bottom));
-  left: calc(var(--ls-pad) + var(--ls-safe-left));
+.hud-top .hud-left,
+.hud-top .hud-right {
   display: flex;
-  gap: var(--ls-pad);
-}
-#btn-freeze, #btn-shield, #btn-bomb {
-  width: clamp(40px, 8vmin, 56px);
-  height: clamp(40px, 8vmin, 56px);
-  border-radius: 50%;
-  font-size: var(--ls-font-xs);
-}
-#btn-freeze svg, #btn-shield svg, #btn-bomb svg {
-  width: var(--ls-icon-md); height: var(--ls-icon-md);
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
 }
 
-/* Pause button pojok kanan atas */
+.hud-top .hud-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  border-radius: 8px;
+  font-size: clamp(9px, 1.5vmin, 12px);
+  background: rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+
+.hud-top .hud-ico {
+  width: clamp(12px, 2vmin, 16px);
+  height: clamp(12px, 2vmin, 16px);
+}
+
 #btn-pause {
   width: var(--ls-tap);
   height: var(--ls-tap);
+  min-width: var(--ls-tap);
+  min-height: var(--ls-tap);
   border-radius: 50%;
-}
-#btn-pause svg { width: var(--ls-icon-md); height: var(--ls-icon-md); }
-
-/* Movement buttons bawah */
-#btn-move-left, #btn-move-right {
-  width: clamp(48px, 10vmin, 72px);
-  height: clamp(48px, 10vmin, 72px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Lives icons */
+#hud-lives {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 #hud-lives svg.heart-icon {
-  width: var(--ls-icon-md);
-  height: var(--ls-icon-md);
+  width: clamp(14px, 2.4vmin, 20px);
+  height: clamp(14px, 2.4vmin, 20px);
+}
+
+#hud-combo-pill {
+  position: absolute;
+  top: calc(var(--ls-pad) + 40px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: clamp(10px, 1.6vmin, 13px);
+  background: rgba(255, 215, 0, 0.2);
+  color: #ffd700;
+  z-index: 65;
+}
+
+.hud-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--ls-pad);
+  padding: var(--ls-pad);
+  padding-bottom: calc(var(--ls-pad) + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(var(--ls-pad) + env(safe-area-inset-left, 0px));
+  padding-right: calc(var(--ls-pad) + env(safe-area-inset-right, 0px));
+  pointer-events: none;
+}
+
+.hud-bottom .ctrl-cluster {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 1.2vmin, 12px);
+  pointer-events: auto;
+}
+
+#btn-move-left, #btn-move-right {
+  width: clamp(46px, 10vmin, 72px);
+  height: clamp(46px, 10vmin, 72px);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#btn-move-left svg, #btn-move-right svg {
+  width: 60%;
+  height: 60%;
+}
+
+.skill-row {
+  flex-direction: row-reverse;
+}
+
+#btn-freeze, #btn-shield, #btn-bomb {
+  width: clamp(40px, 8vmin, 60px);
+  height: clamp(40px, 8vmin, 60px);
+  min-width: 0;
+  min-height: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+#btn-freeze .skill-icon, #btn-shield .skill-icon, #btn-bomb .skill-icon {
+  width: 55%;
+  height: 55%;
+}
+
+.skill-count {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  font-size: clamp(9px, 1.4vmin, 12px);
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.75);
 }
 
 /* ---------------------------------------------------------------
-   12. NARRATIVE — dialog cerita landscape (kiri portrait, kanan text)
+   5. NARRATIVE OVERLAY — landscape grid 2 kolom
    --------------------------------------------------------------- */
-#narrative-overlay > div,
-#narrative-overlay .narrative-box {
-  max-width: min(96vw, 800px);
-  width: 100%;
-  max-height: calc(100dvh - 2 * var(--ls-pad));
-  display: grid;
-  grid-template-columns: minmax(80px, 22%) 1fr;
-  gap: var(--ls-pad);
+#narrative-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--ls-pad);
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.85);
+}
+
+#narrative-overlay .narrative-box {
+  width: min(96vw, 800px);
+  max-height: calc(100dvh - 2 * var(--ls-pad));
+  padding: clamp(10px, 2vmin, 20px);
   border-radius: var(--ls-radius);
+  display: grid;
+  grid-template-columns: minmax(60px, 20%) 1fr;
+  grid-template-rows: 1fr auto;
+  grid-template-areas:
+    "portrait content"
+    "hint     hint";
+  gap: var(--ls-pad);
   overflow: hidden;
 }
-#narrative-portrait-svg, #narrative-portrait {
+
+#narrative-overlay .narrative-portrait {
+  grid-area: portrait;
   align-self: center;
   justify-self: center;
   width: 100%;
-  max-width: 160px;
-  height: auto;
+  max-width: 120px;
   aspect-ratio: 1 / 1;
 }
-#narrative-text {
-  font-size: var(--ls-font-sm);
-  line-height: 1.4;
-  overflow-y: auto;
-  padding: 4px;
+
+#narrative-overlay .narrative-content {
+  grid-area: content;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
 }
-#narrative-speaker {
+
+#narrative-overlay .narrative-speaker {
   font-size: var(--ls-font-md);
   margin-bottom: 4px;
 }
 
+#narrative-overlay .narrative-text {
+  font-size: var(--ls-font-sm);
+  line-height: 1.35;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+#narrative-overlay .narrative-tap-hint {
+  grid-area: hint;
+  text-align: center;
+  font-size: var(--ls-font-xs);
+  opacity: 0.7;
+}
+
 /* ---------------------------------------------------------------
-   13. LEVEL INTRO / BOSS WARNING / KILLSTREAK
+   6. LEADERBOARD TABLE
    --------------------------------------------------------------- */
-#level-intro > div,
-#boss-warning-overlay > div,
-#killstreak-overlay > div {
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ls-font-xs);
+  margin: 8px 0;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+  padding: clamp(3px, 0.8vmin, 6px) clamp(4px, 1vmin, 8px);
+  text-align: left;
+  line-height: 1.2;
+}
+
+.leaderboard-table th {
+  font-size: clamp(8px, 1.3vmin, 11px);
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+/* ---------------------------------------------------------------
+   7. ACHIEVEMENTS
+   --------------------------------------------------------------- */
+#achievement-grid.achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: var(--ls-gap);
+  max-height: calc(100dvh - 260px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px;
+  margin: 8px 0;
+}
+
+.achievement-card {
+  padding: 8px;
+  border-radius: var(--ls-radius);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ach-card-title,
+.ach-card-desc {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  font-size: clamp(9px, 1.4vmin, 12px);
+  line-height: 1.2;
+}
+
+/* ---------------------------------------------------------------
+   8. MP LOBBY — 2 slot grid landscape
+   --------------------------------------------------------------- */
+.mp-players-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--ls-gap);
+  margin: 10px 0;
+}
+
+@media (orientation: landscape) {
+  .mp-players-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.mp-player-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: var(--ls-radius);
+  min-width: 0;
+  min-height: 0;
+}
+
+.mp-slot-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mp-slot-name {
+  font-size: var(--ls-font-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------------------
+   9. SPECTATOR OVERLAY — fullscreen terpusat
+   --------------------------------------------------------------- */
+#mp-spectator-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ls-pad);
+  z-index: 500;
+  background: rgba(0, 0, 0, 0.82);
+}
+
+#mp-spectator-overlay .spectator-box {
+  width: min(90vw, 400px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: clamp(10px, 2vmin, 20px);
+  border-radius: var(--ls-radius);
+  text-align: center;
+}
+
+#spectator-countdown {
+  font-size: clamp(32px, 8vmin, 64px);
+  font-weight: 700;
+  line-height: 1;
+}
+
+#btn-spectator-respawn {
+  min-width: 160px;
+  min-height: clamp(36px, 6.5vmin, 46px);
+  padding: 8px 16px;
+  font-size: var(--ls-font-sm);
+  border-radius: var(--ls-radius);
+}
+
+/* ---------------------------------------------------------------
+   10. LOADOUT CARDS — grid responsive
+   --------------------------------------------------------------- */
+.loadout-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--ls-gap);
+  margin: 10px 0;
+}
+
+@media (orientation: landscape) and (max-height: 400px) {
+  .loadout-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+}
+
+.loadout-card {
+  padding: 8px 4px;
+  border-radius: var(--ls-radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  text-align: center;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.loadout-card .loadout-icon {
+  width: clamp(20px, 4vmin, 32px);
+  height: clamp(20px, 4vmin, 32px);
+}
+
+.loadout-card strong {
+  font-size: clamp(9px, 1.4vmin, 12px);
+  line-height: 1;
+}
+
+.loadout-card small {
+  font-size: clamp(7px, 1.1vmin, 10px);
+  opacity: 0.75;
+  line-height: 1.1;
+}
+
+/* ---------------------------------------------------------------
+   11. ACTOR CARDS
+   --------------------------------------------------------------- */
+.actor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: var(--ls-gap);
+  margin: 10px 0;
+}
+
+.actor-card {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--ls-radius);
+  cursor: pointer;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.actor-card .actor-avatar {
+  width: 55%;
+  height: 55%;
+}
+
+.actor-card span {
+  font-size: clamp(8px, 1.2vmin, 11px);
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ---------------------------------------------------------------
+   12. SHOP ITEMS
+   --------------------------------------------------------------- */
+.shop-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: var(--ls-radius);
+  margin-bottom: 6px;
+  min-height: 0;
+}
+
+.shop-item-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.shop-item-label .shop-ico {
+  width: clamp(18px, 3vmin, 26px);
+  height: clamp(18px, 3vmin, 26px);
+  flex-shrink: 0;
+}
+
+.shop-item-label strong {
+  display: block;
+  font-size: var(--ls-font-xs);
+  line-height: 1.1;
+}
+
+.shop-item-label small {
+  display: block;
+  font-size: clamp(8px, 1.2vmin, 11px);
+  opacity: 0.7;
+  line-height: 1;
+}
+
+.btn-buy {
+  min-height: 30px;
+  min-width: 0;
+  padding: 4px 10px;
+  font-size: var(--ls-font-xs);
+  white-space: nowrap;
+  border-radius: 6px;
+}
+
+/* ---------------------------------------------------------------
+   13. DAILY BOSS PREVIEW
+   --------------------------------------------------------------- */
+.daily-boss-preview {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: center;
+  gap: 4px;
+  margin: 10px 0;
+}
+
+.daily-boss-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 3px;
+  border-radius: var(--ls-radius);
+  text-align: center;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+}
+
+.daily-boss-slot .daily-boss-ico {
+  width: clamp(16px, 2.8vmin, 24px);
+  height: clamp(16px, 2.8vmin, 24px);
+}
+
+.daily-boss-num,
+.daily-boss-name {
+  font-size: clamp(8px, 1.2vmin, 11px);
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.daily-boss-arrow {
+  font-size: var(--ls-font-sm);
+  opacity: 0.6;
+}
+
+/* ---------------------------------------------------------------
+   14. LEVEL INTRO / KILLSTREAK / BOSS WARNING
+   --------------------------------------------------------------- */
+#level-intro,
+#killstreak-overlay,
+#boss-warning-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 150;
+  pointer-events: none;
+}
+
+#level-intro .level-intro-inner {
   text-align: center;
   padding: var(--ls-pad);
 }
-#level-intro-number { font-size: var(--ls-font-xl); }
-#level-intro-name { font-size: var(--ls-font-lg); }
-#level-intro-mission { font-size: var(--ls-font-sm); }
-#killstreak-text { font-size: var(--ls-font-xl); }
-#killstreak-sub { font-size: var(--ls-font-md); }
+
+#level-intro .level-intro-number {
+  font-size: clamp(28px, 8vmin, 64px);
+  line-height: 1;
+}
+
+#level-intro .level-intro-name {
+  font-size: clamp(14px, 3vmin, 22px);
+  line-height: 1.1;
+}
+
+#level-intro .level-intro-mission {
+  font-size: clamp(10px, 1.6vmin, 13px);
+}
+
+#killstreak-text {
+  font-size: clamp(24px, 6vmin, 48px);
+}
+
+#killstreak-sub {
+  font-size: clamp(12px, 2vmin, 18px);
+}
 
 /* ---------------------------------------------------------------
-   14. TOAST / POPUP
+   15. TOAST / FLOATING TEXT
    --------------------------------------------------------------- */
 #achievement-toast-container {
   position: fixed;
-  top: calc(var(--ls-pad) + var(--ls-safe-top));
-  right: calc(var(--ls-pad) + var(--ls-safe-right));
+  top: calc(var(--ls-pad) + env(safe-area-inset-top, 0px));
+  right: calc(var(--ls-pad) + env(safe-area-inset-right, 0px));
   display: flex;
   flex-direction: column;
   gap: 6px;
   z-index: 700;
   pointer-events: none;
-  max-width: min(60vw, 320px);
-}
-.achievement-toast {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: var(--ls-radius);
-  font-size: var(--ls-font-xs);
+  max-width: min(65vw, 320px);
 }
 
 #popup-container {
@@ -563,872 +862,46 @@ svg.ico-lg { width: var(--ls-icon-lg); height: var(--ls-icon-lg); }
   pointer-events: none;
   z-index: 55;
 }
+
 .floating-text {
-  font-size: var(--ls-font-sm);
+  position: absolute;
+  font-size: clamp(11px, 1.8vmin, 14px);
+  font-weight: 700;
+  pointer-events: none;
 }
 
 /* ---------------------------------------------------------------
-   15. SCROLLBAR — tipis & konsisten
+   16. LOW-END PERF
+   --------------------------------------------------------------- */
+body.low-end .achievement-toast,
+body.low-end .floating-text,
+body.low-end #combo-boost-indicator {
+  animation: none !important;
+}
+
+body.low-end * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+}
+
+/* ---------------------------------------------------------------
+   17. SCROLLBAR
    --------------------------------------------------------------- */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.18) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
-*::-webkit-scrollbar { width: 4px; height: 4px; }
-*::-webkit-scrollbar-track { background: transparent; }
+
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 *::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.18);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 4px;
-}
-
-/* ---------------------------------------------------------------
-   16. LANDSCAPE LOCK — kalau tinggi viewport < 500px, kompak total
-   --------------------------------------------------------------- */
-@media (orientation: landscape) and (max-height: 480px) {
-  :root {
-    --ls-pad: 5px;
-    --ls-font-xl: clamp(18px, 6vmin, 30px);
-    --ls-font-lg: clamp(14px, 4vmin, 20px);
-    --ls-icon-lg: clamp(24px, 6vmin, 34px);
-  }
-  #screen-main-menu {
-    grid-template-columns: minmax(200px, 1fr) minmax(220px, 40%);
-  }
-  #achievement-grid {
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    max-height: calc(100dvh - 150px);
-  }
-  #modal-daily .daily-bosses,
-  #modal-daily .boss-list {
-    gap: 4px;
-  }
-  .daily-boss-slot {
-    min-height: 56px;
-    padding: 4px;
-  }
-}
-
-/* ---------------------------------------------------------------
-   17. PORTRAIT FALLBACK — kalau user masih di portrait
-   --------------------------------------------------------------- */
-@media (orientation: portrait) {
-  #screen-main-menu {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: var(--ls-pad);
-    overflow-y: auto;
-  }
-  #screen-main-menu .menu-buttons,
-  #screen-main-menu .btn-group,
-  #screen-main-menu .menu-actions {
-    overflow: visible;
-  }
-  #achievement-grid {
-    max-height: calc(100dvh - 220px);
-  }
-}
-
-/* ---------------------------------------------------------------
-   18. LOW-END PERF — matikan animasi berat di device lambat
-   --------------------------------------------------------------- */
-body.low-end * {
-  animation-duration: 0.01ms !important;
-  transition-duration: 0.05s !important;
-}
-body.low-end .achievement-toast,
-body.low-end .floating-text {
-  animation: none !important;
-}
-
-/* ---------------------------------------------------------------
-   19. HILANGKAN ELEMENT YANG TIDAK PERLU DI LANDSCAPE
-   --------------------------------------------------------------- */
-/* Misalnya hint "Putar HP" atau decorative element yang tidak muat */
-body.landscape-only { display: none; }
-@media (orientation: landscape) {
-  body.landscape-only { display: block; }
-}
-@media (orientation: portrait) {
-  body.portrait-only { display: none !important; }
-}
-
-/* ---------------------------------------------------------------
-   20. FORCE TAP TARGET MINIMUM (aksesibilitas)
-   --------------------------------------------------------------- */
-button, [role="button"], .btn, [onclick] {
-  min-height: var(--ls-tap);
-  min-width: var(--ls-tap);
-}
-button svg + span { margin-left: 4px; }
-
-/* =============================================================
-   PAHLAWAN BINTANG — v20.3 CSS FIX PATCH
-   Perbaikan untuk patch landscape sebelumnya
-   ============================================================= */
-
-/* ---------------------------------------------------------------
-   FIX #1 — Ganti selector svg yang terlalu luas
-   Hapus dampak dari rule lama: "svg[viewBox]" → spesifik ke .ico saja
-   --------------------------------------------------------------- */
-svg[viewBox]:not(.ico):not(.ico-lg):not(.star-mini):not(.heart-icon):not(.ico-inline) {
-  width: auto;
-  height: auto;
-  max-width: 100%;
-}
-/* Biarkan SVG tanpa class mengikuti ukuran parent */
-svg:not([class]) {
-  width: 1em;
-  height: 1em;
-  flex-shrink: 0;
-}
-
-/* ---------------------------------------------------------------
-   FIX #2 — Modal content wrapper lebih fleksibel
-   Berlaku untuk modal-content / modal-box / modal-inner / panel
-   (tidak lagi hanya div:first-child)
-   --------------------------------------------------------------- */
-[id^="modal-"] > .modal-content,
-[id^="modal-"] > .modal-panel,
-[id^="modal-"] > .modal-box,
-[id^="modal-"] > .modal-inner,
-[id^="modal-"] > .panel,
-.modal > .modal-content,
-.modal > .modal-panel {
-  width: min(96vw, 640px);
-  max-width: min(96vw, 640px);
-  max-height: calc(100dvh - 2 * var(--ls-pad) - var(--ls-safe-top) - var(--ls-safe-bottom));
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: var(--ls-pad);
-  border-radius: var(--ls-radius);
-}
-/* Isi modal yang panjang boleh scroll, header/footer sticky */
-[id^="modal-"] > .modal-content > .modal-body,
-[id^="modal-"] > .modal-panel > .modal-body {
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-[id^="modal-"] > .modal-content > .modal-header,
-[id^="modal-"] > .modal-content > .modal-footer {
-  flex: 0 0 auto;
-}
-
-/* ---------------------------------------------------------------
-   FIX #3 — Safe generic fallback untuk wrapper menu
-   Kalau HTML tidak punya .menu-buttons / .menu-icons,
-   fallback ke struktur apapun di dalamnya
-   --------------------------------------------------------------- */
-/* Kalau HTML pakai <div> wrapper generik, dorong ke grid landscape */
-@media (orientation: landscape) {
-  #screen-main-menu > * {
-    max-width: 100%;
-  }
-  /* Fallback: kalau main-menu hanya punya 1 child (tombol wrapper),
-     buat dua kolom otomatis */
-  #screen-main-menu:has(> :only-child) {
-    grid-template-columns: 1fr minmax(280px, 45%);
-    align-items: center;
-  }
-  #screen-main-menu:has(> :only-child) > :only-child {
-    grid-column: 2 / 3;
-    display: flex;
-    flex-direction: column;
-    gap: var(--ls-pad);
-    max-height: 100%;
-    overflow-y: auto;
-    padding: 4px 2px 4px 0;
-  }
-}
-
-/* ---------------------------------------------------------------
-   FIX #4 — Tombol skill & ikon kecil: override min-height:44px
-   --------------------------------------------------------------- */
-#hud-overlay button,
-#btn-freeze, #btn-shield, #btn-bomb, #btn-pause,
-#btn-move-left, #btn-move-right,
-.modal button.small,
-.modal button.compact {
-  min-height: 0;
-  min-width: 0;
-}
-/* Kembalikan ke ukuran spesifik yang sudah di-set */
-
-/* ---------------------------------------------------------------
-   FIX #5 — Achievement detail modal harus di atas modal induk,
-   bukan menggantikannya
-   --------------------------------------------------------------- */
-#modal-achievement-detail {
-  z-index: 300;
-  background: rgba(0, 0, 0, 0.75);
-}
-#modal-achievement-detail > div {
-  max-width: min(90vw, 480px);
-  max-height: calc(100dvh - 2 * var(--ls-pad));
-  overflow-y: auto;
-}
-
-/* ---------------------------------------------------------------
-   FIX #6 — MP Lobby: pastikan layout compact di landscape
-   --------------------------------------------------------------- */
-#modal-mp-lobby > div {
-  max-width: min(94vw, 620px);
-  width: 100%;
-  max-height: calc(100dvh - 2 * var(--ls-pad));
-  overflow-y: auto;
-}
-/* Grid lobby 2 kolom di landscape */
-@media (orientation: landscape) {
-  #modal-mp-lobby .mp-slots,
-  #modal-mp-lobby .lobby-players {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--ls-pad);
-  }
-  #modal-mp-lobby .mp-actions,
-  #modal-mp-lobby .lobby-actions {
-    display: flex;
-    gap: var(--ls-pad);
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-}
-
-/* ---------------------------------------------------------------
-   FIX #7 — Low-end: hanya disable animation, JANGAN transition
-   Transisi pendek tetap bagus untuk feedback tap
-   --------------------------------------------------------------- */
-body.low-end * {
-  animation-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
-  /* Transisi tetap default — penting untuk feedback UX */
-}
-body.low-end .achievement-toast,
-body.low-end .floating-text,
-body.low-end .combo-boost-indicator {
-  animation: none !important;
-}
-/* Kill expensive effects */
-body.low-end #screen-flash-overlay {
-  transition: none !important;
-}
-body.low-end *[class*="pulse"],
-body.low-end *[class*="glow"] {
-  animation: none !important;
-  filter: none !important;
-}
-
-/* ---------------------------------------------------------------
-   BONUS #1 — Fallback untuk structure HUD yang umum
-   --------------------------------------------------------------- */
-/* Kalau #hud-overlay langsung berisi elemen tanpa wrapper */
-#hud-overlay > .hud-top,
-#hud-overlay > .top-bar {
-  position: absolute;
-  top: calc(var(--ls-pad) + var(--ls-safe-top));
-  left: calc(var(--ls-pad) + var(--ls-safe-left));
-  right: calc(var(--ls-pad) + var(--ls-safe-right));
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ls-pad);
-}
-
-/* ---------------------------------------------------------------
-   BONUS #2 — General responsive grid yang lebih fleksibel
-   --------------------------------------------------------------- */
-@media (orientation: landscape) and (max-height: 500px) {
-  .modal > div,
-  [id^="modal-"] > div {
-    padding: 6px !important;
-  }
-  #hud-lives svg.heart-icon {
-    width: clamp(14px, 2.8vmin, 20px);
-    height: clamp(14px, 2.8vmin, 20px);
-  }
-  #btn-pause {
-    width: clamp(36px, 7vmin, 46px);
-    height: clamp(36px, 7vmin, 46px);
-  }
-}
-
-/* ---------------------------------------------------------------
-   BONUS #3 — Mencegah overflow horizontal di grid anak
-   --------------------------------------------------------------- */
-#achievement-grid > *,
-.actor-card,
-.loadout-card,
-.shop-item,
-.upgrade-item,
-.daily-boss-slot,
-.mp-slot {
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ---------------------------------------------------------------
-   BONUS #4 — Text wrapping untuk deskripsi panjang
-   --------------------------------------------------------------- */
-.ach-card-title,
-.ach-card-desc,
-.loadout-card span,
-.shop-item span,
-.actor-card span {
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  hyphens: auto;
-  line-height: 1.25;
-}
-
-/* ---------------------------------------------------------------
-   BONUS #5 — Landscape-friendly scroll indicator
-   --------------------------------------------------------------- */
-#achievement-grid,
-[id^="modal-"] > div,
-.modal > div {
-  scroll-behavior: smooth;
-  scroll-padding: 8px;
-}
-
-/* ---------------------------------------------------------------
-   BONUS #6 — Pastikan FAB / floating button tetap terlihat
-   --------------------------------------------------------------- */
-#btn-achievements {
-  position: relative;
-  z-index: 10;
-}
-
-/* ---------------------------------------------------------------
-   BONUS #7 — Notch handling untuk iOS
-   --------------------------------------------------------------- */
-@supports (padding: env(safe-area-inset-left)) {
-  body {
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-  }
-  #screen-main-menu,
-  #hud-overlay {
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-  }
-}
-
-/* =============================================================
-   PAHLAWAN BINTANG — v20.3 CSS FIX PATCH
-   Perbaikan untuk patch landscape sebelumnya
-   ============================================================= */
-
-/* ---------------------------------------------------------------
-   FIX #1 — Ganti selector svg yang terlalu luas
-   Hapus dampak dari rule lama: "svg[viewBox]" → spesifik ke .ico saja
-   --------------------------------------------------------------- */
-svg[viewBox]:not(.ico):not(.ico-lg):not(.star-mini):not(.heart-icon):not(.ico-inline) {
-  width: auto;
-  height: auto;
-  max-width: 100%;
-}
-/* Biarkan SVG tanpa class mengikuti ukuran parent */
-svg:not([class]) {
-  width: 1em;
-  height: 1em;
-  flex-shrink: 0;
-}
-
-/* ---------------------------------------------------------------
-   FIX #2 — Modal content wrapper lebih fleksibel
-   Berlaku untuk modal-content / modal-box / modal-inner / panel
-   (tidak lagi hanya div:first-child)
-   --------------------------------------------------------------- */
-[id^="modal-"] > .modal-content,
-[id^="modal-"] > .modal-panel,
-[id^="modal-"] > .modal-box,
-[id^="modal-"] > .modal-inner,
-[id^="modal-"] > .panel,
-.modal > .modal-content,
-.modal > .modal-panel {
-  width: min(96vw, 640px);
-  max-width: min(96vw, 640px);
-  max-height: calc(100dvh - 2 * var(--ls-pad) - var(--ls-safe-top) - var(--ls-safe-bottom));
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: var(--ls-pad);
-  border-radius: var(--ls-radius);
-}
-/* Isi modal yang panjang boleh scroll, header/footer sticky */
-[id^="modal-"] > .modal-content > .modal-body,
-[id^="modal-"] > .modal-panel > .modal-body {
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-[id^="modal-"] > .modal-content > .modal-header,
-[id^="modal-"] > .modal-content > .modal-footer {
-  flex: 0 0 auto;
-}
-
-/* ---------------------------------------------------------------
-   FIX #3 — Safe generic fallback untuk wrapper menu
-   Kalau HTML tidak punya .menu-buttons / .menu-icons,
-   fallback ke struktur apapun di dalamnya
-   --------------------------------------------------------------- */
-/* Kalau HTML pakai <div> wrapper generik, dorong ke grid landscape */
-@media (orientation: landscape) {
-  #screen-main-menu > * {
-    max-width: 100%;
-  }
-  /* Fallback: kalau main-menu hanya punya 1 child (tombol wrapper),
-     buat dua kolom otomatis */
-  #screen-main-menu:has(> :only-child) {
-    grid-template-columns: 1fr minmax(280px, 45%);
-    align-items: center;
-  }
-  #screen-main-menu:has(> :only-child) > :only-child {
-    grid-column: 2 / 3;
-    display: flex;
-    flex-direction: column;
-    gap: var(--ls-pad);
-    max-height: 100%;
-    overflow-y: auto;
-    padding: 4px 2px 4px 0;
-  }
-}
-
-/* ---------------------------------------------------------------
-   FIX #4 — Tombol skill & ikon kecil: override min-height:44px
-   --------------------------------------------------------------- */
-#hud-overlay button,
-#btn-freeze, #btn-shield, #btn-bomb, #btn-pause,
-#btn-move-left, #btn-move-right,
-.modal button.small,
-.modal button.compact {
-  min-height: 0;
-  min-width: 0;
-}
-/* Kembalikan ke ukuran spesifik yang sudah di-set */
-
-/* ---------------------------------------------------------------
-   FIX #5 — Achievement detail modal harus di atas modal induk,
-   bukan menggantikannya
-   --------------------------------------------------------------- */
-#modal-achievement-detail {
-  z-index: 300;
-  background: rgba(0, 0, 0, 0.75);
-}
-#modal-achievement-detail > div {
-  max-width: min(90vw, 480px);
-  max-height: calc(100dvh - 2 * var(--ls-pad));
-  overflow-y: auto;
-}
-
-/* ---------------------------------------------------------------
-   FIX #6 — MP Lobby: pastikan layout compact di landscape
-   --------------------------------------------------------------- */
-#modal-mp-lobby > div {
-  max-width: min(94vw, 620px);
-  width: 100%;
-  max-height: calc(100dvh - 2 * var(--ls-pad));
-  overflow-y: auto;
-}
-/* Grid lobby 2 kolom di landscape */
-@media (orientation: landscape) {
-  #modal-mp-lobby .mp-slots,
-  #modal-mp-lobby .lobby-players {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--ls-pad);
-  }
-  #modal-mp-lobby .mp-actions,
-  #modal-mp-lobby .lobby-actions {
-    display: flex;
-    gap: var(--ls-pad);
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-}
-
-/* ---------------------------------------------------------------
-   FIX #7 — Low-end: hanya disable animation, JANGAN transition
-   Transisi pendek tetap bagus untuk feedback tap
-   --------------------------------------------------------------- */
-body.low-end * {
-  animation-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
-  /* Transisi tetap default — penting untuk feedback UX */
-}
-body.low-end .achievement-toast,
-body.low-end .floating-text,
-body.low-end .combo-boost-indicator {
-  animation: none !important;
-}
-/* Kill expensive effects */
-body.low-end #screen-flash-overlay {
-  transition: none !important;
-}
-body.low-end *[class*="pulse"],
-body.low-end *[class*="glow"] {
-  animation: none !important;
-  filter: none !important;
-}
-
-/* ---------------------------------------------------------------
-   BONUS #1 — Fallback untuk structure HUD yang umum
-   --------------------------------------------------------------- */
-/* Kalau #hud-overlay langsung berisi elemen tanpa wrapper */
-#hud-overlay > .hud-top,
-#hud-overlay > .top-bar {
-  position: absolute;
-  top: calc(var(--ls-pad) + var(--ls-safe-top));
-  left: calc(var(--ls-pad) + var(--ls-safe-left));
-  right: calc(var(--ls-pad) + var(--ls-safe-right));
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ls-pad);
-}
-
-/* ---------------------------------------------------------------
-   BONUS #2 — General responsive grid yang lebih fleksibel
-   --------------------------------------------------------------- */
-@media (orientation: landscape) and (max-height: 500px) {
-  .modal > div,
-  [id^="modal-"] > div {
-    padding: 6px !important;
-  }
-  #hud-lives svg.heart-icon {
-    width: clamp(14px, 2.8vmin, 20px);
-    height: clamp(14px, 2.8vmin, 20px);
-  }
-  #btn-pause {
-    width: clamp(36px, 7vmin, 46px);
-    height: clamp(36px, 7vmin, 46px);
-  }
-}
-
-/* ---------------------------------------------------------------
-   BONUS #3 — Mencegah overflow horizontal di grid anak
-   --------------------------------------------------------------- */
-#achievement-grid > *,
-.actor-card,
-.loadout-card,
-.shop-item,
-.upgrade-item,
-.daily-boss-slot,
-.mp-slot {
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ---------------------------------------------------------------
-   BONUS #4 — Text wrapping untuk deskripsi panjang
-   --------------------------------------------------------------- */
-.ach-card-title,
-.ach-card-desc,
-.loadout-card span,
-.shop-item span,
-.actor-card span {
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  hyphens: auto;
-  line-height: 1.25;
-}
-
-/* ---------------------------------------------------------------
-   BONUS #5 — Landscape-friendly scroll indicator
-   --------------------------------------------------------------- */
-#achievement-grid,
-[id^="modal-"] > div,
-.modal > div {
-  scroll-behavior: smooth;
-  scroll-padding: 8px;
-}
-
-/* ---------------------------------------------------------------
-   BONUS #6 — Pastikan FAB / floating button tetap terlihat
-   --------------------------------------------------------------- */
-#btn-achievements {
-  position: relative;
-  z-index: 10;
-}
-
-/* ---------------------------------------------------------------
-   BONUS #7 — Notch handling untuk iOS
-   --------------------------------------------------------------- */
-@supports (padding: env(safe-area-inset-left)) {
-  body {
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-  }
-  #screen-main-menu,
-  #hud-overlay {
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-  }
-}
-/* =============================================================
-   PAHLAWAN BINTANG — v20.3 CSS FIX PATCH
-   Perbaikan untuk patch landscape sebelumnya
-   ============================================================= */
-
-/* ---------------------------------------------------------------
-   FIX #1 — Ganti selector svg yang terlalu luas
-   Hapus dampak dari rule lama: "svg[viewBox]" → spesifik ke .ico saja
-   --------------------------------------------------------------- */
-svg[viewBox]:not(.ico):not(.ico-lg):not(.star-mini):not(.heart-icon):not(.ico-inline) {
-  width: auto;
-  height: auto;
-  max-width: 100%;
-}
-/* Biarkan SVG tanpa class mengikuti ukuran parent */
-svg:not([class]) {
-  width: 1em;
-  height: 1em;
-  flex-shrink: 0;
-}
-
-/* ---------------------------------------------------------------
-   FIX #2 — Modal content wrapper lebih fleksibel
-   Berlaku untuk modal-content / modal-box / modal-inner / panel
-   (tidak lagi hanya div:first-child)
-   --------------------------------------------------------------- */
-[id^="modal-"] > .modal-content,
-[id^="modal-"] > .modal-panel,
-[id^="modal-"] > .modal-box,
-[id^="modal-"] > .modal-inner,
-[id^="modal-"] > .panel,
-.modal > .modal-content,
-.modal > .modal-panel {
-  width: min(96vw, 640px);
-  max-width: min(96vw, 640px);
-  max-height: calc(100dvh - 2 * var(--ls-pad) - var(--ls-safe-top) - var(--ls-safe-bottom));
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: var(--ls-pad);
-  border-radius: var(--ls-radius);
-}
-/* Isi modal yang panjang boleh scroll, header/footer sticky */
-[id^="modal-"] > .modal-content > .modal-body,
-[id^="modal-"] > .modal-panel > .modal-body {
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-[id^="modal-"] > .modal-content > .modal-header,
-[id^="modal-"] > .modal-content > .modal-footer {
-  flex: 0 0 auto;
-}
-
-/* ---------------------------------------------------------------
-   FIX #3 — Safe generic fallback untuk wrapper menu
-   Kalau HTML tidak punya .menu-buttons / .menu-icons,
-   fallback ke struktur apapun di dalamnya
-   --------------------------------------------------------------- */
-/* Kalau HTML pakai <div> wrapper generik, dorong ke grid landscape */
-@media (orientation: landscape) {
-  #screen-main-menu > * {
-    max-width: 100%;
-  }
-  /* Fallback: kalau main-menu hanya punya 1 child (tombol wrapper),
-     buat dua kolom otomatis */
-  #screen-main-menu:has(> :only-child) {
-    grid-template-columns: 1fr minmax(280px, 45%);
-    align-items: center;
-  }
-  #screen-main-menu:has(> :only-child) > :only-child {
-    grid-column: 2 / 3;
-    display: flex;
-    flex-direction: column;
-    gap: var(--ls-pad);
-    max-height: 100%;
-    overflow-y: auto;
-    padding: 4px 2px 4px 0;
-  }
-}
-
-/* ---------------------------------------------------------------
-   FIX #4 — Tombol skill & ikon kecil: override min-height:44px
-   --------------------------------------------------------------- */
-#hud-overlay button,
-#btn-freeze, #btn-shield, #btn-bomb, #btn-pause,
-#btn-move-left, #btn-move-right,
-.modal button.small,
-.modal button.compact {
-  min-height: 0;
-  min-width: 0;
-}
-/* Kembalikan ke ukuran spesifik yang sudah di-set */
-
-/* ---------------------------------------------------------------
-   FIX #5 — Achievement detail modal harus di atas modal induk,
-   bukan menggantikannya
-   --------------------------------------------------------------- */
-#modal-achievement-detail {
-  z-index: 300;
-  background: rgba(0, 0, 0, 0.75);
-}
-#modal-achievement-detail > div {
-  max-width: min(90vw, 480px);
-  max-height: calc(100dvh - 2 * var(--ls-pad));
-  overflow-y: auto;
-}
-
-/* ---------------------------------------------------------------
-   FIX #6 — MP Lobby: pastikan layout compact di landscape
-   --------------------------------------------------------------- */
-#modal-mp-lobby > div {
-  max-width: min(94vw, 620px);
-  width: 100%;
-  max-height: calc(100dvh - 2 * var(--ls-pad));
-  overflow-y: auto;
-}
-/* Grid lobby 2 kolom di landscape */
-@media (orientation: landscape) {
-  #modal-mp-lobby .mp-slots,
-  #modal-mp-lobby .lobby-players {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--ls-pad);
-  }
-  #modal-mp-lobby .mp-actions,
-  #modal-mp-lobby .lobby-actions {
-    display: flex;
-    gap: var(--ls-pad);
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-}
-
-/* ---------------------------------------------------------------
-   FIX #7 — Low-end: hanya disable animation, JANGAN transition
-   Transisi pendek tetap bagus untuk feedback tap
-   --------------------------------------------------------------- */
-body.low-end * {
-  animation-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
-  /* Transisi tetap default — penting untuk feedback UX */
-}
-body.low-end .achievement-toast,
-body.low-end .floating-text,
-body.low-end .combo-boost-indicator {
-  animation: none !important;
-}
-/* Kill expensive effects */
-body.low-end #screen-flash-overlay {
-  transition: none !important;
-}
-body.low-end *[class*="pulse"],
-body.low-end *[class*="glow"] {
-  animation: none !important;
-  filter: none !important;
-}
-
-/* ---------------------------------------------------------------
-   BONUS #1 — Fallback untuk structure HUD yang umum
-   --------------------------------------------------------------- */
-/* Kalau #hud-overlay langsung berisi elemen tanpa wrapper */
-#hud-overlay > .hud-top,
-#hud-overlay > .top-bar {
-  position: absolute;
-  top: calc(var(--ls-pad) + var(--ls-safe-top));
-  left: calc(var(--ls-pad) + var(--ls-safe-left));
-  right: calc(var(--ls-pad) + var(--ls-safe-right));
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ls-pad);
-}
-
-/* ---------------------------------------------------------------
-   BONUS #2 — General responsive grid yang lebih fleksibel
-   --------------------------------------------------------------- */
-@media (orientation: landscape) and (max-height: 500px) {
-  .modal > div,
-  [id^="modal-"] > div {
-    padding: 6px !important;
-  }
-  #hud-lives svg.heart-icon {
-    width: clamp(14px, 2.8vmin, 20px);
-    height: clamp(14px, 2.8vmin, 20px);
-  }
-  #btn-pause {
-    width: clamp(36px, 7vmin, 46px);
-    height: clamp(36px, 7vmin, 46px);
-  }
-}
-
-/* ---------------------------------------------------------------
-   BONUS #3 — Mencegah overflow horizontal di grid anak
-   --------------------------------------------------------------- */
-#achievement-grid > *,
-.actor-card,
-.loadout-card,
-.shop-item,
-.upgrade-item,
-.daily-boss-slot,
-.mp-slot {
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ---------------------------------------------------------------
-   BONUS #4 — Text wrapping untuk deskripsi panjang
-   --------------------------------------------------------------- */
-.ach-card-title,
-.ach-card-desc,
-.loadout-card span,
-.shop-item span,
-.actor-card span {
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  hyphens: auto;
-  line-height: 1.25;
-}
-
-/* ---------------------------------------------------------------
-   BONUS #5 — Landscape-friendly scroll indicator
-   --------------------------------------------------------------- */
-#achievement-grid,
-[id^="modal-"] > div,
-.modal > div {
-  scroll-behavior: smooth;
-  scroll-padding: 8px;
-}
-
-/* ---------------------------------------------------------------
-   BONUS #6 — Pastikan FAB / floating button tetap terlihat
-   --------------------------------------------------------------- */
-#btn-achievements {
-  position: relative;
-  z-index: 10;
-}
-
-/* ---------------------------------------------------------------
-   BONUS #7 — Notch handling untuk iOS
-   --------------------------------------------------------------- */
-@supports (padding: env(safe-area-inset-left)) {
-  body {
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-  }
-  #screen-main-menu,
-  #hud-overlay {
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-  }
 }
