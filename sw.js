@@ -10,23 +10,23 @@
 //   - Sync semua versi ke ?v=20.6
 // ============================================================
 
-const CACHE_VERSION = 'v20.6';
+const CACHE_VERSION = 'v20.7';
 const CACHE_NAME = `pahlawan-bintang-${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
   './',
-  './index.html?v=20.6',
-  './style.css?v=20.6',
-  './multiplayer.js?v=20.6',
-  './game.js?v=20.6',
+  './index.html?v=20.7',
+  './style.css?v=20.7',
+  './multiplayer.js?v=20.7',
+  './game.js?v=20.7',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
 ];
 
 const DATA_ASSETS = [
-  './levels.json?v=20.6',
-  './achievements.json?v=20.6'
+  './levels.json?v=20.7',
+  './achievements.json?v=20.7'
 ];
 
 const BYPASS_HOSTS = [
@@ -125,7 +125,7 @@ async function networkFirst(request) {
   } catch (e) {
     const cached = await caches.match(request);
     if (cached) return cached;
-    const indexCached = await caches.match('./index.html?v=20.6') ||
+    const indexCached = await caches.match('./index.html?v=20.7') ||
                         await caches.match('./index.html');
     if (indexCached) return indexCached;
     return new Response('Offline', { status: 503, statusText: 'Offline' });
