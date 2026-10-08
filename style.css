@@ -662,3 +662,260 @@ button, [role="button"], .btn, [onclick] {
   min-width: var(--ls-tap);
 }
 button svg + span { margin-left: 4px; }
+
+/* =============================================================
+   PAHLAWAN BINTANG — v20.3 CSS FIX PATCH
+   Perbaikan untuk patch landscape sebelumnya
+   ============================================================= */
+
+/* ---------------------------------------------------------------
+   FIX #1 — Ganti selector svg yang terlalu luas
+   Hapus dampak dari rule lama: "svg[viewBox]" → spesifik ke .ico saja
+   --------------------------------------------------------------- */
+svg[viewBox]:not(.ico):not(.ico-lg):not(.star-mini):not(.heart-icon):not(.ico-inline) {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+}
+/* Biarkan SVG tanpa class mengikuti ukuran parent */
+svg:not([class]) {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------
+   FIX #2 — Modal content wrapper lebih fleksibel
+   Berlaku untuk modal-content / modal-box / modal-inner / panel
+   (tidak lagi hanya div:first-child)
+   --------------------------------------------------------------- */
+[id^="modal-"] > .modal-content,
+[id^="modal-"] > .modal-panel,
+[id^="modal-"] > .modal-box,
+[id^="modal-"] > .modal-inner,
+[id^="modal-"] > .panel,
+.modal > .modal-content,
+.modal > .modal-panel {
+  width: min(96vw, 640px);
+  max-width: min(96vw, 640px);
+  max-height: calc(100dvh - 2 * var(--ls-pad) - var(--ls-safe-top) - var(--ls-safe-bottom));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: var(--ls-pad);
+  border-radius: var(--ls-radius);
+}
+/* Isi modal yang panjang boleh scroll, header/footer sticky */
+[id^="modal-"] > .modal-content > .modal-body,
+[id^="modal-"] > .modal-panel > .modal-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+[id^="modal-"] > .modal-content > .modal-header,
+[id^="modal-"] > .modal-content > .modal-footer {
+  flex: 0 0 auto;
+}
+
+/* ---------------------------------------------------------------
+   FIX #3 — Safe generic fallback untuk wrapper menu
+   Kalau HTML tidak punya .menu-buttons / .menu-icons,
+   fallback ke struktur apapun di dalamnya
+   --------------------------------------------------------------- */
+/* Kalau HTML pakai <div> wrapper generik, dorong ke grid landscape */
+@media (orientation: landscape) {
+  #screen-main-menu > * {
+    max-width: 100%;
+  }
+  /* Fallback: kalau main-menu hanya punya 1 child (tombol wrapper),
+     buat dua kolom otomatis */
+  #screen-main-menu:has(> :only-child) {
+    grid-template-columns: 1fr minmax(280px, 45%);
+    align-items: center;
+  }
+  #screen-main-menu:has(> :only-child) > :only-child {
+    grid-column: 2 / 3;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ls-pad);
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 4px 2px 4px 0;
+  }
+}
+
+/* ---------------------------------------------------------------
+   FIX #4 — Tombol skill & ikon kecil: override min-height:44px
+   --------------------------------------------------------------- */
+#hud-overlay button,
+#btn-freeze, #btn-shield, #btn-bomb, #btn-pause,
+#btn-move-left, #btn-move-right,
+.modal button.small,
+.modal button.compact {
+  min-height: 0;
+  min-width: 0;
+}
+/* Kembalikan ke ukuran spesifik yang sudah di-set */
+
+/* ---------------------------------------------------------------
+   FIX #5 — Achievement detail modal harus di atas modal induk,
+   bukan menggantikannya
+   --------------------------------------------------------------- */
+#modal-achievement-detail {
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.75);
+}
+#modal-achievement-detail > div {
+  max-width: min(90vw, 480px);
+  max-height: calc(100dvh - 2 * var(--ls-pad));
+  overflow-y: auto;
+}
+
+/* ---------------------------------------------------------------
+   FIX #6 — MP Lobby: pastikan layout compact di landscape
+   --------------------------------------------------------------- */
+#modal-mp-lobby > div {
+  max-width: min(94vw, 620px);
+  width: 100%;
+  max-height: calc(100dvh - 2 * var(--ls-pad));
+  overflow-y: auto;
+}
+/* Grid lobby 2 kolom di landscape */
+@media (orientation: landscape) {
+  #modal-mp-lobby .mp-slots,
+  #modal-mp-lobby .lobby-players {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ls-pad);
+  }
+  #modal-mp-lobby .mp-actions,
+  #modal-mp-lobby .lobby-actions {
+    display: flex;
+    gap: var(--ls-pad);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+/* ---------------------------------------------------------------
+   FIX #7 — Low-end: hanya disable animation, JANGAN transition
+   Transisi pendek tetap bagus untuk feedback tap
+   --------------------------------------------------------------- */
+body.low-end * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  /* Transisi tetap default — penting untuk feedback UX */
+}
+body.low-end .achievement-toast,
+body.low-end .floating-text,
+body.low-end .combo-boost-indicator {
+  animation: none !important;
+}
+/* Kill expensive effects */
+body.low-end #screen-flash-overlay {
+  transition: none !important;
+}
+body.low-end *[class*="pulse"],
+body.low-end *[class*="glow"] {
+  animation: none !important;
+  filter: none !important;
+}
+
+/* ---------------------------------------------------------------
+   BONUS #1 — Fallback untuk structure HUD yang umum
+   --------------------------------------------------------------- */
+/* Kalau #hud-overlay langsung berisi elemen tanpa wrapper */
+#hud-overlay > .hud-top,
+#hud-overlay > .top-bar {
+  position: absolute;
+  top: calc(var(--ls-pad) + var(--ls-safe-top));
+  left: calc(var(--ls-pad) + var(--ls-safe-left));
+  right: calc(var(--ls-pad) + var(--ls-safe-right));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ls-pad);
+}
+
+/* ---------------------------------------------------------------
+   BONUS #2 — General responsive grid yang lebih fleksibel
+   --------------------------------------------------------------- */
+@media (orientation: landscape) and (max-height: 500px) {
+  .modal > div,
+  [id^="modal-"] > div {
+    padding: 6px !important;
+  }
+  #hud-lives svg.heart-icon {
+    width: clamp(14px, 2.8vmin, 20px);
+    height: clamp(14px, 2.8vmin, 20px);
+  }
+  #btn-pause {
+    width: clamp(36px, 7vmin, 46px);
+    height: clamp(36px, 7vmin, 46px);
+  }
+}
+
+/* ---------------------------------------------------------------
+   BONUS #3 — Mencegah overflow horizontal di grid anak
+   --------------------------------------------------------------- */
+#achievement-grid > *,
+.actor-card,
+.loadout-card,
+.shop-item,
+.upgrade-item,
+.daily-boss-slot,
+.mp-slot {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------------------
+   BONUS #4 — Text wrapping untuk deskripsi panjang
+   --------------------------------------------------------------- */
+.ach-card-title,
+.ach-card-desc,
+.loadout-card span,
+.shop-item span,
+.actor-card span {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  line-height: 1.25;
+}
+
+/* ---------------------------------------------------------------
+   BONUS #5 — Landscape-friendly scroll indicator
+   --------------------------------------------------------------- */
+#achievement-grid,
+[id^="modal-"] > div,
+.modal > div {
+  scroll-behavior: smooth;
+  scroll-padding: 8px;
+}
+
+/* ---------------------------------------------------------------
+   BONUS #6 — Pastikan FAB / floating button tetap terlihat
+   --------------------------------------------------------------- */
+#btn-achievements {
+  position: relative;
+  z-index: 10;
+}
+
+/* ---------------------------------------------------------------
+   BONUS #7 — Notch handling untuk iOS
+   --------------------------------------------------------------- */
+@supports (padding: env(safe-area-inset-left)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  #screen-main-menu,
+  #hud-overlay {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
