@@ -1,20 +1,18 @@
 // ============================================================
-// PAHLAWAN BINTANG — multiplayer.js v20.1
-// "Fast Connect Edition"
+// PAHLAWAN BINTANG — multiplayer.js v20.5
+// "Full Sync Edition"
 // ------------------------------------------------------------
-// v20.1:
-//   - TURN server (openrelay free fallback)
-//   - Wait for ICE gathering before sending offer/answer
-//   - Bulk listen ICE (value instead of child_added)
-//   - Detailed logging untuk debugging
+// v20.5 FIX:
+//   1. sendInput() FORWARD SEMUA field (spectator/respawn/pause/resume)
+//   2. _handleMessage('input') FORWARD SEMUA field ke game.js
+//   3. Dual DataChannel: control (reliable) + state (unreliable)
+//      → pesan pause/respawn/spectator tidak akan hilang
+//   4. Cleanup state yang benar saat leaveRoom
 // ============================================================
 
 (function() {
 'use strict';
 
-// ============================================================
-// KONFIGURASI
-// ============================================================
 const MP_CONFIG = {
   ROOM_CODE_LENGTH: 4,
   ROOM_CODE_CHARS: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
@@ -24,11 +22,9 @@ const MP_CONFIG = {
   INPUT_THROTTLE_MS: 33,
   STATE_THROTTLE_MS: 50,
   CONNECT_TIMEOUT_MS: 25000,
-  ICE_GATHERING_TIMEOUT_MS: 3000,   // 🔥 Tunggu ICE max 3 detik
+  ICE_GATHERING_TIMEOUT_MS: 3000,
 
-  // 🔥 ICE SERVERS — STUN + TURN (dengan fallback)
   ICE_SERVERS: [
-    // STUN servers (gratis, untuk direct P2P)
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
@@ -36,10 +32,6 @@ const MP_CONFIG = {
     { urls: 'stun:stun4.l.google.com:19302' },
     { urls: 'stun:stun.cloudflare.com:3478' },
     { urls: 'stun:stun.nextcloud.com:443' },
-
-    // 🔥 TURN servers (relay fallback)
-    // Menggunakan openrelay.metered.ca — GRATIS, publik
-    // Untuk production, ganti dengan akun sendiri di metered.ca
     {
       urls: 'turn:openrelay.metered.ca:80',
       username: 'openrelayproject',
@@ -58,9 +50,6 @@ const MP_CONFIG = {
   ]
 };
 
-// ============================================================
-// MULTIPLAYER ENGINE
-// ============================================================
 class MultiplayerEngine {
   constructor() {
     this.role = null;
@@ -73,7 +62,9 @@ class MultiplayerEngine {
     this.remotePeerKey = null;
 
     this.peerConnection = null;
-    this.dataChannel = null;
+    this.dataChannel = null;       // kontrol utama (kompatibilitas)
+    this.controlChannel = null;    // 🔥 FIX B3: reliable untuk pause/respawn/spectator
+    this.stateChannel = null;      // 🔥 FIX B3: unreliable untuk input/state
 
     this.connectionState = 'idle';
     this.isConnected = false;
@@ -105,18 +96,14 @@ class MultiplayerEngine {
     this._onRoomJoined = null;
     this._onRoomFull = null;
 
-    console.log('🎮 [MP] MultiplayerEngine initialized (v20.1)');
+    console.log('🎮 [MP] MultiplayerEngine initialized (v20.5)');
   }
 
   // ============================================================
   // PUBLIC API
   // ============================================================
-
   async createRoom(mode, playerName) {
-    if (typeof db === 'undefined' || !db) {
-      throw new Error('Firebase tidak siap. Cek koneksi internet.');
-    }
-
+    if (typeof db === 'undefined' || !db) throw new Error('Firebase tidak siap. Cek koneksi internet.');
     this._cleanup(false);
 
     this.role = 'host';
@@ -146,22 +133,17 @@ class MultiplayerEngine {
     this._setState('waiting');
     this._listenForGuest();
     this._scheduleRoomCleanup(code);
-
     return { roomCode: code };
   }
 
   async joinRoom(code, playerName) {
-    if (typeof db === 'undefined' || !db) {
-      throw new Error('Firebase tidak siap. Cek koneksi internet.');
-    }
-
+    if (typeof db === 'undefined' || !db) throw new Error('Firebase tidak siap. Cek koneksi internet.');
     code = (code || '').toUpperCase().trim();
     if (code.length !== MP_CONFIG.ROOM_CODE_LENGTH) {
       throw new Error('Kode room harus ' + MP_CONFIG.ROOM_CODE_LENGTH + ' huruf');
     }
 
     this._cleanup(false);
-
     this.role = 'guest';
     this.isHost = false;
     this.roomCode = code;
@@ -170,30 +152,18 @@ class MultiplayerEngine {
 
     const roomRef = db.ref('rooms/' + code);
     let snapshot;
-    try {
-      snapshot = await roomRef.once('value');
-    } catch(e) {
-      throw new Error('Gagal terhubung ke server. Coba lagi.');
-    }
+    try { snapshot = await roomRef.once('value'); }
+    catch(e) { throw new Error('Gagal terhubung ke server. Coba lagi.'); }
 
-    if (!snapshot.exists()) {
-      throw new Error('Room tidak ditemukan. Cek kode.');
-    }
-
+    if (!snapshot.exists()) throw new Error('Room tidak ditemukan. Cek kode.');
     const roomData = snapshot.val();
 
     if (Date.now() - (roomData.createdAt || 0) > MP_CONFIG.ROOM_TIMEOUT_MS) {
       await roomRef.remove().catch(() => {});
       throw new Error('Room sudah kadaluarsa.');
     }
-
-    if (roomData.guestId) {
-      throw new Error('Room sudah penuh (2/2 pemain).');
-    }
-
-    if (roomData.hostId === this.playerKey) {
-      throw new Error('Tidak bisa join room sendiri.');
-    }
+    if (roomData.guestId) throw new Error('Room sudah penuh (2/2 pemain).');
+    if (roomData.hostId === this.playerKey) throw new Error('Tidak bisa join room sendiri.');
 
     this.mode = roomData.mode || 'coop';
     this.remotePeerName = roomData.hostName;
@@ -207,14 +177,12 @@ class MultiplayerEngine {
 
     console.log('🚪 [MP] Joined room:', code, 'as', this.playerName);
     this._setState('connecting');
-
     this._listenForOffer(code);
     this._startConnectTimeout();
 
     if (this._onRoomJoined) {
       try { this._onRoomJoined({ mode: this.mode, hostName: this.remotePeerName }); } catch(e) {}
     }
-
     return { success: true, mode: this.mode, hostName: this.remotePeerName };
   }
 
@@ -235,18 +203,13 @@ class MultiplayerEngine {
           await roomRef.remove();
         } else {
           await roomRef.update({
-            guestId: null,
-            guestName: null,
-            status: 'waiting',
-            guestReady: false
+            guestId: null, guestName: null,
+            status: 'waiting', guestReady: false
           });
         }
         await db.ref('signaling/' + code).remove();
-      } catch(e) {
-        console.warn('⚠️ [MP] Cleanup Firebase error:', e);
-      }
+      } catch(e) { console.warn('⚠️ [MP] Cleanup Firebase error:', e); }
     }
-
     this._setState('idle');
     console.log('🚪 [MP] Left room');
   }
@@ -254,36 +217,31 @@ class MultiplayerEngine {
   async setReady(ready) {
     if (!this.roomCode || typeof db === 'undefined' || !db) return;
     const field = this.isHost ? 'hostReady' : 'guestReady';
-    try {
-      await db.ref('rooms/' + this.roomCode).update({ [field]: !!ready });
-    } catch(e) {
-      console.warn('⚠️ [MP] setReady error:', e);
-    }
+    try { await db.ref('rooms/' + this.roomCode).update({ [field]: !!ready }); }
+    catch(e) { console.warn('⚠️ [MP] setReady error:', e); }
   }
 
   async startGame() {
     if (!this.isHost) return;
     if (!this.roomCode || typeof db === 'undefined' || !db) return;
-
     const seed = Math.floor(Math.random() * 1000000);
     try {
       await db.ref('rooms/' + this.roomCode).update({
-        status: 'playing',
-        seed: seed,
-        startedAt: Date.now()
+        status: 'playing', seed: seed, startedAt: Date.now()
       });
       this.sendMessage({ type: 'start', seed: seed });
-    } catch(e) {
-      console.warn('⚠️ [MP] startGame error:', e);
-    }
+    } catch(e) { console.warn('⚠️ [MP] startGame error:', e); }
   }
 
+  // 🔥 v20.5 FIX B1: FORWARD SEMUA FIELD
   sendInput(input) {
     if (!this.isConnected) return;
     const now = Date.now();
     if (now - this._lastInputSent < MP_CONFIG.INPUT_THROTTLE_MS) return;
     this._lastInputSent = now;
 
+    // Kirim semua field penting. Control flags (pause/resume/respawn)
+    // akan dirutekan ke channel reliable via _routeMessage.
     this.sendMessage({
       type: 'input',
       left: !!input.left,
@@ -293,6 +251,10 @@ class MultiplayerEngine {
       skill2: !!input.skill2,
       skill3: !!input.skill3,
       heroType: input.heroType || 'robot',
+      spectator: !!input.spectator,   // 🔥 NEW
+      respawn: !!input.respawn,        // 🔥 NEW
+      pause: !!input.pause,            // 🔥 NEW
+      resume: !!input.resume,          // 🔥 NEW
       t: now
     });
   }
@@ -302,24 +264,26 @@ class MultiplayerEngine {
     const now = Date.now();
     if (now - this._lastStateSent < MP_CONFIG.STATE_THROTTLE_MS) return;
     this._lastStateSent = now;
-
-    this.sendMessage({
-      type: 'state',
-      t: now,
-      data: state
-    });
+    this.sendMessage({ type: 'state', t: now, data: state });
   }
 
+  // 🔥 v20.5: Route message ke channel yang tepat
   sendMessage(msg) {
-    if (!this.dataChannel) return false;
-    if (this.dataChannel.readyState !== 'open') return false;
-    try {
-      this.dataChannel.send(JSON.stringify(msg));
-      return true;
-    } catch(e) {
-      console.warn('⚠️ [MP] send error:', e);
-      return false;
-    }
+    if (!msg || !msg.type) return false;
+    const isControl = ['hello','leave','ready','start','ping','pong',
+                       'pause','resume','respawn','spectator_flag'].includes(msg.type);
+    // Input dengan control flag juga dianggap control
+    const hasControlFlag = msg.type === 'input' &&
+                          (msg.pause || msg.resume || msg.respawn || msg.spectator !== undefined);
+
+    const ch = (isControl || hasControlFlag) && this.controlChannel
+      ? this.controlChannel
+      : (this.stateChannel || this.dataChannel);
+
+    if (!ch) return false;
+    if (ch.readyState !== 'open') return false;
+    try { ch.send(JSON.stringify(msg)); return true; }
+    catch(e) { console.warn('⚠️ [MP] send error:', e); return false; }
   }
 
   // ============================================================
@@ -337,7 +301,7 @@ class MultiplayerEngine {
   onRoomFull(cb)    { this._onRoomFull = cb; }
 
   // ============================================================
-  // PRIVATE — ROOM
+  // PRIVATE
   // ============================================================
   _makePlayerKey(name) {
     return 'p_' + (name || 'player').toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 20) +
@@ -373,36 +337,24 @@ class MultiplayerEngine {
     }, MP_CONFIG.ROOM_TIMEOUT_MS);
   }
 
-  // ============================================================
-  // PRIVATE — SIGNALING
-  // ============================================================
-  async _roomRefSet(code, data) {
-    await db.ref('rooms/' + code).set(data);
-  }
+  async _roomRefSet(code, data) { await db.ref('rooms/' + code).set(data); }
 
   _listenForGuest() {
     const code = this.roomCode;
     this._roomRef = db.ref('rooms/' + code);
-
     this._roomListener = this._roomRef.on('value', async (snapshot) => {
       if (!snapshot.exists()) {
-        if (this.isHost) {
-          this._emitError('Room kadaluarsa.');
-          this.leaveRoom();
-        }
+        if (this.isHost) { this._emitError('Room kadaluarsa.'); this.leaveRoom(); }
         return;
       }
       const data = snapshot.val();
-
       if (data.guestId && data.guestName) {
         this.remotePeerName = data.guestName;
         this.remotePeerKey = data.guestId;
-
         if (this._onRemoteReady) {
           try { this._onRemoteReady(!!data.guestReady); } catch(e) {}
         }
       }
-
       if (data.guestId && data.status === 'connecting' && !this.peerConnection) {
         console.log('👥 [MP] Guest joined:', data.guestName);
         this._setState('connecting');
@@ -415,14 +367,10 @@ class MultiplayerEngine {
           this._setState('error');
         }
       }
-
       if (this.isConnected && !data.guestId) {
         console.log('👋 [MP] Guest left');
-        if (this._onDisconnect) {
-          try { this._onDisconnect('guest'); } catch(e) {}
-        }
+        if (this._onDisconnect) { try { this._onDisconnect('guest'); } catch(e) {} }
       }
-
       if (data.status === 'playing' && data.seed && this._onStart) {
         try { this._onStart({ seed: data.seed }); } catch(e) {}
       }
@@ -437,7 +385,6 @@ class MultiplayerEngine {
     this._offerListener = this._signalRef.on('value', async (snapshot) => {
       if (!snapshot.exists()) return;
       if (this.peerConnection) return;
-
       const offer = snapshot.val();
       console.log('📨 [MP] Received offer from host');
       try {
@@ -449,13 +396,9 @@ class MultiplayerEngine {
         this._setState('error');
       }
     });
-
     this._answerListener = db.ref('signaling/' + code + '/answer').on('value', () => {});
   }
 
-  // ============================================================
-  // 🔥 WAIT FOR ICE GATHERING
-  // ============================================================
   _waitForIceGathering(timeoutMs) {
     return new Promise((resolve) => {
       if (!this.peerConnection) return resolve();
@@ -463,35 +406,28 @@ class MultiplayerEngine {
         console.log('🧊 [MP] ICE already complete');
         return resolve();
       }
-
       const timer = setTimeout(() => {
         console.log('⏱️ [MP] ICE gathering timeout (' + timeoutMs + 'ms), continue anyway');
-        cleanup();
-        resolve();
+        cleanup(); resolve();
       }, timeoutMs);
-
       const checkState = () => {
         if (this.peerConnection.iceGatheringState === 'complete') {
           console.log('🧊 [MP] ICE gathering complete');
-          cleanup();
-          resolve();
+          cleanup(); resolve();
         }
       };
-
       const cleanup = () => {
         clearTimeout(timer);
-        try {
-          this.peerConnection.removeEventListener('icegatheringstatechange', checkState);
-        } catch(e) {}
+        try { this.peerConnection.removeEventListener('icegatheringstatechange', checkState); }
+        catch(e) {}
       };
-
       this.peerConnection.addEventListener('icegatheringstatechange', checkState);
     });
   }
 
+  // 🔥 v20.5 FIX B3: Dua DataChannel — control (reliable) + state (unreliable)
   async _setupPeerConnection() {
     if (this.peerConnection) return;
-
     console.log('🔧 [MP] Setting up PeerConnection as', this.role);
 
     if (typeof RTCPeerConnection === 'undefined') {
@@ -510,8 +446,7 @@ class MultiplayerEngine {
         const field = this.isHost ? 'hostIce' : 'guestIce';
         const key = Date.now() + '_' + Math.random().toString(36).slice(2, 6);
         db.ref('signaling/' + this.roomCode + '/' + field + '/' + key)
-          .set(event.candidate.toJSON())
-          .catch(() => {});
+          .set(event.candidate.toJSON()).catch(() => {});
       }
     };
 
@@ -530,89 +465,112 @@ class MultiplayerEngine {
     this.peerConnection.onconnectionstatechange = () => {
       const s = this.peerConnection.connectionState;
       console.log('🔗 [MP] Peer state:', s);
-      if (s === 'failed' || s === 'closed') {
-        this._handlePeerClosed();
-      }
+      if (s === 'failed' || s === 'closed') this._handlePeerClosed();
     };
 
     if (this.isHost) {
-      this._setupDataChannel(this.peerConnection.createDataChannel('game', {
+      // Host: buat 2 channel
+      this.controlChannel = this.peerConnection.createDataChannel('control', {
+        ordered: true  // reliable untuk kontrol
+      });
+      this.stateChannel = this.peerConnection.createDataChannel('state', {
         ordered: false,
-        maxRetransmits: 0
-      }));
+        maxRetransmits: 0  // unreliable untuk game state
+      });
+      this._setupControlChannel(this.controlChannel);
+      this._setupStateChannel(this.stateChannel);
     } else {
+      // Guest: dengarkan 2 channel
       this.peerConnection.ondatachannel = (event) => {
-        console.log('📡 [MP] DataChannel received from host');
-        this._setupDataChannel(event.channel);
+        const ch = event.channel;
+        console.log('📡 [MP] DataChannel received:', ch.label);
+        if (ch.label === 'control') this._setupControlChannel(ch);
+        else if (ch.label === 'state') this._setupStateChannel(ch);
+        else this._setupStateChannel(ch); // fallback
       };
     }
 
     this._listenForRemoteICE();
   }
 
-  _setupDataChannel(channel) {
-    this.dataChannel = channel;
-
+  _setupControlChannel(channel) {
+    this.controlChannel = channel;
     channel.onopen = () => {
-      console.log('✅ [MP] DataChannel OPEN');
-      this.isConnected = true;
-      this._clearConnectTimeout();
-      this._setState('connected');
-      this._startPingLoop();
-
-      this.sendMessage({
-        type: 'hello',
-        name: this.playerName,
-        key: this.playerKey,
-        mode: this.mode
-      });
-
-      if (this._onConnect) {
-        try {
-          this._onConnect({
-            role: this.role,
-            peerName: this.remotePeerName,
-            mode: this.mode
-          });
-        } catch(e) {}
-      }
+      console.log('✅ [MP] Control channel OPEN');
+      this._checkFullyConnected();
     };
-
     channel.onclose = () => {
-      console.log('🚪 [MP] DataChannel CLOSED');
+      console.log('🚪 [MP] Control channel CLOSED');
       this._handlePeerClosed();
     };
-
-    channel.onerror = (e) => {
-      console.error('❌ [MP] DataChannel error:', e);
-    };
-
+    channel.onerror = (e) => console.error('❌ [MP] Control channel error:', e);
     channel.onmessage = (event) => {
-      let msg;
-      try { msg = JSON.parse(event.data); } catch(e) { return; }
+      let msg; try { msg = JSON.parse(event.data); } catch(e) { return; }
       this._handleMessage(msg);
     };
   }
 
+  _setupStateChannel(channel) {
+    this.stateChannel = channel;
+    this.dataChannel = channel; // compat
+    channel.onopen = () => {
+      console.log('✅ [MP] State channel OPEN');
+      this._checkFullyConnected();
+    };
+    channel.onclose = () => {
+      console.log('🚪 [MP] State channel CLOSED');
+      this._handlePeerClosed();
+    };
+    channel.onerror = (e) => console.error('❌ [MP] State channel error:', e);
+    channel.onmessage = (event) => {
+      let msg; try { msg = JSON.parse(event.data); } catch(e) { return; }
+      this._handleMessage(msg);
+    };
+  }
+
+  // Called when BOTH channels are open
+  _checkFullyConnected() {
+    const ctrl = this.controlChannel && this.controlChannel.readyState === 'open';
+    const st = this.stateChannel && this.stateChannel.readyState === 'open';
+    if (!ctrl || !st) return;
+    if (this.isConnected) return;
+
+    console.log('✅ [MP] Both channels OPEN — fully connected');
+    this.isConnected = true;
+    this._clearConnectTimeout();
+    this._setState('connected');
+    this._startPingLoop();
+
+    this.sendMessage({
+      type: 'hello',
+      name: this.playerName,
+      key: this.playerKey,
+      mode: this.mode
+    });
+
+    if (this._onConnect) {
+      try {
+        this._onConnect({ role: this.role, peerName: this.remotePeerName, mode: this.mode });
+      } catch(e) {}
+    }
+  }
+
+  // 🔥 v20.5 FIX B2: FORWARD SEMUA FIELD ke game.js
   _handleMessage(msg) {
     if (!msg || !msg.type) return;
-
     switch (msg.type) {
       case 'hello':
         console.log('👋 [MP] Hello from', msg.name);
         this.remotePeerName = msg.name;
         this.remotePeerKey = msg.key;
         break;
-
       case 'ping':
         this._lastPingReceived = Date.now();
         this.sendMessage({ type: 'pong' });
         break;
-
       case 'pong':
         this._lastPingReceived = Date.now();
         break;
-
       case 'input':
         if (this.isHost && this._onInput) {
           try {
@@ -623,139 +581,100 @@ class MultiplayerEngine {
               skill1: !!msg.skill1,
               skill2: !!msg.skill2,
               skill3: !!msg.skill3,
-              heroType: msg.heroType || 'robot'
+              heroType: msg.heroType || 'robot',
+              // 🔥 FIX B2: forward SEMUA field kontrol
+              spectator: msg.spectator !== undefined ? !!msg.spectator : undefined,
+              respawn: !!msg.respawn,
+              pause: !!msg.pause,
+              resume: !!msg.resume
             });
           } catch(e) {}
         }
         break;
-
       case 'state':
         if (!this.isHost && this._onState) {
           try { this._onState(msg.data); } catch(e) {}
         }
         break;
-
       case 'ready':
-        if (this._onRemoteReady) {
-          try { this._onRemoteReady(!!msg.value); } catch(e) {}
-        }
+        if (this._onRemoteReady) { try { this._onRemoteReady(!!msg.value); } catch(e) {} }
         break;
-
       case 'start':
-        if (!this.isHost && this._onStart) {
-          try { this._onStart({ seed: msg.seed }); } catch(e) {}
-        }
+        if (!this.isHost && this._onStart) { try { this._onStart({ seed: msg.seed }); } catch(e) {} }
         break;
-
       case 'leave':
         console.log('👋 [MP] Remote player left');
         this._handlePeerClosed();
         break;
-
-      default:
-        break;
+      default: break;
     }
   }
 
-  // ============================================================
-  // 🔥 BULK LISTEN ICE (instead of child_added)
-  // ============================================================
   _listenForRemoteICE() {
     const code = this.roomCode;
     if (!code) return;
-
     const remoteField = this.isHost ? 'guestIce' : 'hostIce';
     this._hostIceRef = db.ref('signaling/' + code + '/' + remoteField);
-
     this._hostIceListener = this._hostIceRef.on('value', async (snapshot) => {
       if (!snapshot.exists() || !this.peerConnection) return;
       const data = snapshot.val();
       const candidates = Object.values(data || {});
       for (const cand of candidates) {
         if (cand && typeof cand === 'object') {
-          try {
-            await this.peerConnection.addIceCandidate(new RTCIceCandidate(cand));
-          } catch(e) {
-            // Ignore duplicate candidates
-          }
+          try { await this.peerConnection.addIceCandidate(new RTCIceCandidate(cand)); }
+          catch(e) { /* ignore duplicate */ }
         }
       }
     });
   }
 
-  // ============================================================
-  // 🔥 OFFER — WAIT FOR ICE GATHERING
-  // ============================================================
   async _createOffer() {
     if (!this.peerConnection) return;
-
     const t0 = Date.now();
     const offer = await this.peerConnection.createOffer();
     await this.peerConnection.setLocalDescription(offer);
     console.log('📝 [MP] Local description set (host)');
-
-    // 🔥 Tunggu ICE gathering selesai
     await this._waitForIceGathering(MP_CONFIG.ICE_GATHERING_TIMEOUT_MS);
-
     const localDesc = this.peerConnection.localDescription;
     await db.ref('signaling/' + this.roomCode + '/offer').set({
-      type: localDesc.type,
-      sdp: localDesc.sdp
+      type: localDesc.type, sdp: localDesc.sdp
     });
     console.log('📤 [MP] Offer sent with ICE (' + (Date.now() - t0) + 'ms)');
 
     this._answerListener = db.ref('signaling/' + this.roomCode + '/answer').on('value', async (snapshot) => {
       if (!snapshot.exists()) return;
       if (this.peerConnection.signalingState !== 'have-local-offer') return;
-
       const answer = snapshot.val();
       console.log('📨 [MP] Answer received');
-      try {
-        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-      } catch(e) {
-        console.warn('⚠️ [MP] Set answer error:', e.message);
-      }
+      try { await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer)); }
+      catch(e) { console.warn('⚠️ [MP] Set answer error:', e.message); }
     });
 
     this._startConnectTimeout();
   }
 
-  // ============================================================
-  // 🔥 ANSWER — WAIT FOR ICE GATHERING
-  // ============================================================
   async _handleOffer(offer) {
     if (!this.peerConnection) return;
-
     const t0 = Date.now();
     await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
     console.log('📝 [MP] Remote description set (guest)');
-
     const answer = await this.peerConnection.createAnswer();
     await this.peerConnection.setLocalDescription(answer);
     console.log('📝 [MP] Local answer created');
-
-    // 🔥 Tunggu ICE gathering selesai
     await this._waitForIceGathering(MP_CONFIG.ICE_GATHERING_TIMEOUT_MS);
-
     const localDesc = this.peerConnection.localDescription;
     await db.ref('signaling/' + this.roomCode + '/answer').set({
-      type: localDesc.type,
-      sdp: localDesc.sdp
+      type: localDesc.type, sdp: localDesc.sdp
     });
     console.log('📤 [MP] Answer sent with ICE (' + (Date.now() - t0) + 'ms)');
   }
 
-  // ============================================================
-  // PING / TIMEOUT
-  // ============================================================
   _startPingLoop() {
     this._lastPingReceived = Date.now();
-
     this._pingTimer = setInterval(() => {
       if (!this.isConnected) return;
       this.sendMessage({ type: 'ping' });
     }, MP_CONFIG.PING_INTERVAL_MS);
-
     this._pingCheckTimer = setInterval(() => {
       if (!this.isConnected) return;
       if (Date.now() - this._lastPingReceived > MP_CONFIG.PING_TIMEOUT_MS) {
@@ -782,41 +701,33 @@ class MultiplayerEngine {
   }
 
   _clearConnectTimeout() {
-    if (this._connectTimeout) {
-      clearTimeout(this._connectTimeout);
-      this._connectTimeout = null;
-    }
+    if (this._connectTimeout) { clearTimeout(this._connectTimeout); this._connectTimeout = null; }
   }
 
   _handlePeerClosed() {
     if (!this.isConnected && this.connectionState === 'idle') return;
-
     const wasConnected = this.isConnected;
     this.isConnected = false;
-
     if (wasConnected && this._onDisconnect) {
       try { this._onDisconnect('peer'); } catch(e) {}
     }
     this._setState('closed');
   }
 
-  _cleanup(keepFirebaseListeners) {
+  // 🔥 v20.5: cleanup yang benar
+  _cleanup(clearState) {
     this._stopPingLoop();
     this._clearConnectTimeout();
+    if (this._cleanupTimer) { clearTimeout(this._cleanupTimer); this._cleanupTimer = null; }
 
-    if (this._cleanupTimer) {
-      clearTimeout(this._cleanupTimer);
-      this._cleanupTimer = null;
-    }
-
-    if (this.dataChannel) {
-      try {
-        if (this.dataChannel.readyState === 'open') {
-          this.dataChannel.close();
-        }
-      } catch(e) {}
-      this.dataChannel = null;
-    }
+    [this.controlChannel, this.stateChannel, this.dataChannel].forEach(ch => {
+      if (!ch) return;
+      try { if (ch.readyState === 'open' || ch.readyState === 'connecting') ch.close(); }
+      catch(e) {}
+    });
+    this.controlChannel = null;
+    this.stateChannel = null;
+    this.dataChannel = null;
 
     if (this.peerConnection) {
       try { this.peerConnection.close(); } catch(e) {}
@@ -825,38 +736,31 @@ class MultiplayerEngine {
 
     if (typeof db !== 'undefined' && db) {
       try {
-        if (this._roomRef && this._roomListener) {
-          this._roomRef.off('value', this._roomListener);
-        }
-        if (this._signalRef && this._offerListener) {
-          this._signalRef.off('value', this._offerListener);
-        }
-        if (this._answerListener && this.roomCode) {
+        if (this._roomRef && this._roomListener) this._roomRef.off('value', this._roomListener);
+        if (this._signalRef && this._offerListener) this._signalRef.off('value', this._offerListener);
+        if (this._answerListener && this.roomCode)
           db.ref('signaling/' + this.roomCode + '/answer').off('value', this._answerListener);
-        }
-        if (this._hostIceRef && this._hostIceListener) {
+        if (this._hostIceRef && this._hostIceListener)
           this._hostIceRef.off('value', this._hostIceListener);
-        }
       } catch(e) {}
     }
 
-    this._roomRef = null;
-    this._roomListener = null;
-    this._signalRef = null;
-    this._offerListener = null;
+    this._roomRef = null; this._roomListener = null;
+    this._signalRef = null; this._offerListener = null;
     this._answerListener = null;
-    this._hostIceRef = null;
-    this._hostIceListener = null;
+    this._hostIceRef = null; this._hostIceListener = null;
 
-    if (!keepFirebaseListeners) {
-      // Ringan
-    } else {
+    // 🔥 FIX: Selalu reset state saat cleanup penuh
+    if (clearState) {
       this.role = null;
       this.isHost = false;
       this.roomCode = null;
       this.remotePeerName = null;
       this.remotePeerKey = null;
       this.isConnected = false;
+      this._lastPingReceived = 0;
+      this._lastInputSent = 0;
+      this._lastStateSent = 0;
     }
   }
 
@@ -871,18 +775,11 @@ class MultiplayerEngine {
 
   _emitError(msg) {
     console.error('⚠️ [MP]', msg);
-    if (this._onError) {
-      try { this._onError(msg); } catch(e) {}
-    }
+    if (this._onError) { try { this._onError(msg); } catch(e) {} }
   }
 }
 
-// ============================================================
-// EXPORT
-// ============================================================
 window.MultiplayerEngine = MultiplayerEngine;
 window.MP = new MultiplayerEngine();
-
-console.log('✅ [MP] multiplayer.js loaded (v20.1)');
-
+console.log('✅ [MP] multiplayer.js loaded (v20.5)');
 })();
