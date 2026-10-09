@@ -2,7 +2,7 @@
 // PAHLAWAN BINTANG — Service Worker v20.8
 // ============================================================
 
-const CACHE_VERSION = 'v20.8';
+const CACHE_VERSION = 'v20.8.1';
 const CACHE_NAME = `pahlawan-bintang-${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
@@ -10,7 +10,7 @@ const PRECACHE_ASSETS = [
   './index.html?v=20.8',
   './style.css?v=20.8',
   './multiplayer.js?v=20.8',
-  './game.js?v=20.8',
+  './game.js?v=20.8.1',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
