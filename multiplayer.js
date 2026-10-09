@@ -1,9 +1,10 @@
 // ============================================================
-// PAHLAWAN BINTANG — multiplayer.js v20.6
-// "Full Sync Edition"
+// PAHLAWAN BINTANG — multiplayer.js v20.8
+// "Analog Sync Edition"
 // ------------------------------------------------------------
-// v20.6:
-//   - Sync versi ke v20.6 (logika sama dengan v20.5)
+// v20.8:
+//   - Dukungan `moveX` (float analog axis -1..1) untuk joystick
+//   - Backward compat dengan `left`/`right` boolean
 // ============================================================
 
 (function() {
@@ -92,7 +93,7 @@ class MultiplayerEngine {
     this._onRoomJoined = null;
     this._onRoomFull = null;
 
-    console.log('🎮 [MP] MultiplayerEngine initialized (v20.6)');
+    console.log('🎮 [MP] MultiplayerEngine initialized (v20.8)');
   }
 
   async createRoom(mode, playerName) {
@@ -226,6 +227,7 @@ class MultiplayerEngine {
     } catch(e) { console.warn('⚠️ [MP] startGame error:', e); }
   }
 
+  // 🔥 v20.8 — Forward moveX (analog axis)
   sendInput(input) {
     if (!this.isConnected) return;
     const now = Date.now();
@@ -236,6 +238,7 @@ class MultiplayerEngine {
       type: 'input',
       left: !!input.left,
       right: !!input.right,
+      moveX: (typeof input.moveX === 'number') ? input.moveX : 0,
       shoot: !!input.shoot,
       skill1: !!input.skill1,
       skill2: !!input.skill2,
@@ -554,6 +557,7 @@ class MultiplayerEngine {
             this._onInput({
               left: !!msg.left,
               right: !!msg.right,
+              moveX: (typeof msg.moveX === 'number') ? msg.moveX : 0,
               shoot: !!msg.shoot,
               skill1: !!msg.skill1,
               skill2: !!msg.skill2,
@@ -755,5 +759,5 @@ class MultiplayerEngine {
 
 window.MultiplayerEngine = MultiplayerEngine;
 window.MP = new MultiplayerEngine();
-console.log('✅ [MP] multiplayer.js loaded (v20.6)');
+console.log('✅ [MP] multiplayer.js loaded (v20.8)');
 })();
