@@ -1,13 +1,9 @@
 /* =============================================================
-   PAHLAWAN BINTANG — style.css v20.6
+   PAHLAWAN BINTANG — style.css v20.8
    Complete stylesheet — landscape-first, ringan, defensive
    ------------------------------------------------------------
-   v20.6 NEW:
-   - Bigger menu cards + float/shimmer animations
-   - Level Select modal (grid 1-50)
-   - Math Quiz modal (unlock hero)
-   - Certificate modal (canvas render)
-   - Hero card lock/unlock visual
+   v20.8 NEW:
+   - Analog Joystick menggantikan tombol arah kiri/kanan
    ============================================================= */
 
 /* ---------------------------------------------------------------
@@ -655,7 +651,7 @@ input:focus { border-color: var(--accent); }
 }
 
 /* ---------------------------------------------------------------
-   6. MENU GRID (v20.6 — BIGGER + ANIMATED)
+   6. MENU GRID
    --------------------------------------------------------------- */
 .menu-grid {
   display: grid;
@@ -916,24 +912,110 @@ input:focus { border-color: var(--accent); }
 }
 .skill-row { flex-direction: row-reverse; }
 
-#btn-move-left, #btn-move-right {
-  width: clamp(46px, 9vmin, 68px);
-  height: clamp(46px, 9vmin, 68px);
+/* ---------------------------------------------------------------
+   8. 🔥 v20.8 — ANALOG JOYSTICK
+   --------------------------------------------------------------- */
+.analog-joystick {
+  position: relative;
+  width: clamp(110px, 22vmin, 160px);
+  height: clamp(110px, 22vmin, 160px);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: grab;
+  pointer-events: auto;
+}
+.analog-joystick:active { cursor: grabbing; }
+
+.joystick-base {
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
-  border: 2px solid var(--border-soft);
-  display: inline-flex;
+  background: radial-gradient(circle at center,
+              rgba(0, 20, 50, 0.55) 0%,
+              rgba(0, 0, 0, 0.78) 80%);
+  border: 2px solid rgba(0, 210, 255, 0.4);
+  box-shadow:
+    inset 0 0 24px rgba(0, 0, 0, 0.7),
+    0 0 24px rgba(0, 210, 255, 0.18),
+    0 6px 16px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.joystick-decor {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16%;
+  height: 16%;
+  color: rgba(0, 210, 255, 0.4);
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+.joystick-decor-left { left: 6%; }
+.joystick-decor-right { right: 6%; }
+.joystick-decor svg { width: 100%; height: 100%; fill: currentColor; }
+
+.analog-joystick.is-active .joystick-decor-left,
+.analog-joystick.is-active .joystick-decor-right {
+  color: rgba(0, 210, 255, 0.9);
+}
+
+.joystick-knob {
+  position: absolute;
+  width: 42%;
+  height: 42%;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%,
+              #7ad4ff 0%,
+              #00a3e0 55%,
+              #005a8a 100%);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.6),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.35),
+    inset 0 3px 6px rgba(255, 255, 255, 0.25);
+  transform: translate(-50%, -50%);
+  transition: box-shadow 0.15s ease;
+  will-change: transform;
+  pointer-events: none;
+  display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent);
-  transition: transform 0.08s ease, background 0.15s ease;
 }
-#btn-move-left:active, #btn-move-right:active {
-  background: rgba(0, 210, 255, 0.25);
-  transform: scale(0.92);
-}
-#btn-move-left .ico, #btn-move-right .ico { width: 50%; height: 50%; }
 
+.joystick-knob-inner {
+  width: 40%;
+  height: 40%;
+  border-radius: 50%;
+  background: radial-gradient(circle at center,
+              rgba(255, 255, 255, 0.9),
+              rgba(255, 255, 255, 0.4));
+  box-shadow: inset 0 0 6px rgba(0, 90, 138, 0.5);
+  pointer-events: none;
+}
+
+.analog-joystick.is-active .joystick-knob {
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.7),
+    0 0 28px rgba(0, 210, 255, 0.75),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.35),
+    inset 0 3px 6px rgba(255, 255, 255, 0.3);
+}
+
+body.low-end .joystick-base {
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.6);
+}
+body.low-end .analog-joystick.is-active .joystick-knob {
+  box-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.7),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.35);
+}
+
+/* Skill buttons */
 #btn-freeze, #btn-shield, #btn-bomb {
   position: relative;
   width: clamp(40px, 8vmin, 58px);
@@ -973,7 +1055,7 @@ input:focus { border-color: var(--accent); }
 }
 
 /* ---------------------------------------------------------------
-   8. OVERLAYS
+   9. OVERLAYS
    --------------------------------------------------------------- */
 #boss-warning-overlay,
 #level-intro,
@@ -1208,7 +1290,7 @@ input:focus { border-color: var(--accent); }
 .ad-note { font-size: var(--fs-xs); color: var(--success); }
 
 /* ---------------------------------------------------------------
-   9. MODALS
+   10. MODALS
    --------------------------------------------------------------- */
 .modal {
   position: fixed;
@@ -1293,6 +1375,11 @@ input:focus { border-color: var(--accent); }
 .actor-card[data-actor="dragon"] .actor-avatar { color: var(--success); }
 .actor-card[data-actor="cat"] .actor-avatar { color: var(--accent-2); }
 .actor-card[data-actor="unicorn"] .actor-avatar { color: var(--purple); }
+.actor-card[data-actor="phoenix"] .actor-avatar { color: #ff8c00; }
+.actor-card[data-actor="ninja"] .actor-avatar { color: #c56cf0; }
+.actor-card[data-actor="wizard"] .actor-avatar { color: #00b8d4; }
+.actor-card[data-actor="archer"] .actor-avatar { color: #2ed573; }
+.actor-card[data-actor="ghost"] .actor-avatar { color: #e6eefc; }
 .actor-card span {
   font-size: clamp(8px, 1.3vmin, 11px);
   font-weight: 700;
@@ -1302,8 +1389,6 @@ input:focus { border-color: var(--accent); }
   white-space: nowrap;
   max-width: 100%;
 }
-
-/* 🔥 v20.6: Locked hero overlay */
 .actor-card.locked {
   opacity: 0.6;
   cursor: pointer;
@@ -1347,7 +1432,6 @@ input:focus { border-color: var(--accent); }
   z-index: 2;
 }
 
-/* Shop */
 .shop-item {
   display: flex;
   align-items: center;
@@ -1398,7 +1482,6 @@ input:focus { border-color: var(--accent); }
 }
 .btn-buy:active { transform: scale(0.94); }
 
-/* Leaderboard */
 .lb-tabs, .ach-tabs {
   display: flex;
   gap: 4px;
@@ -1456,7 +1539,6 @@ input:focus { border-color: var(--accent); }
   padding: 20px;
 }
 
-/* Achievements */
 .modal-achievements-box { max-width: min(96vw, 720px); }
 .ach-stats-bar {
   display: grid;
@@ -2097,9 +2179,6 @@ input:focus { border-color: var(--accent); }
 }
 .mp-mode-indicator strong { color: var(--accent); }
 
-/* ---------------------------------------------------------------
-   10. NARRATIVE
-   --------------------------------------------------------------- */
 #narrative-overlay {
   background: rgba(0, 0, 0, 0.85);
   padding: var(--pad);
@@ -2179,9 +2258,6 @@ input:focus { border-color: var(--accent); }
 }
 @keyframes blink { 50% { opacity: 0; } }
 
-/* ---------------------------------------------------------------
-   11. TOAST & FLOATING TEXT
-   --------------------------------------------------------------- */
 #achievement-toast-container {
   position: fixed;
   top: calc(var(--pad) + var(--safe-top));
@@ -2296,7 +2372,7 @@ input:focus { border-color: var(--accent); }
 }
 
 /* ---------------------------------------------------------------
-   12. LOW-END PERF
+   11. LOW-END PERF
    --------------------------------------------------------------- */
 body.low-end .shooting-star,
 body.low-end .orbit-ring,
@@ -2314,7 +2390,7 @@ body.low-end .floating-text {
 }
 
 /* ---------------------------------------------------------------
-   13. LANDSCAPE LAYOUT (primary)
+   12. LANDSCAPE LAYOUT
    --------------------------------------------------------------- */
 @media (orientation: landscape) {
   .menu-box {
@@ -2416,9 +2492,6 @@ body.low-end .floating-text {
   .menu-card-label { font-size: 10px; }
 }
 
-/* ---------------------------------------------------------------
-   14. PORTRAIT FALLBACK
-   --------------------------------------------------------------- */
 @media (orientation: portrait) {
   .menu-box {
     display: flex;
@@ -2437,7 +2510,7 @@ body.low-end .floating-text {
 }
 
 /* ---------------------------------------------------------------
-   15. SCROLLBAR
+   13. SCROLLBAR
    --------------------------------------------------------------- */
 * {
   scrollbar-width: thin;
@@ -2451,12 +2524,8 @@ body.low-end .floating-text {
 }
 
 /* =============================================================
-   v20.6 NEW COMPONENTS
+   14. LEVEL SELECT MODAL
    ============================================================= */
-
-/* ---------------------------------------------------------------
-   16. LEVEL SELECT MODAL
-   --------------------------------------------------------------- */
 #modal-level-select > .modal-box {
   max-width: min(96vw, 720px);
 }
@@ -2528,9 +2597,9 @@ body.low-end .floating-text {
   line-height: 1;
 }
 
-/* ---------------------------------------------------------------
-   17. MATH QUIZ MODAL
-   --------------------------------------------------------------- */
+/* =============================================================
+   15. MATH QUIZ MODAL
+   ============================================================= */
 #modal-math-quiz > .modal-box {
   max-width: min(94vw, 480px);
   text-align: center;
@@ -2624,9 +2693,9 @@ body.low-end .floating-text {
 .math-quiz-result.lose h3 { color: var(--danger); }
 .math-quiz-result p { margin: 4px 0; color: var(--text-dim); }
 
-/* ---------------------------------------------------------------
-   18. CERTIFICATE MODAL
-   --------------------------------------------------------------- */
+/* =============================================================
+   16. CERTIFICATE MODAL
+   ============================================================= */
 #modal-certificate {
   z-index: 900;
 }
@@ -2684,9 +2753,9 @@ body.low-end .floating-text {
   color: var(--text);
 }
 
-/* ---------------------------------------------------------------
-   19. LEVEL SELECT BUTTON (in menu)
-   --------------------------------------------------------------- */
+/* =============================================================
+   17. LEVEL SELECT BUTTON
+   ============================================================= */
 #btn-level-select {
   background: linear-gradient(180deg, #ffd700, #cc9900);
   color: #1a1200;
@@ -2713,5 +2782,5 @@ body.low-end .floating-text {
 }
 
 /* =============================================================
-   END OF v20.6 STYLE.CSS
+   END OF v20.8 STYLE.CSS
    ============================================================= */
