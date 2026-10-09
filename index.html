@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css?v=20.7" />
+  <link rel="stylesheet" href="./style.css?v=20.8" />
 </head>
 <body class="no-select">
 
@@ -23,7 +23,6 @@
      ============================================================ -->
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
   <defs>
-    <!-- ============ HEROES LAMA ============ -->
     <symbol id="i-robot" viewBox="0 0 40 40">
       <rect x="8" y="12" width="24" height="20" rx="3" fill="currentColor"/>
       <rect x="12" y="4" width="16" height="10" rx="3" fill="currentColor" opacity=".65"/>
@@ -62,8 +61,6 @@
       <circle cx="25" cy="22" r="1.5" fill="#05061a"/>
       <path d="M17 28 Q20 30 23 28" stroke="#05061a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
     </symbol>
-
-    <!-- ============ HEROES BARU v20.7 ============ -->
     <symbol id="i-phoenix" viewBox="0 0 40 40">
       <path d="M20 4 Q14 10 12 18 Q8 16 4 20 Q8 22 12 22 Q12 30 20 36 Q28 30 28 22 Q32 22 36 20 Q32 16 28 18 Q26 10 20 4 Z" fill="currentColor"/>
       <path d="M20 8 Q16 14 16 20 Q20 18 24 20 Q24 14 20 8 Z" fill="#ffd700" opacity="0.7"/>
@@ -105,8 +102,6 @@
       <circle cx="25" cy="18" r="0.8" fill="#00d2d3"/>
       <ellipse cx="20" cy="26" rx="3" ry="4" fill="#05061a" opacity="0.7"/>
     </symbol>
-
-    <!-- ============ UI ICONS ============ -->
     <symbol id="i-target" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
       <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -332,7 +327,7 @@
   <div class="menu-box">
 
     <div class="menu-topbar">
-      <div class="version-badge">v20.7</div>
+      <div class="version-badge">v20.8</div>
       <button id="btn-audio" class="btn-audio" title="Suara" type="button">
         <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
       </button>
@@ -542,12 +537,20 @@
 
   <div class="hud-bottom">
     <div class="ctrl-cluster ctrl-left">
-      <button id="btn-move-left" class="btn-ctrl" aria-label="Kiri" type="button">
-        <svg class="ico" viewBox="0 0 24 24"><use href="#i-chev-left"/></svg>
-      </button>
-      <button id="btn-move-right" class="btn-ctrl" aria-label="Kanan" type="button">
-        <svg class="ico" viewBox="0 0 24 24"><use href="#i-chev-right"/></svg>
-      </button>
+      <div id="analog-joystick" class="analog-joystick" role="slider"
+           aria-label="Kontrol Gerak" aria-valuemin="-1" aria-valuemax="1" aria-valuenow="0">
+        <div class="joystick-base">
+          <div class="joystick-decor joystick-decor-left">
+            <svg viewBox="0 0 24 24"><use href="#i-chev-left"/></svg>
+          </div>
+          <div class="joystick-decor joystick-decor-right">
+            <svg viewBox="0 0 24 24"><use href="#i-chev-right"/></svg>
+          </div>
+          <div class="joystick-knob" id="joystick-knob">
+            <div class="joystick-knob-inner"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="ctrl-cluster ctrl-right skill-row">
@@ -645,7 +648,6 @@
     <h2>PILIH HERO</h2>
     <p class="mp-subtitle">Hero terkunci? Selesaikan 20 soal MTK untuk membukanya!</p>
     <div class="actor-grid" id="actor-grid">
-      <!-- 5 HERO LAMA -->
       <div class="actor-card selected unlocked" data-actor="robot">
         <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-robot"/></svg>
         <span>Robot Cyber</span>
@@ -666,7 +668,6 @@
         <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-unicorn"/></svg>
         <span>Unicorn Star</span>
       </div>
-      <!-- 5 HERO BARU v20.7 -->
       <div class="actor-card locked" data-actor="phoenix">
         <svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-phoenix"/></svg>
         <span>Phoenix Api</span>
@@ -1223,9 +1224,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <!-- ============ MULTIPLAYER ENGINE ============ -->
-<script src="./multiplayer.js?v=20.6"></script>
+<script src="./multiplayer.js?v=20.8"></script>
 
 <!-- ============ GAME SCRIPT ============ -->
-<script src="./game.js?v=20.7"></script>
+<script src="./game.js?v=20.8"></script>
 </body>
 </html>
