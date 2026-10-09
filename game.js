@@ -1,12 +1,13 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v20.8
-// "Analog Joystick Edition"
+// PAHLAWAN BINTANG — game.js v20.8.1
+// "Analog Joystick Responsive Edition"
 // ------------------------------------------------------------
-// v20.8 NEW:
-//   1. Analog joystick menggantikan tombol arah
-//   2. Analog input -1..1 untuk smooth movement
-//   3. Multiplayer sync moveX (axis) via WebRTC
-//   4. Keyboard fallback tetap ada
+// v20.8.1 NEW:
+//   1. Velocity-based joystick movement (tanpa double smoothing)
+//   2. Perceptual curve (pow 0.7) — tilt kecil tetap responsif
+//   3. Dynamic lerp untuk keyboard/pointer tap
+//   4. Guest local prediction (hilangkan rubber-band effect)
+//   5. Host sync rate 33ms untuk co-op
 // =============================================================
 
 // =============================================================
@@ -1296,7 +1297,7 @@ let comboBoostLastNotified = 0;
 let isMovingLeft = false;
 let isMovingRight = false;
 
-// 🔥 v20.8 — Analog Joystick State
+// 🔥 v20.8.1 — Analog Joystick State
 let joystickAxis = 0;              // -1 = kiri penuh, 0 = tengah, 1 = kanan penuh
 let joystickActive = false;
 let joystickPointerId = null;
@@ -1304,7 +1305,9 @@ let joystickCenterX = 0;
 let joystickCenterY = 0;
 let joystickRadius = 0;
 let joystickMaxOffset = 0;
-const JOYSTICK_DEADZONE = 0.12;
+const JOYSTICK_DEADZONE = 0.10;    // sedikit lebih kecil = lebih responsif
+const JOYSTICK_CURVE = 0.7;        // perceptual curve exponent
+const JOYSTICK_SPEED_MULT = 1.35;  // multiplier kecepatan analog
 
 let currentActor = localStorage.getItem('pahlawan_actor') || 'robot';
 let playerName = localStorage.getItem('pahlawan_nama') || 'Pahlawan';
@@ -2171,7 +2174,7 @@ function updateActorGridUI() {
 }
 
 // =============================================================
-// 🔥 v20.8 — ANALOG JOYSTICK HANDLER
+// 🔥 v20.8.1 — ANALOG JOYSTICK HANDLER (RESPONSIVE)
 // =============================================================
 function setupJoystick() {
   const joystick = document.getElementById('analog-joystick');
@@ -2200,7 +2203,8 @@ function setupJoystick() {
     } else {
       const sign = rawAxis > 0 ? 1 : -1;
       const abs = (Math.abs(rawAxis) - JOYSTICK_DEADZONE) / (1 - JOYSTICK_DEADZONE);
-      joystickAxis = sign * Math.min(1, abs);
+      // 🔥 Perceptual curve: tilt kecil tetap terasa responsif
+      joystickAxis = sign * Math.pow(Math.min(1, abs), JOYSTICK_CURVE);
     }
 
     joystick.setAttribute('aria-valuenow', joystickAxis.toFixed(2));
@@ -2262,7 +2266,7 @@ function setupJoystick() {
   window.addEventListener('orientationchange', () => { if (joystickActive) setTimeout(refreshCenter, 350); });
   document.addEventListener('visibilitychange', () => { if (document.hidden && joystickActive) resetKnob(); });
 
-  console.log('✅ [Joystick] Ready');
+  console.log('✅ [Joystick] Ready (v20.8.1 responsive)');
 }
 
 // =============================================================
@@ -2389,7 +2393,7 @@ function setupEventListeners() {
     };
   }
 
-  // 🔥 v20.8 — ANALOG JOYSTICK setup
+  // 🔥 v20.8.1 — ANALOG JOYSTICK setup
   setupJoystick();
 
   // Keyboard fallback
@@ -2757,7 +2761,7 @@ function updateSkillButtonsUI() {
 }
 
 function goToMainMenu() {
-  // 🔥 v20.8 — reset joystick
+  // 🔥 v20.8.1 — reset joystick
   joystickAxis = 0;
   joystickActive = false;
   joystickPointerId = null;
@@ -3289,10 +3293,11 @@ function mpActuallyStartCoop() {
 
 function mpStartHostSyncLoop() {
   if (mpSyncTimer) clearInterval(mpSyncTimer);
+  // 🔥 v20.8.1 — 33ms (~30fps) untuk co-op lebih responsif
   mpSyncTimer = setInterval(() => {
     if (!mpActive || mpRole !== 'host' || !isGameRunning) return;
     mpHostSendState();
-  }, 50);
+  }, 33);
 }
 
 function mpStopHostSyncLoop() {
@@ -3774,8 +3779,9 @@ function checkLevelObjectives() {
 
 // =============================================================
 // END OF PART 1 — Sections 1-17
-// Lanjut ke Part 2 (Sections 18-34) di response berikutnya
+// Lanjut ke Part 2 (Sections 18-34)
 // =============================================================
+
 // =============================================================
 // 18. DRAW HERO (10 HERO VISUAL BERBEDA)
 // =============================================================
@@ -4156,6 +4162,7 @@ function drawBullet(ctx, b, S) {
 
 // =============================================================
 // 19. GAME LOOP (HOST / SINGLE)
+// 🔥 v20.8.1 — JOYSTICK RESPONSIVE FIX DI SINI
 // =============================================================
 function gameLoop() {
   if (!isGameRunning || isGamePaused) return;
@@ -4203,25 +4210,42 @@ function gameLoop() {
   ctx.fillRect(0, H - groundH - 5, W, 5);
   ctx.globalAlpha = 1;
 
-  // 🔥 v20.8 — Analog joystick (prioritas) dengan keyboard fallback
+  // ==========================================================
+  // 🔥 v20.8.1 FIX — LOCAL PLAYER MOVEMENT (VELOCITY-BASED)
+  // ==========================================================
   if (localPlayerActive) {
     let moveInput = 0;
-    if (Math.abs(joystickAxis) > 0.05) {
+    let useJoystick = false;
+
+    if (Math.abs(joystickAxis) > 0.02) {
       moveInput = joystickAxis;
+      useJoystick = true;
     } else if (isMovingLeft) {
       moveInput = -1;
     } else if (isMovingRight) {
       moveInput = 1;
     }
-    if (moveInput !== 0) {
-      playerTargetX += moveInput * playerSpeed;
+
+    if (useJoystick) {
+      // 🔥 Velocity-based: langsung gerakkan hero, TANPA lerp
+      playerX += moveInput * playerSpeed * JOYSTICK_SPEED_MULT;
+      playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
+      playerTargetX = playerX; // sinkronkan target
+    } else {
+      // Keyboard / pointer tap: tetap pakai target + lerp dinamis
+      if (moveInput !== 0) {
+        playerTargetX += moveInput * playerSpeed;
+        playerTargetX = Math.max(40 * S, Math.min(W - 40 * S, playerTargetX));
+      }
+      const dx = playerTargetX - playerX;
+      const dynamicLerp = Math.min(0.55, PLAYER_LERP + Math.abs(dx) / (W * 0.4));
+      if (Math.abs(dx) > 0.5) playerX += dx * dynamicLerp;
+      else playerX = playerTargetX;
+      playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
     }
-    playerTargetX = Math.max(40 * S, Math.min(W - 40 * S, playerTargetX));
-    const dx = playerTargetX - playerX;
-    if (Math.abs(dx) > 0.5) playerX += dx * PLAYER_LERP;
-    else playerX = playerTargetX;
-    playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
   }
+  // ==========================================================
+
   if (playerHitFlash > 0) playerHitFlash--;
 
   if (isSuperShot) { superShotTimer--; if (superShotTimer <= 0) isSuperShot = false; }
@@ -4234,24 +4258,36 @@ function gameLoop() {
 
   const heroPlayerY = H - 45 * S;
 
-  // Guest input handling (host processes)
+  // ==========================================================
+  // 🔥 v20.8.1 FIX — GUEST INPUT HANDLING (VELOCITY-BASED)
+  // ==========================================================
   if (mpActive && mpRole === 'host' && !mpRemoteGuestSpectator) {
-    // 🔥 v20.8 — Guest analog input
     let guestMove = 0;
-    if (typeof mpGuestInput.moveX === 'number' && Math.abs(mpGuestInput.moveX) > 0.05) {
+    let guestUseJoystick = false;
+    if (typeof mpGuestInput.moveX === 'number' && Math.abs(mpGuestInput.moveX) > 0.02) {
       guestMove = mpGuestInput.moveX;
+      guestUseJoystick = true;
     } else if (mpGuestInput.left) {
       guestMove = -1;
     } else if (mpGuestInput.right) {
       guestMove = 1;
     }
-    if (guestMove !== 0) {
-      mpGuestTargetX += guestMove * playerSpeed;
+
+    if (guestUseJoystick) {
+      mpGuestX += guestMove * playerSpeed * JOYSTICK_SPEED_MULT;
+      mpGuestX = Math.max(40 * S, Math.min(W - 40 * S, mpGuestX));
+      mpGuestTargetX = mpGuestX;
+    } else {
+      if (guestMove !== 0) {
+        mpGuestTargetX += guestMove * playerSpeed;
+        mpGuestTargetX = Math.max(40 * S, Math.min(W - 40 * S, mpGuestTargetX));
+      }
+      const gdx = mpGuestTargetX - mpGuestX;
+      const dynamicLerp = Math.min(0.55, PLAYER_LERP + Math.abs(gdx) / (W * 0.4));
+      if (Math.abs(gdx) > 0.5) mpGuestX += gdx * dynamicLerp;
+      else mpGuestX = mpGuestTargetX;
     }
-    mpGuestTargetX = Math.max(40 * S, Math.min(W - 40 * S, mpGuestTargetX));
-    const gdx = mpGuestTargetX - mpGuestX;
-    if (Math.abs(gdx) > 0.5) mpGuestX += gdx * PLAYER_LERP;
-    else mpGuestX = mpGuestTargetX;
+
     if (mpGuestShootCd > 0) mpGuestShootCd--;
 
     if (mpGuestInput.shoot && mpGuestShootCd <= 0 && mpGuestAlive) {
@@ -4288,6 +4324,7 @@ function gameLoop() {
       savePlayerStats(); checkAchievements();
     }
   }
+  // ==========================================================
 
   // Local shooting (per-hero)
   const hero = HERO_DATA[currentActor] || HERO_DATA.robot;
@@ -4833,7 +4870,8 @@ function drawParallaxStars(ctx, W, H) {
 }
 
 // =============================================================
-// 19b. GUEST RENDER-ONLY LOOP
+// 19b. GUEST RENDER-ONLY LOOP (dengan LOCAL PREDICTION)
+// 🔥 v20.8.1 FIX — guest local prediction untuk joystick
 // =============================================================
 function gameLoopGuest() {
   const W = VIRTUAL_WIDTH;
@@ -4874,7 +4912,7 @@ function gameLoopGuest() {
 
   const heroPlayerY = H - 45 * S;
 
-  // 🔥 v20.8 — kirim analog axis
+  // 🔥 v20.8.1 — kirim analog axis
   if (MP && MP.isConnected) {
     MP.sendInput({
       left: localPlayerActive ? isMovingLeft : false,
@@ -4897,9 +4935,28 @@ function gameLoopGuest() {
     mpGuestInput.resume = false;
   }
 
-  const gdx = mpGuestX - playerX;
-  if (Math.abs(gdx) > 0.5) playerX += gdx * 0.35;
-  else playerX = mpGuestX;
+  // ==========================================================
+  // 🔥 v20.8.1 FIX — GUEST LOCAL PREDICTION
+  // ==========================================================
+  if (localPlayerActive && Math.abs(joystickAxis) > 0.02) {
+    // Joystick aktif: prediksi lokal untuk hilangkan lag jaringan
+    playerX += joystickAxis * playerSpeed * JOYSTICK_SPEED_MULT;
+    playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
+    // Soft reconcile ke posisi host (bukan hard snap) → hindari rubber-band
+    mpGuestX = mpGuestX * 0.6 + playerX * 0.4;
+  } else if (localPlayerActive && (isMovingLeft || isMovingRight)) {
+    // Keyboard fallback
+    const kbMove = isMovingLeft ? -1 : 1;
+    playerX += kbMove * playerSpeed;
+    playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
+    mpGuestX = mpGuestX * 0.6 + playerX * 0.4;
+  } else {
+    // Tidak ada input: ikuti posisi host
+    const gdx = mpGuestX - playerX;
+    if (Math.abs(gdx) > 0.5) playerX += gdx * 0.4;
+    else playerX = mpGuestX;
+  }
+  // ==========================================================
 
   if (mpRemoteAlive !== false && !mpRemoteHostSpectator) {
     const hostX = mpRemoteX;
@@ -5992,5 +6049,5 @@ window.addEventListener('load', () => {
 });
 
 // =============================================================
-// END OF FILE — v20.8 (Analog Joystick Edition)
+// END OF FILE — v20.8.1 (Analog Joystick Responsive Edition)
 // =============================================================
