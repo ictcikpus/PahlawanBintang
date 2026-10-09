@@ -1,32 +1,24 @@
 // ============================================================
-// PAHLAWAN BINTANG — Service Worker v20.6
-// Strategy:
-//   - App shell (HTML/CSS/JS lokal) → Cache First (offline ready)
-//   - JSON data (levels/achievements) → Stale-While-Revalidate
-//   - Firebase & Google Fonts → Network Only
-//   - Fallback ke cache kalau network gagal
-// ------------------------------------------------------------
-// v20.6:
-//   - Sync semua versi ke ?v=20.6
+// PAHLAWAN BINTANG — Service Worker v20.8
 // ============================================================
 
-const CACHE_VERSION = 'v20.7';
+const CACHE_VERSION = 'v20.8';
 const CACHE_NAME = `pahlawan-bintang-${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
   './',
-  './index.html?v=20.7',
-  './style.css?v=20.7',
-  './multiplayer.js?v=20.7',
-  './game.js?v=20.7',
+  './index.html?v=20.8',
+  './style.css?v=20.8',
+  './multiplayer.js?v=20.8',
+  './game.js?v=20.8',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
 ];
 
 const DATA_ASSETS = [
-  './levels.json?v=20.7',
-  './achievements.json?v=20.7'
+  './levels.json?v=20.8',
+  './achievements.json?v=20.8'
 ];
 
 const BYPASS_HOSTS = [
@@ -125,7 +117,7 @@ async function networkFirst(request) {
   } catch (e) {
     const cached = await caches.match(request);
     if (cached) return cached;
-    const indexCached = await caches.match('./index.html?v=20.7') ||
+    const indexCached = await caches.match('./index.html?v=20.8') ||
                         await caches.match('./index.html');
     if (indexCached) return indexCached;
     return new Response('Offline', { status: 503, statusText: 'Offline' });
