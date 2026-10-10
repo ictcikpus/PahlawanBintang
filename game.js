@@ -1,17 +1,15 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v20.8.2
-// "Ultra Responsive Controller Edition"
+// PAHLAWAN BINTANG — game.js v20.9
+// "Friendly & Variety Edition"
 // ------------------------------------------------------------
-// v20.8.2 CHANGES:
-//   1. playerSpeed: 9 → 11 (hero lebih lincah)
-//   2. PLAYER_LERP: 0.22 → 0.30 (keyboard/tap lebih responsif)
-//   3. JOYSTICK_DEADZONE: 0.10 → 0.06 (lebih peka)
-//   4. JOYSTICK_CURVE: 0.7 → 0.65 (lebih linear)
-//   5. JOYSTICK_SPEED_MULT: 1.35 → 1.55 (full-tilt lebih cepat)
-//   6. Haptic feedback pada joystick, skill, fire, pause
-//   7. e.stopPropagation() di joystick onPointerDown
-//   8. Fire button manual (opsional, default aktif)
-//   9. Haptic saat boss killed
+// v20.9 NEW:
+//   1. Desktop Control Hints Panel (auto-show di laptop)
+//   2. Keyboard shortcuts lengkap: ←→/AD (gerak), SPACE (fire),
+//      Q/W/E (skill), ESC (pause), H (toggle hints)
+//   3. 5 musuh baru: triangle, hexagon, star, diamond, worm
+//   4. 10 bentuk boss unik per level (5,10,15,20,25,30,35,40,45,50)
+//   5. Auto-detect touch vs desktop — hints panel tidak muncul di HP
+//   6. triggerSkillByKey() untuk Q/W/E
 // =============================================================
 
 // =============================================================
@@ -107,7 +105,23 @@ const ALL_HEROES = Object.keys(HERO_DATA);
 const HERO_DEFAULT_UNLOCKED = ['robot'];
 
 // =============================================================
-// 🔥 MATH QUIZ GENERATOR (Random per sesi)
+// 🔥 v20.9 — ENVIRONMENT DETECTION
+// =============================================================
+const IS_TOUCH_DEVICE = (
+  ('ontouchstart' in window) ||
+  (navigator.maxTouchPoints > 0) ||
+  (navigator.msMaxTouchPoints > 0)
+);
+const IS_DESKTOP = !IS_TOUCH_DEVICE || window.matchMedia('(pointer: fine)').matches;
+let desktopHintsVisible = false;
+
+// =============================================================
+// 🔥 v20.9 — EXTENDED ENEMY TYPES
+// =============================================================
+const ENEMY_EXTENDED_TYPES = ['triangle', 'hexagon', 'star', 'diamond', 'worm'];
+
+// =============================================================
+// 🔥 MATH QUIZ GENERATOR
 // =============================================================
 function generateMathQuestions(heroId, count, difficulty) {
   const hero = HERO_DATA[heroId];
@@ -174,7 +188,7 @@ function generateMathQuestions(heroId, count, difficulty) {
     [questions[i], questions[j]] = [questions[j], questions[i]];
   }
 
-  console.log('🧮 [Quiz] Generated', questions.length, 'random questions for', heroId, '(', diffLevel, ')');
+  console.log('🧮 [Quiz] Generated', questions.length, 'questions for', heroId);
   return questions;
 }
 
@@ -324,7 +338,7 @@ async function setSavedLevel(levelNum) {
 }
 async function resetProgress() {
   await DB.set('pahlawan_last_level', '1');
-  console.log('🔄 [Progress] Progress di-reset ke level 1');
+  console.log('🔄 [Progress] Reset ke level 1');
   const el = document.getElementById('saved-level-display');
   if (el) el.innerText = 'Level 1';
 }
@@ -352,7 +366,6 @@ async function markGameCompleted(scoreVal) {
     bestCertificateData = certData;
     await DB.set('pahlawan_certificate_data', JSON.stringify(certData));
   }
-  console.log('🎓 [Certificate] Saved:', bestCertificateData);
 }
 
 // =============================================================
@@ -382,7 +395,6 @@ async function loadPlayerStats() {
   } catch(e) {
     PLAYER_STATS = { ...DEFAULT_PLAYER_STATS };
   }
-  console.log('📊 [Stats] Loaded:', PLAYER_STATS);
 }
 
 async function savePlayerStats() {
@@ -390,9 +402,7 @@ async function savePlayerStats() {
   if (saveData.fastestLevelTime === Infinity) saveData.fastestLevelTime = null;
   try {
     await DB.set('pahlawan_player_stats', JSON.stringify(saveData));
-  } catch(e) {
-    console.warn('⚠️ [Stats] Save failed:', e);
-  }
+  } catch(e) {}
 }
 
 // =============================================================
@@ -470,7 +480,6 @@ async function checkAchievements(silent) {
     if (isAchievementUnlocked(ach)) {
       PLAYER_STATS.unlockedAchievements.push(ach.id);
       changed = true;
-      console.log('🏆 [Ach] Unlocked:', ach.id, ach.title);
       if (!silent) showAchievementToast(ach);
     }
   }
@@ -490,18 +499,12 @@ function showAchievementToast(ach) {
   const toast = document.createElement('div');
   toast.className = 'achievement-toast';
   toast.innerHTML = `
-    <div class="toast-icon-wrap">
-      <svg viewBox="0 0 24 24"><use href="#${ach.icon}"/></svg>
-    </div>
+    <div class="toast-icon-wrap"><svg viewBox="0 0 24 24"><use href="#${ach.icon}"/></svg></div>
     <div class="toast-content">
       <div class="toast-label">PENCAPAIAN TERBUKA</div>
       <div class="toast-title">${escapeHtml(ach.title)}</div>
-      <div class="toast-reward">
-        +${ach.reward.coins}
-        <svg class="ico-inline gold" viewBox="0 0 24 24" style="width:12px;height:12px;vertical-align:-2px;"><use href="#i-coin"/></svg>
-      </div>
-    </div>
-  `;
+      <div class="toast-reward">+${ach.reward.coins} <svg class="ico-inline gold" viewBox="0 0 24 24" style="width:12px;height:12px;vertical-align:-2px;"><use href="#i-coin"/></svg></div>
+    </div>`;
   container.appendChild(toast);
   try { if (typeof sounds !== 'undefined') sounds.playKillstreak(); } catch(e) {}
   setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3800);
@@ -513,12 +516,8 @@ function updateAchievementBadge() {
   const unclaimed = PLAYER_STATS.unlockedAchievements.filter(
     id => !PLAYER_STATS.claimedAchievements.includes(id)
   ).length;
-  if (unclaimed > 0) {
-    badge.classList.remove('hidden');
-    badge.innerText = unclaimed;
-  } else {
-    badge.classList.add('hidden');
-  }
+  if (unclaimed > 0) { badge.classList.remove('hidden'); badge.innerText = unclaimed; }
+  else badge.classList.add('hidden');
 }
 
 let currentAchievementFilter = 'all';
@@ -529,9 +528,7 @@ function openAchievementModal() {
   if (!modal) return;
   modal.classList.remove('hidden');
   currentAchievementFilter = 'all';
-  document.querySelectorAll('.ach-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.cat === 'all');
-  });
+  document.querySelectorAll('.ach-tab').forEach(t => t.classList.toggle('active', t.dataset.cat === 'all'));
   updateAchievementStatsBar();
   renderAchievementGrid('all');
 }
@@ -578,8 +575,7 @@ function renderAchievementGrid(filter) {
     const claimed = PLAYER_STATS.claimedAchievements.includes(a.id);
     const progress = getAchievementProgress(a);
     const progressText = getAchievementProgressText(a);
-    let cls = 'achievement-card';
-    cls += ` rarity-${a.rarity}`;
+    let cls = 'achievement-card rarity-' + a.rarity;
     if (claimed) cls += ' claimed';
     else if (unlocked) cls += ' unlocked';
     else cls += ' locked';
@@ -591,13 +587,10 @@ function renderAchievementGrid(filter) {
         <div class="ach-card-title">${escapeHtml(a.title)}</div>
         <div class="ach-card-desc">${escapeHtml(a.desc)}</div>
         <div class="ach-card-rarity">${a.rarity.toUpperCase()}</div>
-        <div class="ach-card-progress">
-          <div class="ach-card-progress-fill" style="width:${Math.round(progress*100)}%"></div>
-        </div>
+        <div class="ach-card-progress"><div class="ach-card-progress-fill" style="width:${Math.round(progress*100)}%"></div></div>
         <div class="ach-card-progress-text">${progressText}</div>
         ${unlocked && !claimed ? `<div class="ach-card-reward"><svg style="width:10px;height:10px;" viewBox="0 0 24 24"><use href="#i-coin"/></svg>${a.reward.coins}</div>` : ''}
-      </div>
-    `;
+      </div>`;
   }).join('');
   grid.querySelectorAll('.achievement-card').forEach(card => {
     card.onclick = () => openAchievementDetail(card.dataset.achId);
@@ -668,8 +661,7 @@ async function claimAchievementReward(achId) {
         <div class="toast-label">REWARD DIKLAIM</div>
         <div class="toast-title">${escapeHtml(ach.title)}</div>
         <div class="toast-reward">+${ach.reward.coins} koin</div>
-      </div>
-    `;
+      </div>`;
     container.appendChild(toast);
     setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 3200);
   }
@@ -784,7 +776,7 @@ const STORY = {
 // =============================================================
 function generate30Levels() {
   const levels = [];
-  const enemyTypesPool = ["jelly","donut","cloud","crystal","splitter"];
+  const enemyTypesPool = ["jelly","donut","cloud","crystal","splitter","triangle","hexagon","star","diamond","worm"];
   const algorithmsPool = ["linear","zigzag","gravity","stealth","swarm","splitter"];
   for (let i = 1; i <= 50; i++) {
     if (i % 5 === 0) {
@@ -812,6 +804,7 @@ let stickersData = DEFAULT_STICKERS;
 
 const ENEMY_SCORE_TABLE = {
   jelly:100, donut:200, cloud:250, crystal:300, splitter:350,
+  triangle:180, hexagon:400, star:320, diamond:280, worm:360,
   boss5:2500, boss10:5000, boss15:7500, boss20:10000, boss25:12500, boss30:20000,
   boss35:30000, boss40:45000, boss45:65000, boss50:100000
 };
@@ -1249,8 +1242,8 @@ let reviveQuota = 3;
 
 let playerX = 0;
 let playerTargetX = 0;
-const PLAYER_LERP = 0.30;        // 🔥 v20.8.2: 0.22 → 0.30
-let playerSpeed = 11;            // 🔥 v20.8.2: 9 → 11
+const PLAYER_LERP = 0.30;
+let playerSpeed = 11;
 let playerPulse = 0;
 
 let playerHitPoints = 3;
@@ -1297,11 +1290,9 @@ let screenFlash = 0;
 let comboBoostActive = { coins: false, firerate: false, magnet: false };
 let comboBoostLastNotified = 0;
 
-// Keyboard fallback flags (desktop)
 let isMovingLeft = false;
 let isMovingRight = false;
 
-// 🔥 v20.8.2 — Analog Joystick State (TUNED)
 let joystickAxis = 0;
 let joystickActive = false;
 let joystickPointerId = null;
@@ -1309,12 +1300,11 @@ let joystickCenterX = 0;
 let joystickCenterY = 0;
 let joystickRadius = 0;
 let joystickMaxOffset = 0;
-const JOYSTICK_DEADZONE = 0.06;      // 🔥 v20.8.2: 0.10 → 0.06 (lebih peka)
-const JOYSTICK_CURVE = 0.65;         // 🔥 v20.8.2: 0.7 → 0.65 (lebih linear)
-const JOYSTICK_SPEED_MULT = 1.55;    // 🔥 v20.8.2: 1.35 → 1.55 (full-tilt lebih cepat)
+const JOYSTICK_DEADZONE = 0.06;
+const JOYSTICK_CURVE = 0.65;
+const JOYSTICK_SPEED_MULT = 1.55;
 
-// 🔥 v20.8.2 — Fire button state (manual shoot)
-let fireButtonPressed = true;        // default aktif (auto-fire)
+let fireButtonPressed = true;
 
 let currentActor = localStorage.getItem('pahlawan_actor') || 'robot';
 let playerName = localStorage.getItem('pahlawan_nama') || 'Pahlawan';
@@ -1443,14 +1433,14 @@ function bootstrapUI() {
     );
     if (isLowEnd) {
       document.body.classList.add('low-end');
-      console.log('🐢 [Perf] Low-end device — simplified effects enabled');
+      console.log('🐢 [Perf] Low-end device — simplified effects');
     }
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) document.body.classList.add('tab-hidden');
       else document.body.classList.remove('tab-hidden');
     });
     setupEventListeners();
-    console.log('✅ [Boot] Event listeners attached');
+    console.log('✅ [Boot] Event listeners attached | Desktop:', IS_DESKTOP);
   } catch (e) {
     console.error('❌ [Boot] Failed to attach listeners:', e);
   }
@@ -1465,7 +1455,6 @@ window.addEventListener('load', async () => {
   try {
     await DB.ready;
     playerUUID = await initDeviceId();
-    console.log('✅ [Boot] Device ID:', playerUUID);
     coins = Number(localStorage.getItem('pahlawan_coins')) || 0;
     upgradeFireRate = Number(localStorage.getItem('pahlawan_up_firerate')) || 1;
     upgradeShield = Number(localStorage.getItem('pahlawan_up_shield')) || 1;
@@ -1484,7 +1473,7 @@ window.addEventListener('load', async () => {
     updateAchievementBadge();
     updateLevelSelectButton();
     updateActorGridUI();
-  } catch (e) { console.warn('⚠️ [Boot] Async init partial failure:', e); }
+  } catch (e) { console.warn('⚠️ [Boot] Partial failure:', e); }
 
   try {
     resizeCanvas();
@@ -1548,7 +1537,6 @@ async function trackLoginStreak() {
   else PLAYER_STATS.loginStreak = 1;
   PLAYER_STATS.lastLoginDate = todayKey;
   await savePlayerStats();
-  console.log('📅 [Login] Streak:', PLAYER_STATS.loginStreak);
   await checkAchievements(true);
 }
 
@@ -1557,7 +1545,6 @@ async function trackHeroUsage(heroId) {
   if (!PLAYER_STATS.heroesUsed.includes(heroId)) {
     PLAYER_STATS.heroesUsed.push(heroId);
     await savePlayerStats();
-    console.log('🎨 [Hero] First time using:', heroId);
     await checkAchievements();
   }
 }
@@ -1610,7 +1597,7 @@ function handleOrientationChange() {
     updateGameScale();
     playerX = VIRTUAL_WIDTH / 2;
     playerTargetX = playerX;
-    playerSpeed = 11 * GAME_SCALE;    // 🔥 v20.8.2: 9 → 11
+    playerSpeed = 11 * GAME_SCALE;
     if (mpActive && mpRole === 'host') {
       mpGuestX = VIRTUAL_WIDTH * 0.75;
       mpGuestTargetX = mpGuestX;
@@ -1788,7 +1775,7 @@ function ensureOverlaysInert() {
 
 function startSelfSpectatorMode(reason) {
   if (mpSpectatorMode) return;
-  console.log('👻 [MP] SELF spectator START. reason:', reason || '-', '| role:', mpRole);
+  console.log('👻 [MP] SELF spectator START:', reason);
   mpSpectatorMode = true;
   mpSpectatorReady = false;
   mpSpectatorTimer = MP_SPECTATOR_WAIT_SECONDS;
@@ -1820,7 +1807,6 @@ function startSelfSpectatorMode(reason) {
 
 function endSelfSpectatorMode() {
   if (!mpSpectatorMode) return;
-  console.log('👻 [MP] SELF spectator END');
   mpSpectatorMode = false;
   mpSpectatorReady = false;
   mpSpectatorTimer = 0;
@@ -1851,11 +1837,9 @@ function updateSpectatorUI() {
     if (mpSpectatorReady) {
       cd.innerText = '✓';
       cd.style.color = '#39ff14';
-      cd.style.textShadow = '0 0 20px #39ff14, 0 0 40px rgba(57,255,20,0.5)';
     } else {
       cd.innerText = mpSpectatorTimer;
       cd.style.color = '#fff';
-      cd.style.textShadow = '0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 138, 0, 0.5)';
     }
   }
   if (prog) {
@@ -1874,7 +1858,6 @@ function updateSpectatorUI() {
 function respawnFromSpectator() {
   if (!mpSpectatorMode || !mpSpectatorReady) return;
   endSelfSpectatorMode();
-
   lives = 1;
   playerHitPoints = PLAYER_MAX_HIT_POINTS;
   playerHitFlash = 0;
@@ -1882,7 +1865,6 @@ function respawnFromSpectator() {
   reviveInvulnTimer = 120;
   updateLivesDisplay();
   try { sounds.playRespawn(); } catch(e) {}
-
   if (mpRole === 'guest') {
     mpGuestInput.respawn = true;
   } else {
@@ -1927,7 +1909,6 @@ function startMathQuiz(heroId) {
   if (bodyEl) bodyEl.classList.remove('hidden');
   if (resultWrap) resultWrap.classList.add('hidden');
   if (closeBtn) { closeBtn.classList.remove('hidden'); closeBtn.innerText = 'BATAL'; }
-
   if (modal) modal.classList.remove('hidden');
 
   renderMathQuestion();
@@ -1962,14 +1943,11 @@ function updateMathTimerUI() {
 function renderMathQuestion() {
   const q = mathQuizState.questions[mathQuizState.currentIdx];
   if (!q) return;
-
   const qEl = document.getElementById('math-question');
   const optsEl = document.getElementById('math-options');
   const fbEl = document.getElementById('math-quiz-feedback');
-
   if (qEl) qEl.innerText = q.q;
   if (fbEl) { fbEl.innerText = ''; fbEl.className = 'math-quiz-feedback'; }
-
   if (optsEl) {
     optsEl.innerHTML = '';
     const opts = [...q.opts];
@@ -1993,11 +1971,9 @@ function renderMathQuestion() {
 function answerMath(btn, val, correctVal) {
   if (mathQuizState.answered) return;
   mathQuizState.answered = true;
-
   const fbEl = document.getElementById('math-quiz-feedback');
   const allBtns = document.querySelectorAll('.math-option');
   allBtns.forEach(b => b.disabled = true);
-
   if (val === correctVal) {
     btn.classList.add('correct');
     mathQuizState.correctCount++;
@@ -2006,14 +1982,11 @@ function answerMath(btn, val, correctVal) {
     triggerVibrate(30);
   } else {
     btn.classList.add('wrong');
-    allBtns.forEach(b => {
-      if (parseInt(b.dataset.val) === correctVal) b.classList.add('correct');
-    });
+    allBtns.forEach(b => { if (parseInt(b.dataset.val) === correctVal) b.classList.add('correct'); });
     if (fbEl) { fbEl.innerText = '✗ SALAH! Jawaban: ' + correctVal; fbEl.className = 'math-quiz-feedback error'; }
     try { sounds.playMathWrong(); } catch(e) {}
     triggerVibrate([60, 30, 60]);
   }
-
   setTimeout(() => {
     mathQuizState.answered = false;
     mathQuizState.currentIdx++;
@@ -2022,18 +1995,12 @@ function answerMath(btn, val, correctVal) {
       mathQuizState.timerInterval = null;
       const success = mathQuizState.correctCount >= 18;
       endMathQuiz(success, success ? 'LULUS!' : `Hanya ${mathQuizState.correctCount}/20 benar`);
-    } else {
-      renderMathQuestion();
-    }
+    } else renderMathQuestion();
   }, 900);
 }
 
 async function endMathQuiz(success, reason) {
-  if (mathQuizState.timerInterval) {
-    clearInterval(mathQuizState.timerInterval);
-    mathQuizState.timerInterval = null;
-  }
-
+  if (mathQuizState.timerInterval) { clearInterval(mathQuizState.timerInterval); mathQuizState.timerInterval = null; }
   const bodyEl = document.getElementById('math-quiz-body');
   const resultWrap = document.getElementById('math-quiz-result-wrap');
   const resultBox = document.getElementById('math-quiz-result');
@@ -2041,11 +2008,9 @@ async function endMathQuiz(success, reason) {
   const resultDesc = document.getElementById('math-quiz-result-desc');
   const actionBtn = document.getElementById('btn-math-quiz-action');
   const closeBtn = document.getElementById('btn-close-math-quiz');
-
   if (bodyEl) bodyEl.classList.add('hidden');
   if (resultWrap) resultWrap.classList.remove('hidden');
   if (closeBtn) closeBtn.classList.add('hidden');
-
   if (success) {
     mathQuizState.unlockedSuccessfully = true;
     await unlockHero(mathQuizState.heroId);
@@ -2054,11 +2019,7 @@ async function endMathQuiz(success, reason) {
     if (resultTitle) resultTitle.innerText = '🎉 HERO TERBUKA!';
     if (resultDesc) resultDesc.innerText = `${HERO_DATA[mathQuizState.heroId].name} sekarang bisa kamu pilih!`;
     if (actionBtn) {
-      actionBtn.onclick = () => {
-        closeMathQuiz();
-        updateActorGridUI();
-        updateActorSelectionUI();
-      };
+      actionBtn.onclick = () => { closeMathQuiz(); updateActorGridUI(); updateActorSelectionUI(); };
       actionBtn.querySelector('span').innerText = 'GUNAKAN HERO';
     }
     triggerVibrate([80, 40, 80, 40, 200]);
@@ -2076,10 +2037,7 @@ async function endMathQuiz(success, reason) {
 }
 
 function closeMathQuiz() {
-  if (mathQuizState.timerInterval) {
-    clearInterval(mathQuizState.timerInterval);
-    mathQuizState.timerInterval = null;
-  }
+  if (mathQuizState.timerInterval) { clearInterval(mathQuizState.timerInterval); mathQuizState.timerInterval = null; }
   const modal = document.getElementById('modal-math-quiz');
   if (modal) modal.classList.add('hidden');
   mathQuizState.heroId = null;
@@ -2103,7 +2061,6 @@ async function renderLevelGrid() {
   if (!grid) return;
   const stars = await getStars();
   const maxLevel = gameCompleted ? 50 : await getSavedLevel();
-
   let html = '';
   for (let i = 1; i <= 50; i++) {
     const isBoss = (i % 5 === 0);
@@ -2111,36 +2068,25 @@ async function renderLevelGrid() {
     const isUnlocked = gameCompleted || i <= maxLevel;
     const isCurrent = (i === maxLevel + (gameCompleted ? 0 : 1));
     const lvlStars = stars[i] || 0;
-
     let cls = 'level-btn';
     if (isBoss) cls += ' boss';
     if (isCompleted) cls += ' completed';
     if (isCurrent) cls += ' current';
     if (!isUnlocked) cls += ' locked';
-
     let starHtml = '';
     if (isUnlocked) {
       starHtml = '<div class="lvl-stars">';
       for (let s = 0; s < 3; s++) starHtml += `<span class="lvl-star ${s < lvlStars ? 'on' : ''}">★</span>`;
       starHtml += '</div>';
-    } else {
-      starHtml = '<div class="lvl-stars">🔒</div>';
-    }
-
+    } else starHtml = '<div class="lvl-stars">🔒</div>';
     html += `<button class="${cls}" data-level="${i}" type="button" ${!isUnlocked ? 'disabled' : ''}>
-      <div class="lvl-num">${i}</div>
-      ${starHtml}
-    </button>`;
+      <div class="lvl-num">${i}</div>${starHtml}</button>`;
   }
   grid.innerHTML = html;
-
   grid.querySelectorAll('.level-btn').forEach(btn => {
     btn.onclick = () => {
       const lvl = parseInt(btn.dataset.level);
-      if (!btn.disabled) {
-        closeLevelSelect();
-        jumpToLevel(lvl);
-      }
+      if (!btn.disabled) { closeLevelSelect(); jumpToLevel(lvl); }
     };
   });
 }
@@ -2152,7 +2098,6 @@ function closeLevelSelect() {
 
 async function jumpToLevel(levelNum) {
   if (levelNum < 1 || levelNum > 50) return;
-  console.log('🎯 [LevelSelect] Jump ke level', levelNum);
   currentLevelIndex = levelNum - 1;
   lives = 3;
   playerHitPoints = PLAYER_MAX_HIT_POINTS;
@@ -2171,8 +2116,7 @@ async function jumpToLevel(levelNum) {
 // 🔥 ACTOR GRID UI
 // =============================================================
 function updateActorGridUI() {
-  const cards = document.querySelectorAll('.actor-card');
-  cards.forEach(card => {
+  document.querySelectorAll('.actor-card').forEach(card => {
     const heroId = card.dataset.actor;
     const unlocked = isHeroUnlocked(heroId);
     card.classList.toggle('locked', !unlocked);
@@ -2181,17 +2125,68 @@ function updateActorGridUI() {
 }
 
 // =============================================================
-// 🔥 v20.8.2 — ANALOG JOYSTICK HANDLER (ULTRA RESPONSIVE)
+// 🔥 v20.9 — DESKTOP HINTS SETUP & TOGGLE
+// =============================================================
+function setupDesktopHints($) {
+  const hintsPanel = $('desktop-hints');
+  const hintsToggle = $('btn-hints-toggle');
+  const hintsClose = $('btn-hints-close');
+
+  if (!hintsPanel) {
+    console.warn('⚠️ [Hints] Element #desktop-hints tidak ditemukan');
+    return;
+  }
+
+  if (!IS_DESKTOP) {
+    hintsPanel.classList.add('hidden');
+    hintsPanel.style.display = 'none';
+    if (hintsToggle) hintsToggle.classList.add('hidden');
+    console.log('📱 [Hints] Touch device → desktop hints disabled');
+    return;
+  }
+
+  console.log('💻 [Hints] Desktop detected');
+
+  const showHints = () => {
+    if (!isGameRunning) return;
+    hintsPanel.classList.remove('hidden');
+    hintsPanel.style.display = 'block';
+    desktopHintsVisible = true;
+    if (hintsToggle) hintsToggle.classList.remove('hidden');
+  };
+
+  const hideHints = () => {
+    hintsPanel.classList.add('hidden');
+    hintsPanel.style.display = 'none';
+    desktopHintsVisible = false;
+  };
+
+  const toggleHints = () => {
+    if (desktopHintsVisible) hideHints();
+    else showHints();
+  };
+
+  if (hintsToggle) {
+    hintsToggle.onclick = (e) => { e.preventDefault(); e.stopPropagation(); toggleHints(); };
+  }
+  if (hintsClose) {
+    hintsClose.onclick = (e) => { e.preventDefault(); e.stopPropagation(); hideHints(); };
+  }
+
+  window._showDesktopHints = showHints;
+  window._hideDesktopHints = hideHints;
+  window._toggleDesktopHints = toggleHints;
+}
+
+// =============================================================
+// 🔥 v20.9 — JOYSTICK HANDLER
 // =============================================================
 function setupJoystick() {
   const joystick = document.getElementById('analog-joystick');
   const knob = document.getElementById('joystick-knob');
-  if (!joystick || !knob) {
-    console.warn('⚠️ [Joystick] Element tidak ditemukan');
-    return;
-  }
+  if (!joystick || !knob) return;
 
-  const KNOB_RATIO = 0.46;                            // 🔥 v20.8.2: 0.42 → 0.46 (match CSS)
+  const KNOB_RATIO = 0.46;
   const MAX_OFFSET_RATIO = 1 - KNOB_RATIO;
 
   const updateKnobVisual = (dx, dy) => {
@@ -2199,20 +2194,16 @@ function setupJoystick() {
     let nx = dx, ny = dy;
     if (dist > joystickMaxOffset) {
       const k = joystickMaxOffset / dist;
-      nx = dx * k;
-      ny = dy * k;
+      nx = dx * k; ny = dy * k;
     }
     knob.style.transform = `translate(calc(-50% + ${nx}px), calc(-50% + ${ny}px))`;
-
     const rawAxis = nx / joystickMaxOffset;
-    if (Math.abs(rawAxis) < JOYSTICK_DEADZONE) {
-      joystickAxis = 0;
-    } else {
+    if (Math.abs(rawAxis) < JOYSTICK_DEADZONE) joystickAxis = 0;
+    else {
       const sign = rawAxis > 0 ? 1 : -1;
       const abs = (Math.abs(rawAxis) - JOYSTICK_DEADZONE) / (1 - JOYSTICK_DEADZONE);
       joystickAxis = sign * Math.pow(Math.min(1, abs), JOYSTICK_CURVE);
     }
-
     joystick.setAttribute('aria-valuenow', joystickAxis.toFixed(2));
   };
 
@@ -2237,16 +2228,13 @@ function setupJoystick() {
     if (!isGameRunning || isGamePaused) return;
     if (mpSpectatorMode) return;
     if (joystickPointerId !== null) return;
-
     e.preventDefault();
-    e.stopPropagation();                                    // 🔥 v20.8.2: cegah bubble ke canvas
+    e.stopPropagation();
     joystickPointerId = e.pointerId;
     joystickActive = true;
     joystick.classList.add('is-active');
-
     try { joystick.setPointerCapture(e.pointerId); } catch(err) {}
-    try { triggerVibrate(8); } catch(err) {}                // 🔥 v20.8.2: haptic engage
-
+    try { triggerVibrate(8); } catch(err) {}
     refreshCenter();
     updateKnobVisual(e.clientX - joystickCenterX, e.clientY - joystickCenterY);
   };
@@ -2269,23 +2257,19 @@ function setupJoystick() {
   joystick.addEventListener('pointerup', onPointerUp);
   joystick.addEventListener('pointercancel', onPointerUp);
   joystick.addEventListener('lostpointercapture', onPointerUp);
-
   window.addEventListener('resize', () => { if (joystickActive) refreshCenter(); });
   window.addEventListener('orientationchange', () => { if (joystickActive) setTimeout(refreshCenter, 350); });
   document.addEventListener('visibilitychange', () => { if (document.hidden && joystickActive) resetKnob(); });
 
-  console.log('✅ [Joystick] Ready (v20.8.2 ULTRA RESPONSIVE)');
+  console.log('✅ [Joystick] Ready');
 }
 
 // =============================================================
-// 🔥 v20.8.2 — FIRE BUTTON HANDLER
+// 🔥 v20.9 — FIRE BUTTON
 // =============================================================
 function setupFireButton() {
   const btn = document.getElementById('btn-fire');
-  if (!btn) {
-    console.warn('⚠️ [Fire] Tombol tidak ditemukan (opsional, auto-fire tetap aktif)');
-    return;
-  }
+  if (!btn) return;
 
   const press = (e) => {
     if (e) e.preventDefault();
@@ -2338,11 +2322,7 @@ function setupEventListeners() {
     card.onclick = () => {
       const heroId = card.dataset.actor;
       if (!heroId) return;
-      if (!isHeroUnlocked(heroId)) {
-        console.log('🔒 [Hero] Locked:', heroId, '→ mulai quiz');
-        startMathQuiz(heroId);
-        return;
-      }
+      if (!isHeroUnlocked(heroId)) { startMathQuiz(heroId); return; }
       document.querySelectorAll('.actor-card').forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
       currentActor = heroId;
@@ -2403,10 +2383,7 @@ function setupEventListeners() {
   };
 
   const bPause = $('btn-pause');
-  if (bPause) bPause.onclick = () => {
-    try { triggerVibrate(10); } catch(e) {}   // 🔥 v20.8.2
-    pauseGame();
-  };
+  if (bPause) bPause.onclick = () => { try { triggerVibrate(10); } catch(e) {} pauseGame(); };
   const bResume = $('btn-resume-game'); if (bResume) bResume.onclick = resumeGame;
   const bPHero = $('btn-pause-change-hero');
   if (bPHero) bPHero.onclick = () => { updateActorGridUI(); $('modal-actors').classList.remove('hidden'); };
@@ -2439,20 +2416,54 @@ function setupEventListeners() {
     };
   }
 
-  // 🔥 v20.8.2 — ANALOG JOYSTICK + FIRE BUTTON setup
   setupJoystick();
   setupFireButton();
 
-  // Keyboard fallback
+  // 🔥 v20.9 — KEYBOARD SHORTCUTS LENGKAP
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isMovingLeft = true;
-    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') isMovingRight = true;
-    if (e.key === ' ' || e.key === 'Spacebar') { fireButtonPressed = true; }   // 🔥 v20.8.2: SPACE to fire
+    const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+    if (tag === 'input' || tag === 'textarea') return;
+    const key = e.key;
+    const keyLower = key.toLowerCase();
+
+    if (key === 'ArrowLeft' || keyLower === 'a') isMovingLeft = true;
+    if (key === 'ArrowRight' || keyLower === 'd') isMovingRight = true;
+
+    if (key === ' ' || key === 'Spacebar') {
+      fireButtonPressed = true;
+      if (isGameRunning && !isGamePaused) e.preventDefault();
+    }
+
+    if (keyLower === 'q') { e.preventDefault(); if (isGameRunning && !isGamePaused) triggerSkillByKey('freeze'); }
+    if (keyLower === 'w') { e.preventDefault(); if (isGameRunning && !isGamePaused) triggerSkillByKey('shield'); }
+    if (keyLower === 'e') { e.preventDefault(); if (isGameRunning && !isGamePaused) triggerSkillByKey('bomb'); }
+
+    if (key === 'Escape') {
+      e.preventDefault();
+      if (isGameRunning) {
+        if (isGamePaused) resumeGame();
+        else pauseGame();
+      }
+    }
+
+    if (keyLower === 'h') {
+      e.preventDefault();
+      if (typeof window._toggleDesktopHints === 'function' && IS_DESKTOP) window._toggleDesktopHints();
+    }
   });
+
   window.addEventListener('keyup', (e) => {
-    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isMovingLeft = false;
-    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') isMovingRight = false;
-    if (e.key === ' ' || e.key === 'Spacebar') { fireButtonPressed = false; }  // 🔥 v20.8.2
+    const key = e.key;
+    const keyLower = key.toLowerCase();
+    if (key === 'ArrowLeft' || keyLower === 'a') isMovingLeft = false;
+    if (key === 'ArrowRight' || keyLower === 'd') isMovingRight = false;
+    if (key === ' ' || key === 'Spacebar') fireButtonPressed = false;
+  });
+
+  window.addEventListener('blur', () => {
+    fireButtonPressed = false;
+    isMovingLeft = false;
+    isMovingRight = false;
   });
 
   if (canvas) {
@@ -2515,7 +2526,7 @@ function setupEventListeners() {
   if (bFreeze) bFreeze.onclick = () => {
     if (freezeCharges <= 0 || isFrozen || isGamePaused || !isGameRunning) return;
     if (mpSpectatorMode) return;
-    try { triggerVibrate(15); } catch(e) {}   // 🔥 v20.8.2
+    try { triggerVibrate(15); } catch(e) {}
     if (mpActive && mpRole === 'guest') { freezeCharges--; updateSkillButtonsUI(); mpSendGuestSkill(1); return; }
     freezeCharges--; isFrozen = true; freezeFramesRemaining = 210;
     sounds.playFreeze(); triggerVibrate([50, 50, 50]);
@@ -2527,7 +2538,7 @@ function setupEventListeners() {
   if (bShield) bShield.onclick = () => {
     if (shieldCharges <= 0 || isShieldActive || isGamePaused || !isGameRunning) return;
     if (mpSpectatorMode) return;
-    try { triggerVibrate(15); } catch(e) {}   // 🔥 v20.8.2
+    try { triggerVibrate(15); } catch(e) {}
     if (mpActive && mpRole === 'guest') { shieldCharges--; updateSkillButtonsUI(); mpSendGuestSkill(2); return; }
     shieldCharges--; isShieldActive = true; shieldTimer = 300;
     sounds.playShield(); triggerVibrate([30, 30, 60]);
@@ -2539,7 +2550,7 @@ function setupEventListeners() {
   if (bBomb) bBomb.onclick = () => {
     if (bombCharges <= 0 || isGamePaused || !isGameRunning) return;
     if (mpSpectatorMode) return;
-    try { triggerVibrate(20); } catch(e) {}   // 🔥 v20.8.2
+    try { triggerVibrate(20); } catch(e) {}
     if (mpActive && mpRole === 'guest') { bombCharges--; updateSkillButtonsUI(); mpSendGuestSkill(3); return; }
     bombCharges--; screenShake = 22;
     sounds.playBomb(); triggerVibrate([100, 50, 100]);
@@ -2677,6 +2688,9 @@ function setupEventListeners() {
       storyTyping = false;
     } else playNextStoryLine();
   }, true);
+
+  // 🔥 v20.9 — DESKTOP HINTS SETUP
+  setupDesktopHints($);
 }
 
 // =============================================================
@@ -2722,13 +2736,7 @@ function buyUpgrade(type) {
 function pauseGame() {
   if (!isGameRunning) return;
   if (mpSpectatorMode) return;
-
-  if (mpActive && mpRole === 'guest') {
-    mpGuestInput.pause = true;
-    mpPauseState = 'paused-local';
-    return;
-  }
-
+  if (mpActive && mpRole === 'guest') { mpGuestInput.pause = true; mpPauseState = 'paused-local'; return; }
   isGamePaused = true;
   mpPauseState = 'paused-local';
   sounds.stopBGM();
@@ -2737,11 +2745,7 @@ function pauseGame() {
 }
 
 function resumeGame() {
-  if (mpActive && mpRole === 'guest') {
-    mpGuestInput.resume = true;
-    mpPauseState = 'none';
-    return;
-  }
+  if (mpActive && mpRole === 'guest') { mpGuestInput.resume = true; mpPauseState = 'none'; return; }
   isGamePaused = false;
   mpPauseState = 'none';
   sounds.startBGM();
@@ -2783,8 +2787,6 @@ function requestFullscreenAndLandscape() {
       try {
         if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
         else if (screen.lockOrientation) screen.lockOrientation('landscape');
-        else if (screen.mozLockOrientation) screen.mozLockOrientation('landscape');
-        else if (screen.msLockOrientation) screen.msLockOrientation('landscape');
       } catch (e) {}
     }, 250);
   } catch (e) {}
@@ -2794,6 +2796,25 @@ function updateActorSelectionUI() {
   const name = HERO_DATA[currentActor] ? HERO_DATA[currentActor].name : 'Robot Cyber';
   const el = document.getElementById('selected-actor-name'); if (el) el.innerText = name;
   const ph = document.getElementById('pause-hero-name'); if (ph) ph.innerText = name;
+}
+
+// 🔥 v20.9 — Trigger skill via keyboard
+function triggerSkillByKey(skillType) {
+  if (!isGameRunning || isGamePaused) return;
+  if (mpSpectatorMode) return;
+  if (skillType === 'freeze') {
+    if (freezeCharges <= 0 || isFrozen) return;
+    const btn = document.getElementById('btn-freeze');
+    if (btn) btn.click();
+  } else if (skillType === 'shield') {
+    if (shieldCharges <= 0 || isShieldActive) return;
+    const btn = document.getElementById('btn-shield');
+    if (btn) btn.click();
+  } else if (skillType === 'bomb') {
+    if (bombCharges <= 0) return;
+    const btn = document.getElementById('btn-bomb');
+    if (btn) btn.click();
+  }
 }
 
 function updateSkillButtonsUI() {
@@ -2813,17 +2834,20 @@ function updateSkillButtonsUI() {
 }
 
 function goToMainMenu() {
-  // 🔥 v20.8.2 — reset joystick + fire
   joystickAxis = 0;
   joystickActive = false;
   joystickPointerId = null;
   fireButtonPressed = true;
+  isMovingLeft = false;
+  isMovingRight = false;
   const jk = document.getElementById('joystick-knob');
   if (jk) jk.style.transform = 'translate(-50%, -50%)';
   const je = document.getElementById('analog-joystick');
   if (je) je.classList.remove('is-active');
   const fb = document.getElementById('btn-fire');
   if (fb) fb.dataset.pressed = '1';
+
+  if (typeof window._hideDesktopHints === 'function') window._hideDesktopHints();
 
   stopSpawnLoop();
   mpStopHostSyncLoop();
@@ -2912,7 +2936,6 @@ async function mpCreateRoom() {
     playerName = name;
     const res = await MP.createRoom(mpSelectedMode, name);
     mpShowLobby('host', res.roomCode, mpSelectedMode);
-    console.log('✅ [MP] Room:', res.roomCode);
   } catch (e) { alert('Gagal buat room: ' + (e.message || e)); console.error(e); }
 }
 
@@ -2949,7 +2972,6 @@ function mpSetupCallbacks() {
   if (typeof MP === 'undefined') return;
 
   MP.onConnect((data) => {
-    console.log('✅ [MP] Connected:', data);
     mpSetStatus('mp-connect-status', '✅ Terhubung! ' + (data.peerName || ''), 'success');
     const startBtn = document.getElementById('btn-mp-start-game');
     if (startBtn && MP.isHost) startBtn.disabled = false;
@@ -2962,7 +2984,6 @@ function mpSetupCallbacks() {
   });
 
   MP.onDisconnect((who) => {
-    console.log('❌ [MP] Disconnected:', who);
     mpSetStatus('mp-connect-status', '⚠️ Pemain lain terputus', 'warning');
     if (isGameRunning && gameMode === 'coop') mpEndGame(false, 'Pemain lain terputus');
   });
@@ -2970,7 +2991,6 @@ function mpSetupCallbacks() {
   MP.onError((msg) => mpSetStatus('mp-connect-status', '⚠️ ' + msg, 'error'));
 
   MP.onStatusChange((state) => {
-    console.log('🔄 [MP] State:', state);
     const msgMap = {
       'idle':       { text: 'Menunggu...', type: 'info' },
       'creating':   { text: 'Membuat room...', type: 'info' },
@@ -3015,9 +3035,7 @@ function mpSetupCallbacks() {
       triggerScreenFlash(0.4);
     }
     mpGuestInput = input;
-    if (input.heroType && input.heroType !== mpRemoteHeroType) {
-      mpRemoteHeroType = input.heroType;
-    }
+    if (input.heroType && input.heroType !== mpRemoteHeroType) mpRemoteHeroType = input.heroType;
   });
 
   MP.onState((state) => mpApplyHostState(state));
@@ -3081,7 +3099,6 @@ function mpHostSendState() {
 function mpApplyHostState(state) {
   if (!state) return;
   if (!Array.isArray(state.monsters)) return;
-
   const W = VIRTUAL_WIDTH || 1;
   const H = VIRTUAL_HEIGHT || 1;
   const baseSize = Math.min(W, H);
@@ -3101,7 +3118,9 @@ function mpApplyHostState(state) {
     hp: m.hp, maxHp: m.maxHp, type: m.type,
     size: m.sizeNorm * baseSize, color: m.color,
     opacity: m.opacity, hitFlash: m.hitFlash,
-    coreOpen: m.coreOpen, algorithm: m.algorithm
+    coreOpen: m.coreOpen, algorithm: m.algorithm,
+    timeAlive: (Date.now() % 10000) / 1000,
+    rot: 0, wobble: 0, aura: 0
   }));
 
   mpRemoteBullets = (state.bullets || []).map(b => ({
@@ -3236,6 +3255,7 @@ function mpEndGame(win, reason) {
   setSpectatorOverlayVisible(false);
   mpRemotePaused = false; mpPauseState = 'none';
   hideRemotePauseOverlay();
+  if (typeof window._hideDesktopHints === 'function') window._hideDesktopHints();
 
   const wasRole = mpRole;
   mpActive = false;
@@ -3342,13 +3362,16 @@ function mpActuallyStartCoop() {
     }
   }
 
+  if (IS_DESKTOP && typeof window._showDesktopHints === 'function') {
+    window._showDesktopHints();
+  }
+
   sounds.startBGM();
   gameLoop();
 }
 
 function mpStartHostSyncLoop() {
   if (mpSyncTimer) clearInterval(mpSyncTimer);
-  // 🔥 v20.8.2 — 33ms = 30fps sync (dari multiplayer.js STATE_THROTTLE_MS)
   mpSyncTimer = setInterval(() => {
     if (!mpActive || mpRole !== 'host' || !isGameRunning) return;
     mpHostSendState();
@@ -3364,8 +3387,7 @@ function saveCoopScoreToGlobalLeaderboard(hostName, guestName, scoreVal, levelVa
   const cleanHost = (hostName || 'Host').trim();
   const cleanGuest = (guestName || 'Guest').trim();
   if (!cleanHost) return;
-  const teamKey = (cleanHost.toLowerCase() + '_' + cleanGuest.toLowerCase())
-    .replace(/[^a-z0-9]/g, '_').slice(0, 40);
+  const teamKey = (cleanHost.toLowerCase() + '_' + cleanGuest.toLowerCase()).replace(/[^a-z0-9]/g, '_').slice(0, 40);
   const numScore = Number(scoreVal) || 0;
   const numLevel = Number(levelVal) || 1;
   const sortValue = (numLevel * 100000000) + numScore;
@@ -3404,7 +3426,6 @@ async function startGame() {
   gameMode = 'normal';
   const savedLevel = await getSavedLevel();
   currentLevelIndex = Math.max(0, savedLevel - 1);
-  console.log('▶️ [Game] Resume dari level', savedLevel);
   score = 0; lives = 3;
   playerHitPoints = PLAYER_MAX_HIT_POINTS; playerHitFlash = 0;
   reviveUsedThisRun = false;
@@ -3488,7 +3509,7 @@ function resetLevelState() {
 }
 
 function actuallyStartLevel(levelConfig) {
-  playerSpeed = 11 * GAME_SCALE;    // 🔥 v20.8.2: 9 → 11
+  playerSpeed = 11 * GAME_SCALE;
   freezeCharges = playerLoadout.includes('freeze') ? upgradeFreeze : 0;
   shieldCharges = playerLoadout.includes('shield') ? upgradeShield : 0;
   bombCharges   = playerLoadout.includes('bomb') ? upgradeBomb : 0;
@@ -3499,6 +3520,12 @@ function actuallyStartLevel(levelConfig) {
   isGameRunning = true; isGamePaused = false;
   levelStartTime = Date.now();
   levelDamageTaken = 0;
+
+  // 🔥 v20.9 — show desktop hints
+  if (IS_DESKTOP && typeof window._showDesktopHints === 'function') {
+    window._showDesktopHints();
+  }
+
   showLevelIntro(levelConfig);
   sounds.startBGM();
   startSpawnLoop();
@@ -3602,8 +3629,8 @@ function spawnMonsterLoop(token) {
     const S = GAME_SCALE;
 
     if (gameMode === 'endless') {
-      const typesPool = ["jelly","donut","cloud","crystal","splitter"];
-      const count = Math.min(5, Math.floor(1 + endlessWave / 3) + 1);
+      const typesPool = ["jelly","donut","cloud","crystal","splitter","triangle","hexagon","star","diamond","worm"];
+      const count = Math.min(typesPool.length, Math.floor(1 + endlessWave / 3) + 1);
       const algos = ["linear","zigzag","gravity","stealth","swarm","splitter"];
       levelConfig = { level: 999, targetKills: ENDLESS_KILLS_PER_WAVE,
         speed: (1 + endlessWave * 0.08) * S,
@@ -3676,21 +3703,37 @@ function spawnMonsterLoop(token) {
         n = Math.ceil(n * spawnMultiplier);
         for (let c = 0; c < n; c++) {
           const type = typeList[Math.floor(Math.random() * typeList.length)];
-          const hp = (type === 'donut' ? 2 : (type === 'crystal' ? 3 : 1));
-          const canShoot = (type === 'crystal');
-          const baseSize = (type === 'donut' ? 36 : 30) * S;
+          // 🔥 v20.9 — stats per type extended
+          let hp = 1;
+          let canShoot = false;
+          let baseSize = 30 * S;
+          let speedMult = 1.0;
+
+          if (type === 'donut')        { hp = 2; baseSize = 36 * S; speedMult = 0.9; }
+          else if (type === 'crystal') { hp = 3; baseSize = 30 * S; speedMult = 0.85; canShoot = true; }
+          else if (type === 'cloud')   { hp = 2; baseSize = 34 * S; speedMult = 1.1; }
+          else if (type === 'splitter'){ hp = 2; baseSize = 32 * S; speedMult = 1.0; }
+          else if (type === 'triangle'){ hp = 1; baseSize = 28 * S; speedMult = 1.6; }
+          else if (type === 'hexagon') { hp = 4; baseSize = 34 * S; speedMult = 0.7; }
+          else if (type === 'star')    { hp = 2; baseSize = 30 * S; speedMult = 0.95; canShoot = true; }
+          else if (type === 'diamond') { hp = 2; baseSize = 32 * S; speedMult = 1.1; }
+          else if (type === 'worm')    { hp = 3; baseSize = 36 * S; speedMult = 1.05; }
+          // else jelly: hp=1, baseSize=30, speedMult=1.0
+
           monsters.push({
             x: Math.random() * (W - 120 * S) + 60 * S,
             startX: Math.random() * (W - 120 * S) + 60 * S,
             y: -60 * S,
-            speed: (1.2 + Math.random() * 1.2) * (levelConfig.speed || 1),
+            speed: (1.2 + Math.random() * 1.2) * speedMult * (levelConfig.speed || 1),
             size: baseSize,
             hp, maxHp: hp,
             color: currentTheme.monsters[Math.floor(Math.random() * currentTheme.monsters.length)],
             type, algorithm: algo,
             shootTimer: 0, timeAlive: 0, opacity: 1, hitFlash: 0,
             aimTimer: 0, aimTargetX: 0, aimTargetY: 0,
-            canShoot, shootCooldown: 60 + Math.random() * 120
+            canShoot, shootCooldown: 60 + Math.random() * 120,
+            rot: Math.random() * Math.PI * 2,
+            wobble: Math.random() * Math.PI * 2
           });
         }
       }
@@ -3837,7 +3880,7 @@ function checkLevelObjectives() {
 // Lanjut ke Part 2 (Sections 18-34) di response berikutnya
 // =============================================================
 
-  // =============================================================
+// =============================================================
 // 18. DRAW HERO (10 HERO VISUAL BERBEDA)
 // =============================================================
 function drawHeroVector(ctx, x, y, type, isRemote) {
@@ -4216,8 +4259,619 @@ function drawBullet(ctx, b, S) {
 }
 
 // =============================================================
+// 🔥 v20.9 — EXTENDED ENEMY SHAPE DRAWING
+// =============================================================
+function drawEnemyShapeExtended(ctx, m, S, theme) {
+  const type = m.type;
+  const size = m.size;
+  const t = m.timeAlive || 0;
+  const rot = (m.rot = (m.rot || 0) + 0.02);
+  const wobble = Math.sin((m.wobble = (m.wobble || 0) + 0.08)) * 0.15 + 1;
+
+  // ---------- TRIANGLE (chevron) ----------
+  if (type === 'triangle') {
+    ctx.save();
+    ctx.rotate(rot * 0.5);
+    const g = ctx.createLinearGradient(0, -size, 0, size);
+    g.addColorStop(0, m.color);
+    g.addColorStop(1, 'rgba(0,0,0,0.5)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(0, -size * wobble);
+    ctx.lineTo(size * 0.9, size * 0.7);
+    ctx.lineTo(0, size * 0.35);
+    ctx.lineTo(-size * 0.9, size * 0.7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#fff';
+    ctx.globalAlpha = 0.7;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.arc(0, -size * 0.1, size * 0.18, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.restore();
+
+  // ---------- HEXAGON (armored) ----------
+  } else if (type === 'hexagon') {
+    ctx.save();
+    ctx.rotate(rot * 0.3);
+    const sides = 6;
+    const g = ctx.createRadialGradient(-size * 0.3, -size * 0.3, size * 0.1, 0, 0, size);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.35, m.color);
+    g.addColorStop(1, '#000000');
+    ctx.beginPath();
+    for (let i = 0; i < sides; i++) {
+      const a = (Math.PI * 2 / sides) * i - Math.PI / 2;
+      const x = Math.cos(a) * size * wobble;
+      const y = Math.sin(a) * size * wobble;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#fff';
+    ctx.globalAlpha = 0.75;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.55, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(-size * 0.25, -size * 0.1, size * 0.1, 0, Math.PI * 2);
+    ctx.arc(size * 0.25, -size * 0.1, size * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff4757';
+    ctx.beginPath();
+    ctx.arc(-size * 0.25, -size * 0.1, size * 0.04, 0, Math.PI * 2);
+    ctx.arc(size * 0.25, -size * 0.1, size * 0.04, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+  // ---------- STAR (5-point) ----------
+  } else if (type === 'star') {
+    ctx.save();
+    ctx.rotate(rot * 0.4);
+    const points = 5;
+    const outerR = size * wobble;
+    const innerR = size * 0.45;
+    const g = ctx.createRadialGradient(0, 0, size * 0.1, 0, 0, size);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.4, m.color);
+    g.addColorStop(1, '#000000');
+    ctx.beginPath();
+    for (let i = 0; i < points * 2; i++) {
+      const a = (Math.PI / points) * i - Math.PI / 2;
+      const r = i % 2 === 0 ? outerR : innerR;
+      const x = Math.cos(a) * r;
+      const y = Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffd700';
+    ctx.globalAlpha = 0.9;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    const cg = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 0.4);
+    cg.addColorStop(0, 'rgba(255,255,255,0.9)');
+    cg.addColorStop(1, 'rgba(255,215,0,0)');
+    ctx.fillStyle = cg;
+    ctx.beginPath();
+    ctx.arc(0, 0, size * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+  // ---------- DIAMOND (crystal) ----------
+  } else if (type === 'diamond') {
+    ctx.save();
+    ctx.rotate(rot * 0.6);
+    const g = ctx.createLinearGradient(0, -size, 0, size);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.4, m.color);
+    g.addColorStop(1, 'rgba(0,0,0,0.7)');
+    ctx.beginPath();
+    ctx.moveTo(0, -size * wobble);
+    ctx.lineTo(size * 0.75, 0);
+    ctx.lineTo(0, size * wobble);
+    ctx.lineTo(-size * 0.75, 0);
+    ctx.closePath();
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#fff';
+    ctx.globalAlpha = 0.8;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, -size * wobble);
+    ctx.lineTo(0, size * wobble);
+    ctx.moveTo(-size * 0.75, 0);
+    ctx.lineTo(size * 0.75, 0);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.5 + Math.sin(t * 6) * 0.4) + ')';
+    ctx.beginPath();
+    ctx.arc(0, -size * 0.2, size * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+  // ---------- WORM (segmented) ----------
+  } else if (type === 'worm') {
+    ctx.save();
+    const segCount = 4;
+    for (let i = segCount - 1; i >= 0; i--) {
+      const segX = Math.sin(t * 2 + i * 0.5) * size * 0.5;
+      const segY = -i * size * 0.55;
+      const segR = size * (0.9 - i * 0.15);
+      const alpha = 1.0 - i * 0.15;
+      ctx.globalAlpha = alpha;
+      const g = ctx.createRadialGradient(segX - segR * 0.3, segY - segR * 0.3, segR * 0.1, segX, segY, segR);
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(0.35, m.color);
+      g.addColorStop(1, '#000000');
+      ctx.beginPath();
+      ctx.arc(segX, segY, segR, 0, Math.PI * 2);
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.stroke();
+      if (i === 0) {
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(segX - segR * 0.3, segY - segR * 0.15, segR * 0.2, 0, Math.PI * 2);
+        ctx.arc(segX + segR * 0.3, segY - segR * 0.15, segR * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ff4757';
+        ctx.beginPath();
+        ctx.arc(segX - segR * 0.3, segY - segR * 0.15, segR * 0.08, 0, Math.PI * 2);
+        ctx.arc(segX + segR * 0.3, segY - segR * 0.15, segR * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+  } else {
+    // Fallback (jelly-style)
+    const rg = ctx.createRadialGradient(-size*0.3, -size*0.3, size*0.1, 0, 0, size);
+    rg.addColorStop(0, '#ffffff'); rg.addColorStop(0.3, m.color); rg.addColorStop(1, '#000000');
+    ctx.beginPath(); ctx.arc(0, 0, size * wobble, 0, Math.PI*2);
+    ctx.fillStyle = rg; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.stroke();
+  }
+}
+
+// =============================================================
+// 🔥 v20.9 — UNIQUE BOSS SHAPES (10 bosses, 10 bentuk unik)
+// =============================================================
+function drawBossUniqueShape(ctx, m, S, theme, bossNum) {
+  const size = m.size;
+  const t = m.timeAlive || 0;
+  const coreOpen = m.coreOpen;
+  const rot = m.aura || 0;
+
+  // === BOSS 5: INFERNO (triangle furnace) ===
+  if (bossNum === 5) {
+    ctx.save();
+    ctx.rotate(Math.sin(t * 1.5) * 0.1);
+    const g = ctx.createRadialGradient(0, -size * 0.2, size * 0.2, 0, 0, size);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, m.color); g.addColorStop(1, '#3a0000');
+    ctx.beginPath();
+    ctx.moveTo(0, -size);
+    ctx.lineTo(size * 0.9, size * 0.75);
+    ctx.lineTo(-size * 0.9, size * 0.75);
+    ctx.closePath();
+    ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = 4 * S; ctx.strokeStyle = '#ffd700'; ctx.stroke();
+    for (let i = -1; i <= 1; i += 2) {
+      const fx = i * size * 0.6;
+      ctx.fillStyle = 'rgba(255,120,0,' + (0.6 + Math.sin(t * 5 + i) * 0.3) + ')';
+      ctx.beginPath();
+      ctx.moveTo(fx - 8 * S, -size * 0.5);
+      ctx.lineTo(fx, -size * 0.5 - 30 * S - Math.sin(t * 6) * 5);
+      ctx.lineTo(fx + 8 * S, -size * 0.5);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(-size * 0.3, -size * 0.1, size * 0.15, 0, Math.PI * 2);
+    ctx.arc(size * 0.3, -size * 0.1, size * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff2200';
+    ctx.beginPath();
+    ctx.arc(-size * 0.3, -size * 0.1, size * 0.07, 0, Math.PI * 2);
+    ctx.arc(size * 0.3, -size * 0.1, size * 0.07, 0, Math.PI * 2);
+    ctx.fill();
+    if (coreOpen) drawBossCore(ctx, size, '#ff4400', '#ffd700', t);
+    ctx.restore();
+    return;
+  }
+
+  // === BOSS 10: VOID (dark spiral) ===
+  if (bossNum === 10) {
+    ctx.save();
+    ctx.rotate(rot * 0.5);
+    const g = ctx.createRadialGradient(0, 0, size * 0.15, 0, 0, size);
+    g.addColorStop(0, '#c86bff'); g.addColorStop(0.4, '#3d0060'); g.addColorStop(1, '#000000');
+    ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI * 2);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = 5 * S; ctx.strokeStyle = '#ff77ff'; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,119,255,0.7)';
+    ctx.lineWidth = 3 * S;
+    for (let arm = 0; arm < 3; arm++) {
+      ctx.beginPath();
+      const aOff = (Math.PI * 2 / 3) * arm;
+      for (let i = 0; i < 25; i++) {
+        const a = (i / 25) * Math.PI * 1.8 + aOff;
+        const r = size * (0.2 + i / 25 * 0.75);
+        const x = Math.cos(a) * r;
+        const y = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(0, 0, size * 0.35, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#c86bff'; ctx.lineWidth = 3 * S;
+    ctx.beginPath(); ctx.arc(0, 0, size * 0.35, 0, Math.PI * 2); ctx.stroke();
+    if (coreOpen) drawBossCore(ctx, size * 0.5, '#c86bff', '#ffffff', t);
+    ctx.restore();
+    return;
+  }
+
+  // === BOSS 15: CRYO (ice crystal) ===
+  if (bossNum === 15) {
+    ctx.save();
+    ctx.rotate(Math.sin(t * 0.5) * 0.08);
+    const sides = 6;
+    const g = ctx.createRadialGradient(0, -size * 0.3, size * 0.1, 0, 0, size);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, m.color); g.addColorStop(1, '#001a3a');
+    ctx.beginPath();
+    for (let i = 0; i < sides; i++) {
+      const a = (Math.PI * 2 / sides) * i - Math.PI / 2;
+      const r = i % 2 === 0 ? size : size * 0.7;
+      const x = Math.cos(a) * r;
+      const y = Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = 5 * S; ctx.strokeStyle = '#4de8ff'; ctx.stroke();
+    ctx.fillStyle = 'rgba(200,240,255,0.9)';
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI * 2 / 6) * i - Math.PI / 2;
+      const baseX = Math.cos(a) * size * 0.9;
+      const baseY = Math.sin(a) * size * 0.9;
+      const tipX = Math.cos(a) * (size + 15 * S);
+      const tipY = Math.sin(a) * (size + 15 * S);
+      ctx.beginPath();
+      ctx.moveTo(baseX - 6 * S, baseY - 6 * S);
+      ctx.lineTo(tipX, tipY);
+      ctx.lineTo(baseX + 6 * S, baseY + 6 * S);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(-size * 0.3, -size * 0.1, size * 0.14, 0, Math.PI * 2);
+    ctx.arc(size * 0.3, -size * 0.1, size * 0.14, 0, Math.PI * 2);
+    ctx.fill();
+    if (coreOpen) drawBossCore(ctx, size * 0.5, '#4de8ff', '#ffffff', t);
+    ctx.restore();
+    return;
+  }
+
+  // === BOSS 20: TITAN (armored hexagon) ===
+  if (bossNum === 20) {
+    ctx.save();
+    ctx.rotate(rot * 0.3);
+    ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI * 2);
+    ctx.fillStyle = '#1a1a2a'; ctx.fill();
+    ctx.lineWidth = 6 * S; ctx.strokeStyle = '#1abc9c'; ctx.stroke();
+    const g = ctx.createRadialGradient(0, 0, size * 0.2, 0, 0, size * 0.8);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.4, m.color); g.addColorStop(1, '#003333');
+    ctx.beginPath(); ctx.arc(0, 0, size * 0.8, 0, Math.PI * 2);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 2 * S;
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI * 2 / 6) * i + rot * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a) * size * 0.8, Math.sin(a) * size * 0.8);
+      ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(0, 0, size * 0.5, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(0,255,200,0.7)'; ctx.lineWidth = 3 * S; ctx.stroke();
+    ctx.fillStyle = '#00ffcc';
+    ctx.beginPath();
+    ctx.arc(-size * 0.25, -size * 0.05, size * 0.12, 0, Math.PI * 2);
+    ctx.arc(size * 0.25, -size * 0.05, size * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+    if (coreOpen) drawBossCore(ctx, size * 0.5, '#1abc9c', '#00ffcc', t);
+    ctx.restore();
+    return;
+  }
+
+  // === BOSS 25: SOLAR (sun with rays) ===
+  if (bossNum === 25) {
+    ctx.save();
+    ctx.rotate(rot * 0.2);
+    const rayCount = 12;
+    for (let i = 0; i < rayCount; i++) {
+      const a = (Math.PI * 2 / rayCount) * i + t * 0.5;
+      const innerR = size * 1.05;
+      const outerR = size * 1.35 + Math.sin(t * 3 + i) * size * 0.1;
+      ctx.save();
+      ctx.rotate(a);
+      const rg = ctx.createLinearGradient(innerR, 0, outerR, 0);
+      rg.addColorStop(0, 'rgba(255,170,0,0.9)');
+      rg.addColorStop(1, 'rgba(255,80,0,0)');
+      ctx.fillStyle = rg;
+      ctx.beginPath();
+      ctx.moveTo(innerR, -size * 0.08);
+      ctx.lineTo(outerR, 0);
+      ctx.lineTo(innerR, size * 0.08);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    const g = ctx.createRadialGradient(0, -size * 0.2, size * 0.15, 0, 0, size);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, '#ffd700'); g.addColorStop(0.7, '#ff6600'); g.addColorStop(1, '#3a0a00');
+    ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI * 2);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = 4 * S; ctx.strokeStyle = '#ffd700'; ctx.stroke();
+    ctx.globalAlpha = 0.4 + Math.sin(t * 8) * 0.2;
+    ctx.beginPath(); ctx.arc(0, 0, size * 1.1, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 3 * S; ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(-size * 0.3, -size * 0.05, size * 0.13, 0, Math.PI * 2);
+    ctx.arc(size * 0.3, -size * 0.05, size * 0.13, 0, Math.PI * 2);
+    ctx.fill();
+    if (coreOpen) drawBossCore(ctx, size * 0.5, '#ffaa00', '#ffd700', t);
+    ctx.restore();
+    return;
+  }
+
+  // === BOSS 30: OMEGA (layered star) ===
+  if (bossNum === 30) {
+    ctx.save();
+    ctx.rotate(rot * 0.4);
+    for (let layer = 2; layer >= 0; layer--) {
+      const r = size * (0.5 + layer * 0.25);
+      const alpha = 0.4 + (2 - layer) * 0.3;
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      for (let i = 0; i < 12; i++) {
+        const a = (Math.PI / 6) * i + layer * 0.3;
+        const rr = i % 2 === 0 ? r : r * 0.6;
+        const x = Math.cos(a) * rr;
+        const y = Math.sin(a) * rr;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+      g.addColorStop(0, '#ff0055');
+      g.addColorStop(0.5, '#ffd700');
+      g.addColorStop(1, 'rgba(0,0,0,0.8)');
+      ctx.fillStyle = g; ctx.fill();
+      ctx.lineWidth = 3 * S; ctx.strokeStyle = '#ffd700'; ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(0, 0, size * 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff'; ctx.fill();
+    ctx.strokeStyle = '#ff0055'; ctx.lineWidth = 3 * S; ctx.stroke();
+    if (coreOpen) drawBossCore(ctx, size * 0.4, '#ff0055', '#ffffff', t);
+    ctx.restore();
+    return;
+  }
+
+  // === BOSS 35: ABYSS (octagon + tentacles) ===
+  if (bossNum === 35) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(139,0,255,0.7)';
+    ctx.lineWidth = 6 * S;
+    for (let i = 0; i < 8; i++) {
+      const baseA = (Math.PI * 2 / 8) * i + rot * 0.3;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(baseA) * size * 0.8, Math.sin(baseA) * size * 0.8);
+      for (let s = 1; s <= 5; s++) {
+        const a = baseA + Math.sin(t * 3 + i + s) * 0.3;
+        const r = size * (0.8 + s * 0.15);
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (Math.PI * 2 / 8) * i - Math.PI / 2;
+      const x = Math.cos(a) * size;
+      const y = Math.sin(a) * size;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    const g = ctx.createRadialGradient(0, 0, size * 0.2, 0, 0, size);
+    g.addColorStop(0, '#e0b3ff'); g.addColorStop(0.4, '#5a0099'); g.addColorStop(1, '#000000');
+    ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = 5 * S; ctx.strokeStyle = '#8b00ff'; ctx.stroke();
+    ctx.shadowColor = '#ff00ff'; ctx.shadowBlur = 15;
+    ctx.fillStyle = '#ff00ff';
+    ctx.beginPath();
+    ctx.arc(-size * 0.3, -size * 0.05, size * 0.13, 0, Math.PI * 2);
+    ctx.arc(size * 0.3, -size * 0.05, size * 0.13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    if (coreOpen) drawBossCore(ctx, size * 0.5, '#8b00ff', '#ff00ff', t);
+    ctx.restore();
+    return;
+  }
+
+  // === BOSS 40: NEMESIS (skull king) ===
+  if (bossNum === 40) {
+    ctx.save();
+    ctx.fillStyle = '#ff2200';
+    ctx.beginPath();
+    ctx.moveTo(-size * 0.6, -size);
+    ctx.lineTo(-size * 0.5, -size * 1.3);
+    ctx.lineTo(-size * 0.3, -size * 1.05);
+    ctx.lineTo(-size * 0.1, -size * 1.35);
+    ctx.lineTo(size * 0.1, -size * 1.05);
+    ctx.lineTo(size * 0.3, -size * 1.35);
+    ctx.lineTo(size * 0.5, -size * 1.05);
+    ctx.lineTo(size * 0.6, -size);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2 * S; ctx.stroke();
+    const g = ctx.createRadialGradient(0, 0, size * 0.2, 0, 0, size);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, m.color); g.addColorStop(1, '#1a0000');
+    ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI * 2);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = 5 * S; ctx.strokeStyle = '#ff2200'; ctx.stroke();
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(-size * 0.35, -size * 0.1, size * 0.25, 0, Math.PI * 2);
+    ctx.arc(size * 0.35, -size * 0.1, size * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowColor = '#ff2200'; ctx.shadowBlur = 12;
+    ctx.fillStyle = '#ff2200';
+    ctx.beginPath();
+    ctx.arc(-size * 0.35, -size * 0.1, size * 0.1, 0, Math.PI * 2);
+    ctx.arc(size * 0.35, -size * 0.1, size * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffffff';
+    for (let i = -3; i <= 3; i++) {
+      const tx = i * size * 0.13;
+      ctx.fillRect(tx - size * 0.05, size * 0.35, size * 0.1, size * 0.2);
+    }
+    if (coreOpen) drawBossCore(ctx, size * 0.4, '#ff2200', '#ffd700', t);
+    ctx.restore();
+    return;
+  }
+
+  // === BOSS 45: ABYSS² (double spiral) ===
+  if (bossNum === 45) {
+    ctx.save();
+    ctx.rotate(rot * 0.3);
+    for (let ring = 0; ring < 2; ring++) {
+      const r = size * (1.0 + ring * 0.2);
+      const rAlpha = 0.9 - ring * 0.3;
+      ctx.globalAlpha = rAlpha;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.lineWidth = (5 - ring) * S;
+      ctx.strokeStyle = ring === 0 ? '#8b00ff' : '#ff00ff';
+      ctx.setLineDash(ring === 0 ? [] : [10, 8]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.globalAlpha = 1;
+    for (let arm = 0; arm < 2; arm++) {
+      ctx.beginPath();
+      const aOff = arm * Math.PI;
+      for (let i = 0; i < 30; i++) {
+        const a = (i / 30) * Math.PI * 2 + aOff + t * 0.8;
+        const r = size * (i / 30 * 0.9);
+        const x = Math.cos(a) * r;
+        const y = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = arm === 0 ? '#8b00ff' : '#ff00ff';
+      ctx.lineWidth = 3 * S;
+      ctx.stroke();
+    }
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 0.5);
+    g.addColorStop(0, '#000000');
+    g.addColorStop(0.7, '#3d0066');
+    g.addColorStop(1, 'rgba(255,0,255,0.3)');
+    ctx.beginPath(); ctx.arc(0, 0, size * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = g; ctx.fill();
+    if (coreOpen) drawBossCore(ctx, size * 0.4, '#8b00ff', '#ff00ff', t);
+    ctx.restore();
+    return;
+  }
+
+  // === BOSS 50: ETERNITY (infinity + wings) ===
+  if (bossNum === 50) {
+    ctx.save();
+    ctx.rotate(Math.sin(t * 0.5) * 0.05);
+    ctx.fillStyle = 'rgba(255,215,0,0.6)';
+    for (let w = -1; w <= 1; w += 2) {
+      ctx.beginPath();
+      ctx.moveTo(0, -size * 0.5);
+      ctx.quadraticCurveTo(w * size * 1.6, -size * 1.2, w * size * 1.4, 0);
+      ctx.quadraticCurveTo(w * size * 1.7, size * 0.6, w * size * 1.2, size * 0.8);
+      ctx.quadraticCurveTo(w * size * 0.9, size * 0.3, 0, size * 0.5);
+      ctx.closePath(); ctx.fill();
+    }
+    const g = ctx.createRadialGradient(0, 0, size * 0.15, 0, 0, size);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.4, '#ffd700');
+    g.addColorStop(0.75, '#ff8a00');
+    g.addColorStop(1, '#3a1500');
+    ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI * 2);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = 6 * S; ctx.strokeStyle = '#ffd700'; ctx.stroke();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4 * S;
+    ctx.beginPath();
+    const iw = size * 0.4, ih = size * 0.25;
+    ctx.moveTo(-iw, 0);
+    ctx.bezierCurveTo(-iw, -ih, 0, -ih, 0, 0);
+    ctx.bezierCurveTo(0, ih, iw, ih, iw, 0);
+    ctx.bezierCurveTo(iw, -ih, 0, -ih, 0, 0);
+    ctx.bezierCurveTo(0, ih, -iw, ih, -iw, 0);
+    ctx.stroke();
+    ctx.globalAlpha = 0.3 + Math.sin(t * 4) * 0.2;
+    ctx.beginPath(); ctx.arc(0, 0, size * 1.25, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 3 * S; ctx.stroke();
+    ctx.globalAlpha = 1;
+    if (coreOpen) drawBossCore(ctx, size * 0.5, '#ffd700', '#ffffff', t);
+    ctx.restore();
+    return;
+  }
+
+  // Fallback
+  const bg = ctx.createRadialGradient(0, 0, size*0.2, 0, 0, size);
+  bg.addColorStop(0, '#ffffff'); bg.addColorStop(0.4, m.color); bg.addColorStop(1, '#000000');
+  ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI*2);
+  ctx.fillStyle = bg; ctx.fill();
+  ctx.lineWidth = 5 * S; ctx.strokeStyle = '#ffd700'; ctx.stroke();
+}
+
+// Helper: draw glowing core (weak point)
+function drawBossCore(ctx, size, color1, color2, t) {
+  ctx.save();
+  const pulse = 0.85 + Math.sin(t * 8) * 0.15;
+  const cg = ctx.createRadialGradient(0, 0, 2, 0, 0, size * pulse);
+  cg.addColorStop(0, color2);
+  cg.addColorStop(0.4, color1);
+  cg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.beginPath(); ctx.arc(0, 0, size * pulse, 0, Math.PI * 2);
+  ctx.fillStyle = cg; ctx.fill();
+  ctx.restore();
+}
+
+// =============================================================
 // 19. GAME LOOP (HOST / SINGLE)
-// 🔥 v20.8.2 — VELOCITY-BASED MOVEMENT + DYNAMIC LERP + FIRE BUTTON
 // =============================================================
 function gameLoop() {
   if (!isGameRunning || isGamePaused) return;
@@ -4266,7 +4920,7 @@ function gameLoop() {
   ctx.globalAlpha = 1;
 
   // ==========================================================
-  // 🔥 v20.8.2 FIX — LOCAL PLAYER MOVEMENT (VELOCITY-BASED)
+  // LOCAL PLAYER MOVEMENT (VELOCITY-BASED)
   // ==========================================================
   if (localPlayerActive) {
     let moveInput = 0;
@@ -4282,12 +4936,10 @@ function gameLoop() {
     }
 
     if (useJoystick) {
-      // Velocity-based: langsung gerakkan hero, TANPA lerp
       playerX += moveInput * playerSpeed * JOYSTICK_SPEED_MULT;
       playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
-      playerTargetX = playerX; // sinkronkan target
+      playerTargetX = playerX;
     } else {
-      // Keyboard / pointer tap: tetap pakai target + lerp dinamis
       if (moveInput !== 0) {
         playerTargetX += moveInput * playerSpeed;
         playerTargetX = Math.max(40 * S, Math.min(W - 40 * S, playerTargetX));
@@ -4299,7 +4951,6 @@ function gameLoop() {
       playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
     }
   }
-  // ==========================================================
 
   if (playerHitFlash > 0) playerHitFlash--;
 
@@ -4313,9 +4964,7 @@ function gameLoop() {
 
   const heroPlayerY = H - 45 * S;
 
-  // ==========================================================
-  // 🔥 v20.8.2 FIX — GUEST INPUT HANDLING (VELOCITY-BASED)
-  // ==========================================================
+  // GUEST INPUT HANDLING
   if (mpActive && mpRole === 'host' && !mpRemoteGuestSpectator) {
     let guestMove = 0;
     let guestUseJoystick = false;
@@ -4379,9 +5028,8 @@ function gameLoop() {
       savePlayerStats(); checkAchievements();
     }
   }
-  // ==========================================================
 
-  // Local shooting (per-hero) — 🔥 v20.8.2: fire button + dynamic FR
+  // Local shooting
   const hero = HERO_DATA[currentActor] || HERO_DATA.robot;
   const comboFRMult = comboBoostActive.firerate ? 0.8 : 1.0;
   const fireInterval = Math.max(60, (hero.fireRate - (upgradeFireRate - 1) * 15) * comboFRMult);
@@ -4477,15 +5125,15 @@ function gameLoop() {
           if (isB) {
             triggerScreenFlash(0.6);
             triggerHitStop(6);
-            try { triggerVibrate([100, 40, 100]); } catch(e) {}   // 🔥 v20.8.2: haptic boss kill
+            try { triggerVibrate([100, 40, 100]); } catch(e) {}
           }
           else if (m.size > 30 * GAME_SCALE) { triggerHitStop(2); }
 
           if (m.algorithm === 'splitter' && m.size > 22 * S) {
             const miniSize = 22 * S;
             monsters.push(
-              { x: m.x-20*S, startX: m.x-20*S, y: m.y, speed: m.speed*1.25, size: miniSize, hp: 1, maxHp: 1, color: '#ff7f50', type: 'jelly', algorithm: 'linear', shootTimer: 0, timeAlive: 0, opacity: 1, hitFlash: 0, canShoot: false },
-              { x: m.x+20*S, startX: m.x+20*S, y: m.y, speed: m.speed*1.25, size: miniSize, hp: 1, maxHp: 1, color: '#ff7f50', type: 'jelly', algorithm: 'linear', shootTimer: 0, timeAlive: 0, opacity: 1, hitFlash: 0, canShoot: false }
+              { x: m.x-20*S, startX: m.x-20*S, y: m.y, speed: m.speed*1.25, size: miniSize, hp: 1, maxHp: 1, color: '#ff7f50', type: 'jelly', algorithm: 'linear', shootTimer: 0, timeAlive: 0, opacity: 1, hitFlash: 0, canShoot: false, rot: 0, wobble: 0 },
+              { x: m.x+20*S, startX: m.x+20*S, y: m.y, speed: m.speed*1.25, size: miniSize, hp: 1, maxHp: 1, color: '#ff7f50', type: 'jelly', algorithm: 'linear', shootTimer: 0, timeAlive: 0, opacity: 1, hitFlash: 0, canShoot: false, rot: 0, wobble: 0 }
             );
           }
           monsters.splice(j, 1);
@@ -4665,6 +5313,7 @@ function gameLoop() {
     }
   }
 
+  // MONSTER UPDATE + DRAW
   for (let i = monsters.length - 1; i >= 0; i--) {
     const m = monsters[i];
     m.timeAlive += 0.05;
@@ -4699,8 +5348,8 @@ function gameLoop() {
         if (m.minionTimer > 300) {
           m.minionTimer = 0;
           monsters.push(
-            { x: m.x-60*S, startX: m.x-60*S, y: m.y+40*S, speed: 1.5*S, size: 28*S, hp: 2, maxHp: 2, color: '#ff7f50', type: 'jelly', algorithm: 'linear', shootTimer: 0, timeAlive: 0, opacity: 1, hitFlash: 0, canShoot: false },
-            { x: m.x+60*S, startX: m.x+60*S, y: m.y+40*S, speed: 1.5*S, size: 28*S, hp: 2, maxHp: 2, color: '#ff7f50', type: 'jelly', algorithm: 'linear', shootTimer: 0, timeAlive: 0, opacity: 1, hitFlash: 0, canShoot: false }
+            { x: m.x-60*S, startX: m.x-60*S, y: m.y+40*S, speed: 1.5*S, size: 28*S, hp: 2, maxHp: 2, color: '#ff7f50', type: 'jelly', algorithm: 'linear', shootTimer: 0, timeAlive: 0, opacity: 1, hitFlash: 0, canShoot: false, rot: 0, wobble: 0 },
+            { x: m.x+60*S, startX: m.x+60*S, y: m.y+40*S, speed: 1.5*S, size: 28*S, hp: 2, maxHp: 2, color: '#ff7f50', type: 'jelly', algorithm: 'linear', shootTimer: 0, timeAlive: 0, opacity: 1, hitFlash: 0, canShoot: false, rot: 0, wobble: 0 }
           );
           spawnFloatingText(m.x, m.y+60*S, 'SUMMON!', '#ff4757');
         }
@@ -4759,6 +5408,7 @@ function gameLoop() {
     ctx.translate(m.x, m.y);
 
     if (m.type.startsWith('boss')) {
+      // Aura ring
       ctx.save();
       ctx.rotate(m.aura || 0);
       ctx.beginPath(); ctx.arc(0, 0, m.size + 15 * S, 0, Math.PI*2);
@@ -4769,44 +5419,9 @@ function gameLoop() {
       ctx.restore();
       ctx.globalAlpha = m.opacity || 1.0;
 
-      const bg = ctx.createRadialGradient(0, 0, m.size*0.2, 0, 0, m.size);
-      bg.addColorStop(0, '#ffffff');
-      bg.addColorStop(0.4, m.color);
-      bg.addColorStop(1, '#000000');
-      ctx.beginPath(); ctx.arc(0, 0, m.size, 0, Math.PI*2);
-      ctx.fillStyle = bg; ctx.fill();
-      ctx.lineWidth = 5 * S; ctx.strokeStyle = '#ffd700'; ctx.stroke();
-
-      ctx.fillStyle = '#ffd700';
-      ctx.beginPath();
-      ctx.moveTo(-30 * S, -m.size);
-      ctx.lineTo(-15 * S, -m.size - 25 * S);
-      ctx.lineTo(0, -m.size - 10 * S);
-      ctx.lineTo(15 * S, -m.size - 25 * S);
-      ctx.lineTo(30 * S, -m.size);
-      ctx.closePath(); ctx.fill();
-
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(-m.size*0.3, -10 * S, m.size*0.15, 0, Math.PI*2);
-      ctx.arc(m.size*0.3, -10 * S, m.size*0.15, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = '#ff4757';
-      ctx.beginPath();
-      ctx.arc(-m.size*0.3, -10 * S, m.size*0.07, 0, Math.PI*2);
-      ctx.arc(m.size*0.3, -10 * S, m.size*0.07, 0, Math.PI*2);
-      ctx.fill();
-
-      if (!m.noWeakPoint && m.coreOpen) {
-        ctx.save();
-        const cg = ctx.createRadialGradient(0, 0, 4 * S, 0, 0, m.size*0.55);
-        cg.addColorStop(0, 'rgba(255,50,50,0.95)');
-        cg.addColorStop(0.5, 'rgba(255,200,0,0.7)');
-        cg.addColorStop(1, 'rgba(255,50,50,0)');
-        ctx.beginPath(); ctx.arc(0, 0, m.size*0.55, 0, Math.PI*2);
-        ctx.fillStyle = cg; ctx.fill();
-        ctx.restore();
-      }
+      // 🔥 v20.9 — unique boss shape
+      const bossNum = parseInt(m.type.replace('boss','')) || 5;
+      drawBossUniqueShape(ctx, m, S, currentTheme, bossNum);
     } else if (m.type === 'donut') {
       ctx.beginPath(); ctx.arc(0, 0, m.size, 0, Math.PI*2); ctx.fillStyle = '#fa8231'; ctx.fill();
       ctx.beginPath(); ctx.arc(0, 0, m.size*0.8, 0, Math.PI*2); ctx.fillStyle = '#ff78ae'; ctx.fill();
@@ -4824,6 +5439,9 @@ function gameLoop() {
       ctx.closePath();
       ctx.fillStyle = '#00d2d3'; ctx.fill();
       ctx.strokeStyle = '#fff'; ctx.stroke();
+    } else if (['triangle','hexagon','star','diamond','worm'].includes(m.type)) {
+      // 🔥 v20.9 — extended enemy shapes
+      drawEnemyShapeExtended(ctx, m, S, theme);
     } else {
       const rg = ctx.createRadialGradient(-m.size*0.3, -m.size*0.3, m.size*0.1, 0, 0, m.size);
       rg.addColorStop(0, '#ffffff'); rg.addColorStop(0.3, m.color); rg.addColorStop(1, '#000000');
@@ -4877,6 +5495,7 @@ function gameLoop() {
     }
   }
 
+  // Particles
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.x += p.vx; p.y += p.vy;
@@ -4929,8 +5548,7 @@ function drawParallaxStars(ctx, W, H) {
 }
 
 // =============================================================
-// 19b. GUEST RENDER-ONLY LOOP (dengan LOCAL PREDICTION)
-// 🔥 v20.8.2 — guest local prediction untuk joystick
+// 19b. GUEST RENDER-ONLY LOOP
 // =============================================================
 function gameLoopGuest() {
   const W = VIRTUAL_WIDTH;
@@ -4971,7 +5589,6 @@ function gameLoopGuest() {
 
   const heroPlayerY = H - 45 * S;
 
-  // 🔥 v20.8.2 — kirim analog axis + fire state
   if (MP && MP.isConnected) {
     MP.sendInput({
       left: localPlayerActive ? isMovingLeft : false,
@@ -4994,28 +5611,21 @@ function gameLoopGuest() {
     mpGuestInput.resume = false;
   }
 
-  // ==========================================================
-  // 🔥 v20.8.2 FIX — GUEST LOCAL PREDICTION
-  // ==========================================================
+  // Local prediction
   if (localPlayerActive && Math.abs(joystickAxis) > 0.02) {
-    // Joystick aktif: prediksi lokal untuk hilangkan lag jaringan
     playerX += joystickAxis * playerSpeed * JOYSTICK_SPEED_MULT;
     playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
-    // Soft reconcile ke posisi host (bukan hard snap) → hindari rubber-band
     mpGuestX = mpGuestX * 0.6 + playerX * 0.4;
   } else if (localPlayerActive && (isMovingLeft || isMovingRight)) {
-    // Keyboard fallback
     const kbMove = isMovingLeft ? -1 : 1;
     playerX += kbMove * playerSpeed;
     playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
     mpGuestX = mpGuestX * 0.6 + playerX * 0.4;
   } else {
-    // Tidak ada input: ikuti posisi host
     const gdx = mpGuestX - playerX;
     if (Math.abs(gdx) > 0.5) playerX += gdx * 0.4;
     else playerX = mpGuestX;
   }
-  // ==========================================================
 
   if (mpRemoteAlive !== false && !mpRemoteHostSpectator) {
     const hostX = mpRemoteX;
@@ -5105,42 +5715,9 @@ function drawRemoteMonsters(ctx, W, H, S, heroPlayerY) {
       ctx.restore();
       ctx.globalAlpha = m.opacity || 1.0;
 
-      const bg = ctx.createRadialGradient(0, 0, m.size*0.2, 0, 0, m.size);
-      bg.addColorStop(0, '#ffffff'); bg.addColorStop(0.4, m.color); bg.addColorStop(1, '#000000');
-      ctx.beginPath(); ctx.arc(0, 0, m.size, 0, Math.PI*2);
-      ctx.fillStyle = bg; ctx.fill();
-      ctx.lineWidth = 5 * S; ctx.strokeStyle = '#ffd700'; ctx.stroke();
-
-      ctx.fillStyle = '#ffd700';
-      ctx.beginPath();
-      ctx.moveTo(-30 * S, -m.size);
-      ctx.lineTo(-15 * S, -m.size - 25 * S);
-      ctx.lineTo(0, -m.size - 10 * S);
-      ctx.lineTo(15 * S, -m.size - 25 * S);
-      ctx.lineTo(30 * S, -m.size);
-      ctx.closePath(); ctx.fill();
-
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(-m.size*0.3, -10 * S, m.size*0.15, 0, Math.PI*2);
-      ctx.arc(m.size*0.3, -10 * S, m.size*0.15, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = '#ff4757';
-      ctx.beginPath();
-      ctx.arc(-m.size*0.3, -10 * S, m.size*0.07, 0, Math.PI*2);
-      ctx.arc(m.size*0.3, -10 * S, m.size*0.07, 0, Math.PI*2);
-      ctx.fill();
-
-      if (m.coreOpen) {
-        ctx.save();
-        const cg = ctx.createRadialGradient(0, 0, 4 * S, 0, 0, m.size*0.55);
-        cg.addColorStop(0, 'rgba(255,50,50,0.95)');
-        cg.addColorStop(0.5, 'rgba(255,200,0,0.7)');
-        cg.addColorStop(1, 'rgba(255,50,50,0)');
-        ctx.beginPath(); ctx.arc(0, 0, m.size*0.55, 0, Math.PI*2);
-        ctx.fillStyle = cg; ctx.fill();
-        ctx.restore();
-      }
+      // 🔥 v20.9 — remote boss unique shape
+      const bossNum = parseInt(m.type.replace('boss','')) || 5;
+      drawBossUniqueShape(ctx, m, S, currentTheme, bossNum);
     } else if (m.type === 'donut') {
       ctx.beginPath(); ctx.arc(0, 0, m.size, 0, Math.PI*2); ctx.fillStyle = '#fa8231'; ctx.fill();
       ctx.beginPath(); ctx.arc(0, 0, m.size*0.8, 0, Math.PI*2); ctx.fillStyle = '#ff78ae'; ctx.fill();
@@ -5158,6 +5735,9 @@ function drawRemoteMonsters(ctx, W, H, S, heroPlayerY) {
       ctx.closePath();
       ctx.fillStyle = '#00d2d3'; ctx.fill();
       ctx.strokeStyle = '#fff'; ctx.stroke();
+    } else if (m.type && ['triangle','hexagon','star','diamond','worm'].includes(m.type)) {
+      // 🔥 v20.9 — remote extended enemies
+      drawEnemyShapeExtended(ctx, m, S, currentTheme);
     } else {
       const rg = ctx.createRadialGradient(-m.size*0.3, -m.size*0.3, m.size*0.1, 0, 0, m.size);
       rg.addColorStop(0, '#ffffff'); rg.addColorStop(0.3, m.color); rg.addColorStop(1, '#000000');
@@ -5314,7 +5894,6 @@ async function levelComplete() {
   const isFinalLevel = (lc.level === 50);
   if (isFinalLevel) {
     await markGameCompleted(score);
-    console.log('🏆 [Completed] Game tamat! Certificate tersimpan.');
     updateLevelSelectButton();
   }
 
@@ -5337,20 +5916,17 @@ async function levelComplete() {
     }
     const icon = $('result-icon');
     if (icon) { icon.innerHTML = '<use href="#i-trophy"/>'; icon.classList.remove('fail'); }
-
     const nb = $('btn-next-level');
     if (nb) {
       if (isFinalLevel) nb.classList.add('hidden');
       else nb.classList.remove('hidden');
     }
     const rb = $('btn-retry-level'); if (rb) rb.classList.remove('hidden');
-
     const certBtn = $('btn-view-certificate');
     if (certBtn) {
       if (isFinalLevel) certBtn.classList.remove('hidden');
       else certBtn.classList.add('hidden');
     }
-
     const m = $('modal-result'); if (m) m.classList.remove('hidden');
   };
 
@@ -5422,7 +5998,7 @@ function startEndless() {
     resizeCanvas(); updateGameScale();
     const d = { level: 999, targetKills: ENDLESS_KILLS_PER_WAVE, targetScore: 0, algorithm: 'linear', types: ['jelly'] };
     showLoadoutModal(d, () => {
-      playerSpeed = 11 * GAME_SCALE;   // 🔥 v20.8.2: 9 → 11
+      playerSpeed = 11 * GAME_SCALE;
       freezeCharges = playerLoadout.includes('freeze') ? upgradeFreeze : 0;
       shieldCharges = playerLoadout.includes('shield') ? upgradeShield : 0;
       bombCharges = playerLoadout.includes('bomb') ? upgradeBomb : 0;
@@ -5437,6 +6013,7 @@ function startEndless() {
       void b.offsetWidth;
       sounds.playLevelIntro();
       setTimeout(() => { b.classList.add('fade-out'); setTimeout(() => b.classList.add('hidden'), 500); }, 1800);
+      if (IS_DESKTOP && typeof window._showDesktopHints === 'function') window._showDesktopHints();
       sounds.startBGM(); startSpawnLoop(); gameLoop();
     });
   }, 60);
@@ -5538,7 +6115,7 @@ function startDaily() {
     resizeCanvas(); updateGameScale();
     const d = { level: 999, targetKills: 1, targetScore: 0, algorithm: 'boss_daily', types: ['boss'] };
     showLoadoutModal(d, () => {
-      playerSpeed = 11 * GAME_SCALE;   // 🔥 v20.8.2: 9 → 11
+      playerSpeed = 11 * GAME_SCALE;
       freezeCharges = playerLoadout.includes('freeze') ? upgradeFreeze : 0;
       shieldCharges = (currentDailyModifier.id !== 'no_shield' && playerLoadout.includes('shield')) ? upgradeShield : 0;
       bombCharges = playerLoadout.includes('bomb') ? upgradeBomb : 0;
@@ -5553,6 +6130,7 @@ function startDaily() {
       void b.offsetWidth;
       sounds.playLevelIntro();
       setTimeout(() => { b.classList.add('fade-out'); setTimeout(() => b.classList.add('hidden'), 500); }, 1800);
+      if (IS_DESKTOP && typeof window._showDesktopHints === 'function') window._showDesktopHints();
       sounds.startBGM(); startSpawnLoop(); gameLoop();
     });
   }, 60);
@@ -6108,5 +6686,5 @@ window.addEventListener('load', () => {
 });
 
 // =============================================================
-// END OF FILE — v20.8.2 (Ultra Responsive Controller Edition)
+// END OF FILE — v20.9 (Friendly & Variety Edition)
 // =============================================================
