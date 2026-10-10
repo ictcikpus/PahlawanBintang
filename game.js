@@ -7467,3 +7467,1277 @@ trackHeroUsage = async function(heroId) {
 // (existing heroesUsedCount tetap bekerja karena kita pakai array yang sama)
 
 console.log('✅ [game.js] v23.0.0 — PART 7/7 COMPLETE — 30 HEROES READY');
+
+// =============================================================
+// PAHLAWAN BINTANG — game.js v24.0.0 — PART 8/8 "LEGACY"
+// Ultimate + Boss Cinematic + Story + Pets + Skins + Rush + Weekly + Login
+// =============================================================
+
+// =============================================================
+// L1. ULTIMATE SKILL SYSTEM
+// =============================================================
+const ULTIMATE_CONFIG = {
+  // Starter heroes
+  robot:          { name:'OVERDRIVE',      charge:100, duration:300, color:'#00d2ff', effect:'firerate' },
+  cannon:         { name:'NUKE BLAST',     charge:100, duration:1,   color:'#ff4757', effect:'nuke' },
+  dragon:         { name:'DRAGON RAGE',    charge:100, duration:240, color:'#2ed573', effect:'spread5' },
+  cat:            { name:'NINE LIVES',     charge:100, duration:300, color:'#ffa502', effect:'firerate' },
+  unicorn:        { name:'STAR RAIN',      charge:100, duration:240, color:'#a55eea', effect:'starRain' },
+  phoenix:        { name:'REBIRTH FLAME',  charge:100, duration:240, color:'#ff8c00', effect:'spread5' },
+  ninja:          { name:'SHADOW CLONE',   charge:100, duration:300, color:'#c56cf0', effect:'clone' },
+  wizard:         { name:'ARCANE STORM',   charge:100, duration:300, color:'#00b8d4', effect:'homing' },
+  archer:         { name:'RAIN OF ARROWS', charge:100, duration:300, color:'#2ed573', effect:'rain' },
+  ghost:          { name:'SOUL REAP',      charge:100, duration:180, color:'#00d2d3', effect:'invuln' },
+  // Minions
+  jelly_hero:     { name:'BOUNCE BOMB',    charge:100, duration:1,   color:'#ff4757', effect:'bounceBomb' },
+  donut_hero:     { name:'DONUT SPIN',     charge:100, duration:300, color:'#fa8231', effect:'spiral' },
+  cloud_hero:     { name:'CLOUD BURST',    charge:100, duration:240, color:'#f1f2f6', effect:'slowAll' },
+  crystal_hero:   { name:'PRISM BEAM',     charge:100, duration:240, color:'#00d2d3', effect:'laserBeam' },
+  splitter_hero:  { name:'SPLIT MADNESS',  charge:100, duration:300, color:'#ff7f50', effect:'splitAll' },
+  triangle_hero:  { name:'TRI STORM',      charge:100, duration:300, color:'#ffa502', effect:'spread5' },
+  hexagon_hero:   { name:'HEX SHIELD',     charge:100, duration:360, color:'#1e90ff', effect:'invuln' },
+  star_enemy_hero:{ name:'STARFALL',       charge:100, duration:240, color:'#ffd700', effect:'starRain' },
+  diamond_hero:   { name:'DIAMOND HARD',   charge:100, duration:360, color:'#70a1ff', effect:'invuln' },
+  worm_hero:      { name:'WORMHOLE',       charge:100, duration:1,   color:'#a55eea', effect:'nuke' },
+  // Villains
+  inferno_boss:   { name:'METEOR RAIN',    charge:100, duration:300, color:'#ff2200', effect:'meteor' },
+  void_boss:      { name:'TIME FREEZE',    charge:100, duration:180, color:'#c86bff', effect:'freezeTime' },
+  cryo_boss:      { name:'ABSOLUTE ZERO',  charge:100, duration:240, color:'#4de8ff', effect:'freezeAll' },
+  titan_boss:     { name:'EARTHQUAKE',     charge:100, duration:1,   color:'#1abc9c', effect:'quake' },
+  solar_boss:     { name:'SOLAR FLARE',    charge:100, duration:300, color:'#ffaa00', effect:'spread5' },
+  omega_boss:     { name:'OMEGA BEAM',     charge:100, duration:240, color:'#ff0055', effect:'laserBeam' },
+  abyss_boss:     { name:'ABYSS VOID',     charge:100, duration:1,   color:'#8b00ff', effect:'nuke' },
+  nemesis_boss:   { name:'NEMESIS RAGE',   charge:100, duration:300, color:'#ff2200', effect:'firerate' },
+  abyss2_boss:    { name:'DOUBLE VOID',    charge:100, duration:240, color:'#8b00ff', effect:'freezeTime' },
+  eternity_boss:  { name:'SUPERNOVA',      charge:100, duration:1,   color:'#ffd700', effect:'supernova' }
+};
+
+let ultCharge = 0;
+let ultActive = false;
+let ultTimer = 0;
+let ultCooldown = 0;
+let ultCloneTimer = 0;
+let ultExtraBullets = [];
+let ultBounceTimers = [];
+
+function updateUltCharge(amount) {
+  if (ultActive) return;
+  ultCharge = Math.min(100, ultCharge + amount);
+  const btn = document.getElementById('btn-ultimate');
+  const fill = document.getElementById('ult-fill');
+  if (fill) fill.style.height = ultCharge + '%';
+  if (btn) btn.classList.toggle('ready', ultCharge >= 100);
+}
+
+function triggerUltimate() {
+  if (ultCharge < 100 || ultActive || !isGameRunning || isGamePaused) return;
+  const cfg = ULTIMATE_CONFIG[currentActor];
+  if (!cfg) return;
+
+  ultCharge = 0;
+  ultActive = true;
+  ultTimer = cfg.duration;
+  ultCooldown = 0;
+
+  const btn = document.getElementById('btn-ultimate');
+  if (btn) btn.classList.remove('ready');
+  const fill = document.getElementById('ult-fill');
+  if (fill) fill.style.height = '0%';
+
+  // Visual banner
+  showUltimateBanner(cfg.name, cfg.color);
+
+  // Apply effect
+  applyUltimateEffect(cfg.effect, cfg);
+
+  try { sounds.playBossWarning(); } catch(e) {}
+  try { triggerVibrate([100, 30, 100, 30, 200]); } catch(e) {}
+  triggerScreenFlash(0.8);
+  screenShake = 18;
+  triggerHitStop(6);
+}
+
+function applyUltimateEffect(effect, cfg) {
+  const W = VIRTUAL_WIDTH, H = VIRTUAL_HEIGHT, S = GAME_SCALE;
+  switch(effect) {
+    case 'firerate':
+      ultCooldown = 0; // signal to gameLoop: fire faster
+      break;
+    case 'nuke':
+      // Big burst — kill or damage all on screen
+      monsters.forEach(m => {
+        if (m.type.startsWith('boss')) { m.hp -= 150; m.hitFlash = 15; }
+        else { m.hp = 0; }
+        createBurstParticles3D(m.x, m.y, m.color, 30);
+      });
+      monsters = monsters.filter(m => m.hp > 0);
+      levelKills += 10;
+      score += 5000;
+      updateHUDValues();
+      checkLevelObjectives();
+      break;
+    case 'spread5':
+      ultExtraBullets.push({ type:'spread5', until: 240 });
+      break;
+    case 'starRain':
+      for (let i = 0; i < 30; i++) {
+        setTimeout(() => {
+          if (!isGameRunning) return;
+          const rx = Math.random() * W;
+          bullets.push({
+            x: rx, y: -20, vx: 0, vy: 12 * S,
+            color: cfg.color, heroType: currentActor, size: 8 * S, pierce: 2, owner: 'host'
+          });
+        }, i * 80);
+      }
+      break;
+    case 'clone':
+      ultExtraBullets.push({ type:'clone', until: 300 });
+      break;
+    case 'homing':
+      ultExtraBullets.push({ type:'homing', until: 300 });
+      break;
+    case 'rain':
+      for (let i = 0; i < 15; i++) {
+        setTimeout(() => {
+          if (!isGameRunning) return;
+          bullets.push({
+            x: playerX + (Math.random() - 0.5) * W * 0.7,
+            y: -20, vx: 0, vy: 15 * S,
+            color: '#ffd700', heroType: 'archer', size: 6 * S, pierce: 2, owner: 'host'
+          });
+        }, i * 100);
+      }
+      break;
+    case 'invuln':
+      isReviveInvuln = true;
+      reviveInvulnTimer = cfg.duration;
+      break;
+    case 'bounceBomb':
+      for (let i = 0; i < 6; i++) {
+        const angle = (i / 6) * Math.PI * 2;
+        bullets.push({
+          x: playerX, y: H - H * 0.07 - 20,
+          vx: Math.cos(angle) * 8 * S,
+          vy: Math.sin(angle) * 8 * S,
+          color: cfg.color, heroType: 'jelly_hero', size: 10 * S, pierce: 3, owner: 'host'
+        });
+      }
+      break;
+    case 'spiral':
+      for (let i = 0; i < 24; i++) {
+        const angle = (i / 24) * Math.PI * 4;
+        setTimeout(() => {
+          if (!isGameRunning) return;
+          bullets.push({
+            x: playerX, y: H - H * 0.07 - 20,
+            vx: Math.cos(angle) * 10 * S,
+            vy: Math.sin(angle) * 10 * S,
+            color: cfg.color, heroType: 'donut_hero', size: 7 * S, pierce: 1, owner: 'host'
+          });
+        }, i * 50);
+      }
+      break;
+    case 'slowAll':
+      monsters.forEach(m => { m.speed *= 0.3; m._slowedUntil = Date.now() + 3000; });
+      break;
+    case 'laserBeam':
+      // Big vertical beam
+      monsters.forEach(m => {
+        if (Math.abs(m.x - playerX) < W * 0.3) {
+          if (m.type.startsWith('boss')) { m.hp -= 200; }
+          else { m.hp -= 10; }
+          m.hitFlash = 12;
+        }
+      });
+      monsters = monsters.filter(m => m.hp > 0);
+      levelKills += 15;
+      score += 8000;
+      updateHUDValues();
+      checkLevelObjectives();
+      break;
+    case 'splitAll':
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+          spawnHeroBullets(currentActor, playerX, H - H * 0.07 - 20, 1, 'host');
+        }, i * 100);
+      }
+      break;
+    case 'meteor':
+      for (let i = 0; i < 20; i++) {
+        setTimeout(() => {
+          if (!isGameRunning) return;
+          const rx = Math.random() * W;
+          spawnFloatingText(rx, 30, '☄', '#ff2200');
+          monsters.forEach(m => {
+            if (Math.abs(m.x - rx) < 80) {
+              if (m.type.startsWith('boss')) { m.hp -= 30; }
+              else { m.hp -= 5; }
+              m.hitFlash = 8;
+            }
+          });
+          createBurstParticles3D(rx, H * 0.5, '#ff2200', 15);
+        }, i * 120);
+      }
+      break;
+    case 'freezeTime':
+      isFrozen = true;
+      freezeFramesRemaining = 300;
+      break;
+    case 'freezeAll':
+      isFrozen = true;
+      freezeFramesRemaining = 360;
+      monsters.forEach(m => { m.hitFlash = 5; });
+      break;
+    case 'quake':
+      screenShake = 30;
+      monsters.forEach(m => {
+        if (m.type.startsWith('boss')) { m.hp -= 180; }
+        else { m.hp -= 3; }
+        m.hitFlash = 12;
+      });
+      monsters = monsters.filter(m => m.hp > 0);
+      levelKills += 8;
+      score += 4000;
+      updateHUDValues();
+      checkLevelObjectives();
+      break;
+    case 'supernova':
+      // Massive — damages all, gains +10 to all stats temporarily
+      monsters.forEach(m => {
+        if (m.type.startsWith('boss')) { m.hp -= 300; m.hitFlash = 20; }
+        else { m.hp = 0; }
+        createBurstParticles3D(m.x, m.y, '#ffd700', 40);
+      });
+      monsters = monsters.filter(m => m.hp > 0);
+      levelKills += 20;
+      score += 15000;
+      coins += 500;
+      levelCoinsEarned += 500;
+      try { DB.set('pahlawan_coins', coins); } catch(e) {}
+      updateHUDValues();
+      checkLevelObjectives();
+      break;
+  }
+}
+
+function showUltimateBanner(name, color) {
+  const flash = document.createElement('div');
+  flash.className = 'ultimate-flash';
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 700);
+
+  const banner = document.createElement('div');
+  banner.className = 'ultimate-banner';
+  banner.style.color = '#fff';
+  banner.style.textShadow = `0 0 20px ${color}, 0 0 40px ${color}, 0 4px 0 rgba(0,0,0,.8)`;
+  banner.innerText = '⚡ ' + name + ' ⚡';
+  document.body.appendChild(banner);
+  setTimeout(() => banner.remove(), 2000);
+}
+
+// Update ultimate in gameLoop
+const _origGameLoop24 = gameLoop;
+gameLoop = function() {
+  if (ultActive) {
+    ultTimer--;
+    if (ultTimer <= 0) {
+      ultActive = false;
+      ultExtraBullets = [];
+    }
+  }
+  _origGameLoop24.call(this);
+};
+
+// Hook into bullet spawn to apply ultimate bullets
+const _origSpawnHeroBullets24 = spawnHeroBullets;
+spawnHeroBullets = function(heroId, originX, originY, targetDir, owner) {
+  if (ultActive) {
+    // Speed boost / extra bullets
+    const cfg = ULTIMATE_CONFIG[heroId];
+    if (cfg) {
+      if (cfg.effect === 'firerate' || cfg.effect === 'clone') {
+        // Double shot
+        _origSpawnHeroBullets24.call(this, heroId, originX - 15 * GAME_SCALE, originY, targetDir, owner);
+        _origSpawnHeroBullets24.call(this, heroId, originX + 15 * GAME_SCALE, originY, targetDir, owner);
+        return;
+      }
+      if (cfg.effect === 'spread5') {
+        for (let i = -2; i <= 2; i++) {
+          const angle = i * 0.25;
+          const hero = HERO_DATA[heroId] || HERO_DATA.robot;
+          const speed = hero.bulletSpeed * GAME_SCALE;
+          bullets.push({
+            x: originX, y: originY,
+            vx: Math.sin(angle) * speed,
+            vy: Math.cos(angle) * speed,
+            color: cfg.color, heroType: heroId,
+            size: hero.bulletSize * GAME_SCALE,
+            pierce: hero.bulletPierce, owner
+          });
+        }
+        return;
+      }
+    }
+  }
+  return _origSpawnHeroBullets24.call(this, heroId, originX, originY, targetDir, owner);
+};
+
+// Charge ultimate on kill
+const _origHandleKillStreak24 = handleKillStreak;
+handleKillStreak = function() {
+  updateUltCharge(3);
+  _origHandleKillStreak24.call(this);
+};
+
+// =============================================================
+// L2. BOSS CINEMATIC
+// =============================================================
+const BOSS_CINEMATIC_DATA = {
+  5:  { name:'INFERNO',       sub:'THE FIRELORD AWAKENS',      icon:'i-inferno_boss' },
+  10: { name:'VOID LORD',     sub:'MASTER OF THE VOID',        icon:'i-void_boss' },
+  15: { name:'CRYO EMPEROR',  sub:'FROZEN ETERNITY',           icon:'i-cryo_boss' },
+  20: { name:'TITAN PRIME',   sub:'GUARDIAN OF THE GALAXY',    icon:'i-titan_boss' },
+  25: { name:'SOLAR WRAITH',  sub:'THE RAGING SUN',            icon:'i-solar_boss' },
+  30: { name:'OMEGA',         sub:'THE END OF ALL THINGS',     icon:'i-omega_boss' },
+  35: { name:'ABYSS SOVEREIGN', sub:'RULER OF THE DEEP',       icon:'i-abyss_boss' },
+  40: { name:'NEMESIS',       sub:'YOUR DARKEST REFLECTION',   icon:'i-nemesis_boss' },
+  45: { name:'ABYSS²',        sub:'THE STRONGEST FORM',        icon:'i-abyss2_boss' },
+  50: { name:'ETERNITY',      sub:'THE BEGINNING AND END',     icon:'i-eternity_boss' }
+};
+
+function showBossCinematic(bossNum) {
+  const data = BOSS_CINEMATIC_DATA[bossNum];
+  if (!data) return;
+  const overlay = document.getElementById('boss-cinematic');
+  const svg = document.getElementById('boss-cine-svg');
+  const name = document.getElementById('boss-cine-name');
+  const sub = document.getElementById('boss-cine-sub');
+  if (!overlay) return;
+  if (svg) svg.innerHTML = `<use href="#${data.icon}"/>`;
+  if (name) name.innerText = data.name;
+  if (sub) sub.innerText = data.sub;
+  overlay.classList.remove('hidden');
+  try { sounds.playBossWarning(); } catch(e) {}
+  triggerVibrate([200, 100, 300, 100]);
+  triggerScreenFlash(0.6);
+
+  // Slow motion — freeze game for 2.5s
+  const savedPause = isGamePaused;
+  isGamePaused = true;
+
+  setTimeout(() => {
+    overlay.classList.add('hidden');
+    isGamePaused = savedPause;
+    if (isGameRunning) requestAnimationFrame(gameLoop);
+  }, 2500);
+}
+
+// Hook: replace old boss siren with cinematic
+const _origTriggerBossSiren24 = triggerBossSiren;
+triggerBossSiren = function() {
+  // Try cinematic first
+  let bossNum = null;
+  if (gameMode === 'daily') bossNum = dailyBossSequence[dailyBossIndex];
+  else if (gameMode === 'endless') bossNum = Math.min(50, Math.ceil(endlessWave / 5) * 5);
+  else {
+    const lc = levelsData[currentLevelIndex];
+    if (lc && lc.algorithm && lc.algorithm.startsWith('boss_')) {
+      bossNum = parseInt(lc.algorithm.replace('boss_','')) || 5;
+    }
+  }
+  if (bossNum && BOSS_CINEMATIC_DATA[bossNum]) {
+    showBossCinematic(bossNum);
+  } else {
+    _origTriggerBossSiren24.call(this);
+  }
+};
+
+// =============================================================
+// L3. STORY CUTSCENE (Comic Panels)
+// =============================================================
+const STORY_CUTSCENES = {
+  5: [
+    { bg:'#3a0000', sprite:'i-inferno_boss', label:'PERTEMPURAN', color:'#ff2200', text:'"Kau... berhasil mengalahkanku. Void mengendalikan pikiranku selama ini."' },
+    { bg:'#0a0a2e', sprite:'i-robot', label:'PAHLAWAN', color:'#00d2ff', text:'"Api kemarahanmu sudah reda. Bergabunglah denganku, Inferno."' },
+    { bg:'#2a0a00', sprite:'i-inferno_boss', label:'PERJANJIAN', color:'#ffd700', text:'"Aku bersumpah. Api-ku akan melindungi, bukan menghancurkan."' },
+    { bg:'#1a0a3a', sprite:'i-star', label:'BINTANG BARU', color:'#ffd700', text:'Hero INFERNO bergabung dalam tim Pahlawan Bintang!' }
+  ],
+  10: [
+    { bg:'#2a0a3a', sprite:'i-void_boss', label:'KEGELAPAN', color:'#c86bff', text:'"Ribuan tahun dalam kekosongan... aku lupa siapa diriku."' },
+    { bg:'#0a0a2e', sprite:'i-robot', label:'PEMBEBASAN', color:'#00d2ff', text:'"Kau bukan Void. Kau adalah korban Void. Kembalilah!"' },
+    { bg:'#3a0a5a', sprite:'i-void_boss', label:'KESADARAN', color:'#ff77ff', text:'"Aku... mengingat. Aku dulu penjaga Bimasakti. Terima kasih, Pahlawan."' },
+    { bg:'#1a0a3a', sprite:'i-star', label:'BINTANG BARU', color:'#ffd700', text:'Hero VOID LORD bergabung dan siap melindungi galaksi!' }
+  ],
+  50: [
+    { bg:'#1a1200', sprite:'i-eternity_boss', label:'AKHIR', color:'#ffd700', text:'"Aku awal, aku akhir. Tapi kau... adalah teman di antara keduanya."' },
+    { bg:'#0a0a2e', sprite:'i-robot', label:'AWAL BARU', color:'#00d2ff', text:'"Selamat datang, Eternity. Bersama kita jaga semesta ini."' },
+    { bg:'#2a2000', sprite:'i-eternity_boss', label:'JANJI', color:'#ffffff', text:'"Bintang-bintang purba akan menyertaimu selamanya, Pahlawan Bintang."' },
+    { bg:'#0a0a2e', sprite:'i-star', label:'TAMAT', color:'#ffd700', text:'🌟 SELAMAT! Semua bos telah kembali ke sisi cahaya. Galaksi aman untuk selamanya! 🌟' }
+  ]
+};
+
+function showStoryCutscene(levelNum, onDone) {
+  const panels = STORY_CUTSCENES[levelNum];
+  if (!panels) { if (onDone) onDone(); return; }
+
+  const container = document.getElementById('story-panels');
+  const overlay = document.getElementById('story-cutscene');
+  if (!container || !overlay) { if (onDone) onDone(); return; }
+
+  container.innerHTML = panels.map((p, i) => `
+    <div class="story-panel">
+      <div class="story-panel-bg" style="background:radial-gradient(circle at 50% 30%, ${p.color}40, transparent 60%)"></div>
+      <div class="story-panel-label" style="color:${p.color}; border-color:${p.color}80">${p.label}</div>
+      <div class="story-panel-sprite" style="color:${p.color}">
+        <svg viewBox="0 0 40 40"><use href="#${p.sprite}"/></svg>
+      </div>
+      <div class="story-panel-text">${p.text}</div>
+    </div>
+  `).join('');
+
+  overlay.classList.remove('hidden');
+  try { sounds.playLevelIntro(); } catch(e) {}
+
+  const skipBtn = document.getElementById('btn-story-skip');
+  const handler = () => {
+    overlay.classList.add('hidden');
+    skipBtn.removeEventListener('click', handler);
+    if (onDone) onDone();
+  };
+  skipBtn.addEventListener('click', handler);
+
+  // Auto-advance after all panels shown (7s)
+  setTimeout(() => {
+    if (!overlay.classList.contains('hidden')) handler();
+  }, 7000);
+}
+
+// Hook into levelComplete to show story after boss
+const _origLevelComplete24 = levelComplete;
+levelComplete = async function() {
+  const lvl = (levelsData[currentLevelIndex] || {}).level || 0;
+  const hasCutscene = !!STORY_CUTSCENES[lvl];
+  if (hasCutscene) {
+    // Show cutscene BEFORE result modal
+    await new Promise(resolve => {
+      showStoryCutscene(lvl, resolve);
+    });
+  }
+  await _origLevelComplete24.call(this);
+};
+
+// =============================================================
+// L4. COMPANION / PET SYSTEM
+// =============================================================
+const PETS = {
+  astro_dog: { name:'Astro Dog', icon:'i-robot', color:'#00d2ff', desc:'Tembakan otomatis' },
+  nova_cat:  { name:'Nova Cat',  icon:'i-cat',   color:'#ffa502', desc:'Fire rate +10%' },
+  star_owl:  { name:'Star Owl',  icon:'i-eagle', color:'#ffd700', desc:'Koin otomatis' },
+  void_bat:  { name:'Void Bat',  icon:'i-ghost', color:'#a55eea', desc:'Shield tiap 30s' }
+};
+
+let ownedPets = [];
+let activePets = [];
+let petFireTimer = 0;
+let petCoinTimer = 0;
+let petShieldTimer = 0;
+
+async function loadPets() {
+  const raw = await DB.get('pahlawan_pets');
+  try {
+    const data = JSON.parse(raw || '{}');
+    ownedPets = data.owned || [];
+    activePets = data.active || [];
+  } catch(e) { ownedPets = []; activePets = []; }
+}
+
+async function savePets() {
+  await DB.set('pahlawan_pets', JSON.stringify({ owned: ownedPets, active: activePets }));
+}
+
+async function unlockPet(petId) {
+  if (ownedPets.includes(petId)) return;
+  ownedPets.push(petId);
+  if (activePets.length < 3) activePets.push(petId);
+  await savePets();
+  renderPetStrip();
+}
+
+function renderPetStrip() {
+  const strip = document.getElementById('pet-strip');
+  if (!strip) return;
+  strip.innerHTML = activePets.map(pid => {
+    const pet = PETS[pid];
+    if (!pet) return '';
+    const cls = pid === 'star_owl' ? 'pet-owl' : pid === 'void_bat' ? 'pet-bat' : pid === 'nova_cat' ? 'pet-fox' : '';
+    return `<div class="pet-chip ${cls} active" title="${pet.name}"><svg viewBox="0 0 40 40"><use href="#${pet.icon}"/></svg></div>`;
+  }).join('');
+}
+
+// Pet effects in gameLoop
+const _origGameLoopPet = gameLoop;
+gameLoop = function() {
+  if (isGameRunning && !isGamePaused) {
+    const H = VIRTUAL_HEIGHT, S = GAME_SCALE;
+    const heroPlayerY = H - Math.max(40, H * 0.07);
+
+    // Astro Dog: auto-shoot every 800ms
+    if (activePets.includes('astro_dog')) {
+      petFireTimer++;
+      if (petFireTimer >= 50) {
+        petFireTimer = 0;
+        if (monsters.length > 0 && Math.random() < 0.3) {
+          const target = monsters[0];
+          const ang = Math.atan2(target.y - heroPlayerY, target.x - playerX);
+          bullets.push({
+            x: playerX, y: heroPlayerY - 20 * S,
+            vx: Math.cos(ang) * 12 * S, vy: Math.sin(ang) * 12 * S,
+            color: '#00d2ff', heroType: 'robot', size: 5 * S, pierce: 1, owner: 'host', isPet: true
+          });
+        }
+      }
+    }
+
+    // Nova Cat: fire rate boost handled via comboFRMult in spawn
+    // Star Owl: auto-collect coin
+    if (activePets.includes('star_owl')) {
+      petCoinTimer++;
+      if (petCoinTimer >= 60 && coinsOnField.length > 0) {
+        petCoinTimer = 0;
+        const c = coinsOnField[0];
+        if (Math.random() < 0.5) {
+          coins += 1;
+          levelCoinsEarned += 1;
+          PLAYER_STATS.totalCoinsEarned += 1;
+          try { DB.set('pahlawan_coins', coins); } catch(e) {}
+          spawnFloatingText(c.x, c.y, '+1', '#ffd700');
+          coinsOnField.shift();
+          updateHUDValues();
+        }
+      }
+    }
+
+    // Void Bat: shield every 30s
+    if (activePets.includes('void_bat')) {
+      petShieldTimer++;
+      if (petShieldTimer >= 1800) {
+        petShieldTimer = 0;
+        isShieldActive = true;
+        shieldTimer = 300;
+        spawnFloatingText(playerX, heroPlayerY - 30 * S, 'PET SHIELD', '#a55eea');
+      }
+    }
+
+    // Nova Cat: 10% fire rate boost (applied in comboFRMult)
+    // Handled in gameLoop's fire interval: if activePets has nova_cat, use 0.9
+  }
+  _origGameLoopPet.call(this);
+};
+
+// Update fire rate for Nova Cat
+const _origSpawnHeroBulletsPet = spawnHeroBullets;
+spawnHeroBullets = function(heroId, originX, originY, targetDir, owner) {
+  // no change here — handled in gameLoop fire interval
+  return _origSpawnHeroBulletsPet.call(this, heroId, originX, originY, targetDir, owner);
+};
+
+// =============================================================
+// L5. HERO SKIN SYSTEM
+// =============================================================
+const SKINS = {
+  robot: [
+    { id:'default', name:'Original', color:'#1e90ff', price:0,      owned:true },
+    { id:'red',     name:'Crimson',  color:'#ff4757', price:500 },
+    { id:'gold',    name:'Golden',   color:'#ffd700', price:1500 }
+  ],
+  cannon: [
+    { id:'default', name:'Original', color:'#ff4757', price:0, owned:true },
+    { id:'ice',     name:'Ice',      color:'#4de8ff', price:500 },
+    { id:'shadow',  name:'Shadow',   color:'#2f3542', price:1500 }
+  ],
+  dragon: [
+    { id:'default', name:'Original', color:'#2ed573', price:0, owned:true },
+    { id:'fire',    name:'Fire',     color:'#ff8c00', price:500 },
+    { id:'void',    name:'Void',     color:'#8b00ff', price:1500 }
+  ]
+};
+// Default skins for all heroes (replicate pattern)
+Object.keys(HERO_DATA).forEach(hid => {
+  if (!SKINS[hid]) {
+    SKINS[hid] = [
+      { id:'default', name:'Original', color: HERO_DATA[hid].color, price:0, owned:true },
+      { id:'alt1', name:'Variant', color: HERO_DATA[hid].accent, price:500 },
+      { id:'alt2', name:'Special', color: '#ffd700', price:1500 }
+    ];
+  }
+});
+
+let ownedSkins = {};      // { heroId: ['default','red'] }
+let selectedSkins = {};   // { heroId: 'red' }
+
+async function loadSkins() {
+  const raw = await DB.get('pahlawan_skins');
+  try {
+    const data = JSON.parse(raw || '{}');
+    ownedSkins = data.owned || {};
+    selectedSkins = data.selected || {};
+  } catch(e) { ownedSkins = {}; selectedSkins = {}; }
+  // Ensure default owned
+  Object.keys(SKINS).forEach(hid => {
+    if (!ownedSkins[hid]) ownedSkins[hid] = ['default'];
+    if (!selectedSkins[hid]) selectedSkins[hid] = 'default';
+  });
+}
+
+async function saveSkins() {
+  await DB.set('pahlawan_skins', JSON.stringify({ owned: ownedSkins, selected: selectedSkins }));
+}
+
+function getActiveSkinColor(heroId) {
+  const skinId = selectedSkins[heroId] || 'default';
+  const skins = SKINS[heroId] || [];
+  const skin = skins.find(s => s.id === skinId);
+  return skin ? skin.color : (HERO_DATA[heroId] || HERO_DATA.robot).color;
+}
+
+function openSkinModal(heroId) {
+  const modal = document.getElementById('modal-skin');
+  const title = document.getElementById('skin-modal-title');
+  const sub = document.getElementById('skin-modal-hero');
+  const selector = document.getElementById('skin-selector');
+  const coinEl = document.getElementById('skin-coin-count');
+  if (!modal || !selector) return;
+
+  const hero = HERO_DATA[heroId] || HERO_DATA.robot;
+  if (title) title.innerText = 'SKIN: ' + hero.name.toUpperCase();
+  if (sub) sub.innerText = 'Pilih tampilan untuk ' + hero.name;
+  if (coinEl) coinEl.innerText = coins;
+
+  const skins = SKINS[heroId] || [];
+  const ownedList = ownedSkins[heroId] || ['default'];
+  const selected = selectedSkins[heroId] || 'default';
+
+  selector.innerHTML = skins.map(sk => {
+    const isOwned = ownedList.includes(sk.id) || sk.id === 'default';
+    const isSelected = selected === sk.id;
+    return `
+      <div class="skin-card ${isSelected ? 'selected' : ''} ${!isOwned ? 'locked' : ''}" data-skin-id="${sk.id}" data-hero-id="${heroId}">
+        <div class="skin-preview" style="color:${sk.color}">
+          <svg viewBox="0 0 40 40"><use href="#i-${heroId}"/></svg>
+        </div>
+        <div class="skin-name">${sk.name}</div>
+        <div class="skin-price ${isOwned ? 'owned' : ''}">
+          ${isOwned ? '✓ OWNED' : `<svg viewBox="0 0 24 24"><use href="#i-coin"/></svg>${sk.price}`}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  selector.querySelectorAll('.skin-card').forEach(card => {
+    card.onclick = () => handleSkinClick(card.dataset.heroId, card.dataset.skinId);
+  });
+
+  modal.classList.remove('hidden');
+}
+
+function handleSkinClick(heroId, skinId) {
+  const skins = SKINS[heroId] || [];
+  const skin = skins.find(s => s.id === skinId);
+  if (!skin) return;
+  const ownedList = ownedSkins[heroId] || ['default'];
+  const isOwned = ownedList.includes(skinId) || skinId === 'default';
+
+  if (!isOwned) {
+    if (coins < skin.price) {
+      alert('Koin tidak cukup! Butuh ' + skin.price + ' koin.');
+      return;
+    }
+    coins -= skin.price;
+    try { DB.set('pahlawan_coins', coins); } catch(e) {}
+    ownedList.push(skinId);
+    ownedSkins[heroId] = ownedList;
+    saveSkins();
+    try { sounds.playCoin(); } catch(e) {}
+  }
+
+  selectedSkins[heroId] = skinId;
+  saveSkins();
+  try { sounds.playPowerup(); } catch(e) {}
+  updateHUDValues();
+  openSkinModal(heroId); // refresh
+}
+
+// Skin color applied to bullet in gameLoop — override
+const _origDrawBulletSkin = drawBullet;
+drawBullet = function(ctx, b, S) {
+  if (b.heroType && selectedSkins[b.heroType] && selectedSkins[b.heroType] !== 'default') {
+    const originalColor = b.color;
+    b.color = getActiveSkinColor(b.heroType);
+    _origDrawBulletSkin.call(this, ctx, b, S);
+    b.color = originalColor;
+    return;
+  }
+  _origDrawBulletSkin.call(this, ctx, b, S);
+};
+
+// =============================================================
+// L6. BOSS RUSH MODE
+// =============================================================
+let bossRushIndex = 0;
+let bossRushStartTime = 0;
+const BOSS_RUSH_SEQUENCE = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+
+async function getBossRushBest() {
+  const raw = await DB.get('pahlawan_boss_rush_best');
+  try { return JSON.parse(raw || '{"time":0,"kills":0}'); } catch(e) { return {time:0, kills:0}; }
+}
+
+async function setBossRushBest(time, kills) {
+  const best = await getBossRushBest();
+  if ((best.time === 0 || time < best.time) && kills >= 10) {
+    await DB.set('pahlawan_boss_rush_best', JSON.stringify({ time, kills: Math.max(kills, best.kills) }));
+  } else if (kills > best.kills) {
+    await DB.set('pahlawan_boss_rush_best', JSON.stringify({ time: best.time, kills }));
+  }
+}
+
+async function openBossRushModal() {
+  const best = await getBossRushBest();
+  const bt = document.getElementById('br-best-time');
+  const bk = document.getElementById('br-best-kills');
+  if (bt) {
+    if (best.time > 0) {
+      const m = Math.floor(best.time / 60);
+      const s = best.time % 60;
+      bt.innerText = `${m}:${String(s).padStart(2,'0')}`;
+    } else bt.innerText = '--:--';
+  }
+  if (bk) bk.innerText = best.kills;
+  document.getElementById('modal-boss-rush').classList.remove('hidden');
+}
+
+function startBossRush() {
+  sounds.init();
+  gameMode = 'boss_rush';
+  bossRushIndex = 0;
+  bossRushStartTime = Date.now();
+  score = 0;
+  lives = 1;
+  playerHitPoints = 1;
+  reviveUsedThisRun = true; // no revive in boss rush
+  levelKills = 0;
+  levelCoinsEarned = 0;
+  currentTheme = LEVEL_THEMES[0];
+  applyThemeToDocument(currentTheme);
+  recolorStars();
+  resetLevelState();
+
+  playerLoadout = ['freeze', 'bomb'];
+  freezeCharges = 2;
+  shieldCharges = 0;
+  bombCharges = 2;
+  updateSkillButtonsUI();
+  updateHUDValues();
+  updateLivesDisplay();
+
+  document.getElementById('screen-main-menu').classList.add('hidden');
+  document.getElementById('hud-overlay').classList.remove('hidden');
+  resizeCanvas(); updateGameScale();
+
+  setTimeout(() => {
+    isGameRunning = true;
+    isGamePaused = false;
+    levelStartTime = Date.now();
+    // Spawn first boss directly
+    spawnBossRushBoss();
+    sounds.startBGM();
+    gameLoop();
+  }, 100);
+}
+
+function spawnBossRushBoss() {
+  if (bossRushIndex >= BOSS_RUSH_SEQUENCE.length) {
+    finishBossRush(true);
+    return;
+  }
+  const bossNum = BOSS_RUSH_SEQUENCE[bossRushIndex];
+  const W = VIRTUAL_WIDTH, S = GAME_SCALE;
+  const theme = getBossTheme(bossNum);
+  currentTheme = theme;
+  applyThemeToDocument(theme);
+  recolorStars();
+
+  const hpVal = getBossBaseHp(bossNum) * 2; // doubled
+  const bossSize = (BOSS_SIZES[bossNum] || 75) * S;
+
+  monsters.push({
+    x: W / 2, startX: W / 2, y: -100 * S,
+    speed: 1.0 * S, size: bossSize, hp: hpVal, maxHp: hpVal,
+    color: theme.accent, type: `boss${bossNum}`, algorithm: `boss_${bossNum}`,
+    shootTimer: 0, minionTimer: 0, enrageTimer: 0,
+    timeAlive: 0, opacity: 1, hitFlash: 0, aura: 0,
+    aimTimer: 0, aimTargetX: 0, aimTargetY: 0,
+    coreOpen: false, coreTimer: 0, coreGlow: 0, noWeakPoint: false
+  });
+
+  if (BOSS_CINEMATIC_DATA[bossNum]) showBossCinematic(bossNum);
+  updateHUDValues();
+}
+
+function finishBossRush(win) {
+  isGameRunning = false;
+  isGamePaused = false;
+  stopSpawnLoop();
+  sounds.stopBGM();
+  if (win) sounds.playWin();
+
+  const elapsed = Math.floor((Date.now() - bossRushStartTime) / 1000);
+  if (win) {
+    setBossRushBest(elapsed, BOSS_RUSH_SEQUENCE.length);
+    coins += 10000;
+    levelCoinsEarned += 10000;
+    try { DB.set('pahlawan_coins', coins); } catch(e) {}
+    // Unlock Timekeeper skin
+    const newOwnedSkins = ownedSkins['robot'] || ['default'];
+    if (!newOwnedSkins.includes('timekeeper')) {
+      newOwnedSkins.push('timekeeper');
+      ownedSkins['robot'] = newOwnedSkins;
+      // Add to SKINS data
+      if (SKINS['robot'] && !SKINS['robot'].find(s => s.id === 'timekeeper')) {
+        SKINS['robot'].push({ id:'timekeeper', name:'Timekeeper', color:'#ffd700', price:0 });
+      }
+      saveSkins();
+    }
+  }
+
+  const m = Math.floor(elapsed / 60);
+  const s = elapsed % 60;
+  const timeStr = `${m}:${String(s).padStart(2,'0')}`;
+
+  const $ = id => document.getElementById(id);
+  const rt = $('result-title');
+  if (rt) rt.innerText = win ? '🏆 BOSS RUSH SELESAI!' : 'BOSS RUSH GAGAL';
+  const rpn = $('result-player-name'); if (rpn) rpn.innerText = playerName;
+  const rs = $('result-score'); if (rs) rs.innerText = score;
+  const rc = $('result-coins'); if (rc) rc.innerText = `+${levelCoinsEarned}`;
+  const rl = $('result-level'); if (rl) rl.innerText = `${bossRushIndex}/${BOSS_RUSH_SEQUENCE.length} Bos`;
+  const rk = $('result-kills'); if (rk) rk.innerText = win ? `⏱ ${timeStr}` : `${bossRushIndex} Bos`;
+  const sc = $('result-stars');
+  if (sc) sc.innerHTML = win ? '<span style="color:#ffd700;font-size:12px;">⭐ TIMEKEEPER UNLOCKED ⭐</span>' : '<span style="color:#566a8c;font-size:12px;">—</span>';
+  const icon = $('result-icon');
+  if (icon) { icon.innerHTML = win ? '<use href="#i-trophy"/>' : '<use href="#i-skull"/>'; icon.classList.toggle('fail', !win); }
+  const nb = $('btn-next-level'); if (nb) nb.classList.add('hidden');
+  const rb = $('btn-retry-level'); if (rb) rb.classList.remove('hidden');
+  const certBtn = $('btn-view-certificate'); if (certBtn) certBtn.classList.add('hidden');
+  document.getElementById('modal-result').classList.remove('hidden');
+}
+
+// Hook: when boss dies in boss rush, spawn next
+const _origOnLevelCleared24 = onLevelCleared;
+onLevelCleared = function() {
+  if (gameMode === 'boss_rush') {
+    bossRushIndex++;
+    if (bossRushIndex >= BOSS_RUSH_SEQUENCE.length) {
+      finishBossRush(true);
+    } else {
+      setTimeout(() => {
+        if (!isGameRunning) return;
+        spawnBossRushBoss();
+      }, 2000);
+    }
+    return;
+  }
+  return _origOnLevelCleared24.call(this);
+};
+
+// Boss rush spawn loop override
+const _origSpawnMonsterLoop24 = spawnMonsterLoop;
+spawnMonsterLoop = function(token) {
+  if (gameMode === 'boss_rush') {
+    // Boss rush: no minions
+    return;
+  }
+  return _origSpawnMonsterLoop24.call(this, token);
+};
+
+// =============================================================
+// L7. WEEKLY CHALLENGE
+// =============================================================
+const WEEKLY_MODIFIERS = [
+  { id:'double_dmg',  name:'DOUBLE DAMAGE',  desc:'Tembakan damage x2, tapi hanya 1 HP' },
+  { id:'speed_demon', name:'SPEED DEMON',    desc:'Musuh 2x lebih cepat, koin x3' },
+  { id:'no_skill',    name:'BARE HANDS',     desc:'Skill dimatikan, tapi damage x3' },
+  { id:'glass_cannon',name:'GLASS CANNON',   desc:'1 HP, no shield, tapi fire rate x2' },
+  { id:'heavy_artilery', name:'HEAVY ARTILERY', desc:'Tembakan lambat tapi damage x5' }
+];
+
+async function getWeeklyChallenge() {
+  const now = new Date();
+  // Get Monday of current week
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(now.setDate(diff));
+  monday.setHours(0, 0, 0, 0);
+  const weekKey = `${monday.getFullYear()}${String(monday.getMonth()+1).padStart(2,'0')}${String(monday.getDate()).padStart(2,'0')}`;
+
+  // Deterministic modifier per week
+  let seed = 0;
+  for (let i = 0; i < weekKey.length; i++) seed = (seed * 31 + weekKey.charCodeAt(i)) % 1000000;
+  const modifier = WEEKLY_MODIFIERS[seed % WEEKLY_MODIFIERS.length];
+
+  const raw = await DB.get('pahlawan_weekly_' + weekKey);
+  let data = { bestScore: 0, rank: 0, plays: 0 };
+  try { if (raw) data = JSON.parse(raw); } catch(e) {}
+
+  return { weekKey, modifier, data };
+}
+
+async function saveWeeklyScore(weekKey, scoreVal) {
+  const raw = await DB.get('pahlawan_weekly_' + weekKey);
+  let data = { bestScore: 0, rank: 0, plays: 0 };
+  try { if (raw) data = JSON.parse(raw); } catch(e) {}
+  if (scoreVal > data.bestScore) data.bestScore = scoreVal;
+  data.plays++;
+  await DB.set('pahlawan_weekly_' + weekKey, JSON.stringify(data));
+}
+
+async function openWeeklyModal() {
+  const { modifier, data } = await getWeeklyChallenge();
+  const $ = id => document.getElementById(id);
+  const nameEl = $('weekly-mod-name');
+  const descEl = $('weekly-mod-desc');
+  const scoreEl = $('weekly-best-score');
+  const rankEl = $('weekly-rank');
+  if (nameEl) nameEl.innerText = modifier.name;
+  if (descEl) descEl.innerText = modifier.desc;
+  if (scoreEl) scoreEl.innerText = data.bestScore || 0;
+  if (rankEl) rankEl.innerText = data.rank ? `#${data.rank}` : '-';
+
+  // Timer to Monday next week
+  const now = new Date();
+  const day = now.getDay();
+  const diff = 8 - day;
+  const nextMonday = new Date(now);
+  nextMonday.setDate(now.getDate() + (day === 1 ? 7 : diff % 7 === 0 ? 7 : diff));
+  nextMonday.setHours(0, 0, 0, 0);
+  const secs = Math.floor((nextMonday - now) / 1000);
+  updateWeeklyTimer(secs);
+
+  if (window._weeklyTimerInt) clearInterval(window._weeklyTimerInt);
+  window._weeklyTimerInt = setInterval(() => {
+    const s = Math.max(0, secs - Math.floor((Date.now() - now.getTime()) / 1000));
+    updateWeeklyTimer(s);
+  }, 1000);
+
+  document.getElementById('modal-weekly').classList.remove('hidden');
+}
+
+function updateWeeklyTimer(secs) {
+  const el = document.getElementById('weekly-timer');
+  if (!el) return;
+  const d = Math.floor(secs / 86400);
+  const h = Math.floor((secs % 86400) / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  el.innerText = `${d}h ${h}j ${m}m`;
+}
+
+async function startWeekly() {
+  const { weekKey, modifier } = await getWeeklyChallenge();
+  sounds.init();
+  gameMode = 'weekly';
+  window._weeklyModifier = modifier;
+  window._weeklyWeekKey = weekKey;
+
+  score = 0;
+  lives = 1;
+  playerHitPoints = 1;
+  reviveUsedThisRun = false;
+  currentLevelIndex = 10; // start at level 11 (space zone)
+  currentTheme = LEVEL_THEMES[0];
+  applyThemeToDocument(currentTheme);
+  recolorStars();
+  resetLevelState();
+
+  playerLoadout = ['freeze', 'bomb'];
+  freezeCharges = 3;
+  shieldCharges = 0;
+  bombCharges = 3;
+  updateSkillButtonsUI();
+  updateHUDValues();
+  updateLivesDisplay();
+
+  document.getElementById('screen-main-menu').classList.add('hidden');
+  document.getElementById('hud-overlay').classList.remove('hidden');
+  resizeCanvas(); updateGameScale();
+
+  setTimeout(() => {
+    isGameRunning = true;
+    isGamePaused = false;
+    levelStartTime = Date.now();
+    initBossPhase(1, 'weekly');
+    const banner = document.getElementById('level-intro');
+    if (banner) {
+      document.getElementById('level-intro-number').innerText = '⚔';
+      document.getElementById('level-intro-name').innerText = 'WEEKLY: ' + modifier.name;
+      document.getElementById('level-intro-mission').innerText = modifier.desc.toUpperCase();
+      banner.classList.remove('hidden');
+      banner.classList.remove('fade-out');
+      banner.classList.remove('stage-clear');
+      banner.classList.remove('boss-approach');
+      void banner.offsetWidth;
+      sounds.playLevelIntro();
+      setTimeout(() => {
+        banner.classList.add('fade-out');
+        setTimeout(() => banner.classList.add('hidden'), 500);
+        startSpawnLoop();
+      }, 1200);
+    }
+    sounds.startBGM();
+    gameLoop();
+  }, 100);
+}
+
+// =============================================================
+// L8. DAILY LOGIN CALENDAR
+// =============================================================
+const LOGIN_REWARDS = [
+  { day:1, type:'coins', amount:100,  icon:'i-coin' },
+  { day:2, type:'coins', amount:200,  icon:'i-coin' },
+  { day:3, type:'coins', amount:500,  icon:'i-coin' },
+  { day:4, type:'freeze', amount:1,   icon:'i-snow' },
+  { day:5, type:'coins', amount:1000, icon:'i-coin' },
+  { day:6, type:'shield', amount:1,   icon:'i-shield' },
+  { day:7, type:'hero_box', amount:1, icon:'i-trophy' }
+];
+
+async function getLoginData() {
+  const raw = await DB.get('pahlawan_login_data');
+  const today = getTodayKey();
+  try {
+    const d = JSON.parse(raw || '{}');
+    if (d.lastClaim === today) return { claimedDays: d.claimedDays || [], todayClaimed: true, lastClaim: today };
+    // Check streak
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    const yKey = `${y.getFullYear()}${String(y.getMonth()+1).padStart(2,'0')}${String(y.getDate()).padStart(2,'0')}`;
+    if (d.lastClaim === yKey) return { claimedDays: d.claimedDays || [], todayClaimed: false, lastClaim: d.lastClaim };
+    // Streak broken
+    return { claimedDays: [], todayClaimed: false, lastClaim: d.lastClaim };
+  } catch(e) {
+    return { claimedDays: [], todayClaimed: false, lastClaim: null };
+  }
+}
+
+async function openLoginModal() {
+  const data = await getLoginData();
+  const cal = document.getElementById('login-calendar');
+  const claimBtn = document.getElementById('btn-claim-login');
+  if (!cal) return;
+
+  const nextDay = data.todayClaimed ? -1 : (data.claimedDays.length < 7 ? data.claimedDays.length + 1 : 1);
+
+  cal.innerHTML = LOGIN_REWARDS.map(r => {
+    const claimed = data.claimedDays.includes(r.day);
+    const isToday = data.todayClaimed && claimed && data.claimedDays.length === r.day;
+    const isNext = r.day === nextDay;
+    const cls = claimed ? 'claimed' : (isNext ? 'today' : '');
+    let rewardText = '';
+    if (r.type === 'coins') rewardText = `<svg viewBox="0 0 24 24"><use href="#i-coin"/></svg>${r.amount}`;
+    else if (r.type === 'freeze') rewardText = `❄ ${r.amount}`;
+    else if (r.type === 'shield') rewardText = `🛡 ${r.amount}`;
+    else if (r.type === 'hero_box') rewardText = `🎁`;
+    return `
+      <div class="login-day ${cls}">
+        <div class="login-day-num">Hari ${r.day}</div>
+        <div class="login-day-reward">${rewardText}</div>
+        ${claimed ? `<div class="login-day-check"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  if (claimBtn) {
+    if (data.todayClaimed) {
+      claimBtn.disabled = true;
+      claimBtn.querySelector('span').innerText = 'SUDAH DIKLAIM';
+    } else {
+      claimBtn.disabled = false;
+      claimBtn.querySelector('span').innerText = 'KLAIM HADIAH HARI INI';
+    }
+  }
+
+  document.getElementById('modal-login').classList.remove('hidden');
+}
+
+async function claimLoginReward() {
+  const data = await getLoginData();
+  if (data.todayClaimed) return;
+
+  const nextDay = data.claimedDays.length < 7 ? data.claimedDays.length + 1 : 1;
+  const reward = LOGIN_REWARDS.find(r => r.day === nextDay);
+  if (!reward) return;
+
+  // Apply reward
+  if (reward.type === 'coins') {
+    coins += reward.amount;
+    try { DB.set('pahlawan_coins', coins); } catch(e) {}
+    PLAYER_STATS.totalCoinsEarned += reward.amount;
+  } else if (reward.type === 'freeze') {
+    upgradeFreeze += reward.amount;
+    try { DB.set('pahlawan_up_freeze', upgradeFreeze); } catch(e) {}
+  } else if (reward.type === 'shield') {
+    upgradeShield += reward.amount;
+    try { DB.set('pahlawan_up_shield', upgradeShield); } catch(e) {}
+  } else if (reward.type === 'hero_box') {
+    // Unlock random locked minion hero
+    const lockedMinions = MINION_HEROES.filter(h => !isHeroUnlocked(h));
+    if (lockedMinions.length > 0) {
+      const rnd = lockedMinions[Math.floor(Math.random() * lockedMinions.length)];
+      await unlockHero(rnd);
+    } else {
+      // All minions unlocked — give coins instead
+      coins += 2000;
+      try { DB.set('pahlawan_coins', coins); } catch(e) {}
+    }
+  }
+
+  data.claimedDays.push(nextDay);
+  if (data.claimedDays.length >= 7) data.claimedDays = [];
+  await DB.set('pahlawan_login_data', JSON.stringify({
+    claimedDays: data.claimedDays,
+    lastClaim: getTodayKey()
+  }));
+
+  await savePlayerStats();
+  try { sounds.playUnlock(); } catch(e) {}
+  triggerScreenFlash(0.5);
+  updateShopUI();
+  updateHUDValues();
+  updateActorGridUI();
+  openLoginModal();
+}
+
+// =============================================================
+// L9. INIT — Load semua data baru
+// =============================================================
+window.addEventListener('load', () => {
+  setTimeout(async () => {
+    try {
+      await loadPets();
+      renderPetStrip();
+      await loadSkins();
+      console.log('✅ [Legacy] Pets + Skins loaded');
+    } catch(e) { console.warn('⚠️ [Legacy] Init fail:', e); }
+
+    // Auto-unlock Astro Dog as starter pet
+    if (!ownedPets.includes('astro_dog')) {
+      await unlockPet('astro_dog');
+    }
+
+    // Weekly check — show modal if Monday
+    const now = new Date();
+    if (now.getDay() === 1) {
+      // Monday - reminder
+      setTimeout(() => {
+        const weeklyBtn = document.getElementById('btn-weekly');
+        if (weeklyBtn) {
+          weeklyBtn.style.animation = 'btnShine 2s ease-in-out infinite';
+        }
+      }, 2000);
+    }
+
+    // Login check
+    const loginData = await getLoginData();
+    if (!loginData.todayClaimed) {
+      setTimeout(() => {
+        const loginBtn = document.getElementById('btn-login');
+        if (loginBtn) {
+          loginBtn.classList.add('has-notif');
+          loginBtn.style.boxShadow = '0 0 20px rgba(255,215,0,.7)';
+        }
+      }, 2500);
+    }
+  }, 1500);
+});
+
+// =============================================================
+// L10. EVENT BINDINGS — semua tombol baru
+// =============================================================
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const $ = id => document.getElementById(id);
+
+    // Ultimate button
+    const btnUlt = $('btn-ultimate');
+    if (btnUlt) {
+      btnUlt.addEventListener('click', (e) => {
+        e.preventDefault();
+        triggerUltimate();
+        try { triggerVibrate(30); } catch(err) {}
+      });
+    }
+
+    // Boss Rush
+    const btnBR = $('btn-boss-rush');
+    if (btnBR) btnBR.onclick = () => openBossRushModal();
+    const btnStartBR = $('btn-start-boss-rush');
+    if (btnStartBR) btnStartBR.onclick = () => {
+      $('modal-boss-rush').classList.add('hidden');
+      try { requestFullscreenAndLandscape(); } catch(e) {}
+      startBossRush();
+    };
+    const btnCloseBR = $('btn-close-boss-rush');
+    if (btnCloseBR) btnCloseBR.onclick = () => $('modal-boss-rush').classList.add('hidden');
+
+    // Weekly
+    const btnWK = $('btn-weekly');
+    if (btnWK) btnWK.onclick = () => openWeeklyModal();
+    const btnStartWK = $('btn-start-weekly');
+    if (btnStartWK) btnStartWK.onclick = () => {
+      $('modal-weekly').classList.add('hidden');
+      try { requestFullscreenAndLandscape(); } catch(e) {}
+      startWeekly();
+    };
+    const btnCloseWK = $('btn-close-weekly');
+    if (btnCloseWK) btnCloseWK.onclick = () => $('modal-weekly').classList.add('hidden');
+
+    // Login
+    const btnLG = $('btn-login');
+    if (btnLG) btnLG.onclick = () => openLoginModal();
+    const btnClaimLG = $('btn-claim-login');
+    if (btnClaimLG) btnClaimLG.onclick = () => claimLoginReward();
+    const btnCloseLG = $('btn-close-login');
+    if (btnCloseLG) btnCloseLG.onclick = () => $('modal-login').classList.add('hidden');
+
+    // Skin modal close
+    const btnCloseSk = $('btn-close-skin');
+    if (btnCloseSk) btnCloseSk.onclick = () => $('modal-skin').classList.add('hidden');
+
+    // Long-press on actor card opens skin modal
+    document.querySelectorAll('.actor-card').forEach(card => {
+      let pressTimer = null;
+      const heroId = card.dataset.actor;
+      if (!heroId) return;
+
+      card.addEventListener('touchstart', () => {
+        pressTimer = setTimeout(() => {
+          if (isHeroUnlocked(heroId)) openSkinModal(heroId);
+        }, 700);
+      });
+      card.addEventListener('touchend', () => {
+        if (pressTimer) clearTimeout(pressTimer);
+      });
+      card.addEventListener('touchmove', () => {
+        if (pressTimer) clearTimeout(pressTimer);
+      });
+      // Right-click on desktop
+      card.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (isHeroUnlocked(heroId)) openSkinModal(heroId);
+      });
+    });
+
+    console.log('✅ [Legacy] All buttons bound');
+  }, 1800);
+});
+
+console.log('✅ [game.js] v24.0.0 — LEGACY EDITION PART 8/8 LOADED');
