@@ -446,28 +446,53 @@ canvas{display:block}
 <div id="modal-actors" class="modal hidden">
   <div class="modal-box">
     <h2>PILIH HERO</h2>
-    <p class="mp-subtitle">Hero terkunci? Selesaikan 20 soal MTK dalam 60 detik untuk membukanya!</p>
+    <p class="mp-subtitle">Total <strong>30 Hero</strong>: 10 Starter · 10 Minion (MTK) · 10 Villain (Kalahkan Bos)</p>
+
+    <div class="actor-tabs" id="actor-tabs">
+      <button class="actor-tab active" data-cat="all" type="button">SEMUA</button>
+      <button class="actor-tab" data-cat="starter" type="button">STARTER</button>
+      <button class="actor-tab" data-cat="minion" type="button">MINION (MTK)</button>
+      <button class="actor-tab" data-cat="villain" type="button">VILLAIN (BOS)</button>
+    </div>
+
     <div class="actor-grid" id="actor-grid">
-      <div class="actor-card selected unlocked" data-actor="robot"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-robot"/></svg><span>Robot Cyber</span></div>
-      <div class="actor-card locked" data-actor="cannon"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-cannon"/></svg><span>Meriam Bintang</span></div>
-      <div class="actor-card locked" data-actor="dragon"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-dragon"/></svg><span>Cyber Dragon</span></div>
-      <div class="actor-card locked" data-actor="cat"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-cat"/></svg><span>Ninja Cat</span></div>
-      <div class="actor-card locked" data-actor="unicorn"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-unicorn"/></svg><span>Unicorn Star</span></div>
-      <div class="actor-card locked" data-actor="phoenix"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-phoenix"/></svg><span>Phoenix Api</span></div>
-      <div class="actor-card locked" data-actor="ninja"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-ninja"/></svg><span>Shadow Ninja</span></div>
-      <div class="actor-card locked" data-actor="wizard"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-wizard"/></svg><span>Star Wizard</span></div>
-      <div class="actor-card locked" data-actor="archer"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-archer"/></svg><span>Elite Archer</span></div>
-      <div class="actor-card locked" data-actor="ghost"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-ghost"/></svg><span>Void Ghost</span></div>
-      <div class="actor-card locked" data-actor="tiger"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-tiger"/></svg><span>Tiger Blaze</span></div>
-      <div class="actor-card locked" data-actor="eagle"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-eagle"/></svg><span>Sky Eagle</span></div>
-      <div class="actor-card locked" data-actor="samurai"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-samurai"/></svg><span>Star Samurai</span></div>
-      <div class="actor-card locked" data-actor="alien"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-alien"/></svg><span>Cosmic Alien</span></div>
-      <div class="actor-card locked" data-actor="mecha"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-mecha"/></svg><span>Mega Mecha</span></div>
-      <div class="actor-card locked" data-actor="wolf"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-wolf"/></svg><span>Lunar Wolf</span></div>
-      <div class="actor-card locked" data-actor="bee"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-bee"/></svg><span>Hyper Bee</span></div>
-      <div class="actor-card locked" data-actor="kraken"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-kraken"/></svg><span>Void Kraken</span></div>
-      <div class="actor-card locked" data-actor="titan"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-titan"/></svg><span>Iron Titan</span></div>
-      <div class="actor-card locked" data-actor="angel"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-angel"/></svg><span>Light Angel</span></div>
+
+      <!-- ======== STARTER (10) ======== -->
+      <div class="actor-card selected unlocked" data-actor="robot" data-cat="starter"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-robot"/></svg><span>Robot Cyber</span></div>
+      <div class="actor-card locked" data-actor="cannon" data-cat="starter"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-cannon"/></svg><span>Meriam Bintang</span></div>
+      <div class="actor-card locked" data-actor="dragon" data-cat="starter"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-dragon"/></svg><span>Cyber Dragon</span></div>
+      <div class="actor-card locked" data-actor="cat" data-cat="starter"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-cat"/></svg><span>Ninja Cat</span></div>
+      <div class="actor-card locked" data-actor="unicorn" data-cat="starter"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-unicorn"/></svg><span>Unicorn Star</span></div>
+      <div class="actor-card locked" data-actor="phoenix" data-cat="starter"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-phoenix"/></svg><span>Phoenix Api</span></div>
+      <div class="actor-card locked" data-actor="ninja" data-cat="starter"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-ninja"/></svg><span>Shadow Ninja</span></div>
+      <div class="actor-card locked" data-actor="wizard" data-cat="starter"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-wizard"/></svg><span>Star Wizard</span></div>
+      <div class="actor-card locked" data-actor="archer" data-cat="starter"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-archer"/></svg><span>Elite Archer</span></div>
+      <div class="actor-card locked" data-actor="ghost" data-cat="starter"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-ghost"/></svg><span>Void Ghost</span></div>
+
+      <!-- ======== MINION (10) — Unlock via MTK ======== -->
+      <div class="actor-card locked cat-minion" data-actor="jelly_hero" data-cat="minion"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-jelly_hero"/></svg><span>Jelly Bouncer</span><span class="unlock-hint">📚 MTK</span></div>
+      <div class="actor-card locked cat-minion" data-actor="donut_hero" data-cat="minion"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-donut_hero"/></svg><span>Donut Roller</span><span class="unlock-hint">📚 MTK</span></div>
+      <div class="actor-card locked cat-minion" data-actor="cloud_hero" data-cat="minion"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-cloud_hero"/></svg><span>Cloud Puff</span><span class="unlock-hint">📚 MTK</span></div>
+      <div class="actor-card locked cat-minion" data-actor="crystal_hero" data-cat="minion"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-crystal_hero"/></svg><span>Crystal Shard</span><span class="unlock-hint">📚 MTK</span></div>
+      <div class="actor-card locked cat-minion" data-actor="splitter_hero" data-cat="minion"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-splitter_hero"/></svg><span>Split Bomb</span><span class="unlock-hint">📚 MTK</span></div>
+      <div class="actor-card locked cat-minion" data-actor="triangle_hero" data-cat="minion"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-triangle_hero"/></svg><span>Tri Dash</span><span class="unlock-hint">📚 MTK</span></div>
+      <div class="actor-card locked cat-minion" data-actor="hexagon_hero" data-cat="minion"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-hexagon_hero"/></svg><span>Hex Tank</span><span class="unlock-hint">📚 MTK</span></div>
+      <div class="actor-card locked cat-minion" data-actor="star_enemy_hero" data-cat="minion"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-star_enemy_hero"/></svg><span>Star Shooter</span><span class="unlock-hint">📚 MTK</span></div>
+      <div class="actor-card locked cat-minion" data-actor="diamond_hero" data-cat="minion"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-diamond_hero"/></svg><span>Diamond Blast</span><span class="unlock-hint">📚 MTK</span></div>
+      <div class="actor-card locked cat-minion" data-actor="worm_hero" data-cat="minion"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-worm_hero"/></svg><span>Worm Tunnel</span><span class="unlock-hint">📚 MTK</span></div>
+
+      <!-- ======== VILLAIN (10) — Unlock via boss ======== -->
+      <div class="actor-card locked cat-villain" data-actor="inferno_boss" data-cat="villain"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-inferno_boss"/></svg><span>Inferno</span><span class="unlock-hint">⚔ Lv 5</span></div>
+      <div class="actor-card locked cat-villain" data-actor="void_boss" data-cat="villain"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-void_boss"/></svg><span>Void Lord</span><span class="unlock-hint">⚔ Lv 10</span></div>
+      <div class="actor-card locked cat-villain" data-actor="cryo_boss" data-cat="villain"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-cryo_boss"/></svg><span>Cryo Emperor</span><span class="unlock-hint">⚔ Lv 15</span></div>
+      <div class="actor-card locked cat-villain" data-actor="titan_boss" data-cat="villain"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-titan_boss"/></svg><span>Titan Prime</span><span class="unlock-hint">⚔ Lv 20</span></div>
+      <div class="actor-card locked cat-villain" data-actor="solar_boss" data-cat="villain"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-solar_boss"/></svg><span>Solar Wraith</span><span class="unlock-hint">⚔ Lv 25</span></div>
+      <div class="actor-card locked cat-villain" data-actor="omega_boss" data-cat="villain"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-omega_boss"/></svg><span>Omega</span><span class="unlock-hint">⚔ Lv 30</span></div>
+      <div class="actor-card locked cat-villain" data-actor="abyss_boss" data-cat="villain"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-abyss_boss"/></svg><span>Abyss Sovereign</span><span class="unlock-hint">⚔ Lv 35</span></div>
+      <div class="actor-card locked cat-villain" data-actor="nemesis_boss" data-cat="villain"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-nemesis_boss"/></svg><span>Nemesis</span><span class="unlock-hint">⚔ Lv 40</span></div>
+      <div class="actor-card locked cat-villain" data-actor="abyss2_boss" data-cat="villain"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-abyss2_boss"/></svg><span>Abyss²</span><span class="unlock-hint">⚔ Lv 45</span></div>
+      <div class="actor-card locked cat-villain" data-actor="eternity_boss" data-cat="villain"><svg class="actor-avatar" viewBox="0 0 40 40"><use href="#i-eternity_boss"/></svg><span>Eternity</span><span class="unlock-hint">⚔ Lv 50</span></div>
+
     </div>
     <button id="btn-close-actors" class="btn-secondary" type="button">TUTUP</button>
   </div>
