@@ -8741,3 +8741,631 @@ window.addEventListener('load', () => {
 });
 
 console.log('✅ [game.js] v24.0.0 — LEGACY EDITION PART 8/8 LOADED');
+
+// =============================================================
+// PAHLAWAN BINTANG — game.js v24.0.0 — PART 9/8 "LEGACY PART 2"
+// Co-op Raid + Pet Shop + Weather + Photo Mode
+// =============================================================
+
+// =============================================================
+// M1. CO-OP RAID MODE
+// =============================================================
+let raidState = {
+  active: false,
+  phase: 0, // 1=minion, 2=boss1, 3=minion, 4=boss2enraged
+  bossHp: 0,
+  bossMaxHp: 0,
+  bossNum: 30, // Omega Prime
+  sharedHp: 10,
+  sharedRevives: 3,
+  minionTarget: 20,
+  minionKilled: 0,
+  startTime: 0
+};
+
+async function openRaidModal() {
+  document.getElementById('modal-raid').classList.remove('hidden');
+  updateRaidUI();
+}
+
+function updateRaidUI() {
+  const hpEl = document.getElementById('raid-shared-hp');
+  if (hpEl) hpEl.innerText = raidState.sharedHp;
+}
+
+async function startRaid() {
+  sounds.init();
+  gameMode = 'coop_raid';
+  raidState.active = true;
+  raidState.phase = 1;
+  raidState.sharedHp = 10;
+  raidState.sharedRevives = 3;
+  raidState.minionKilled = 0;
+  raidState.startTime = Date.now();
+  raidState.bossNum = 30;
+
+  const baseHp = 50000;
+  raidState.bossMaxHp = baseHp;
+  raidState.bossHp = baseHp;
+
+  score = 0;
+  lives = 1;
+  playerHitPoints = 1; // Shared HP handled separately
+  reviveUsedThisRun = false;
+  currentLevelIndex = 29; // Around level 30
+  currentTheme = getBossTheme(30);
+  applyThemeToDocument(currentTheme);
+  recolorStars();
+  resetLevelState();
+
+  playerLoadout = ['freeze', 'bomb'];
+  freezeCharges = 5;
+  shieldCharges = 0;
+  bombCharges = 5;
+  updateSkillButtonsUI();
+  updateHUDValues();
+  updateLivesDisplay();
+
+  document.getElementById('screen-main-menu').classList.add('hidden');
+  document.getElementById('hud-overlay').classList.remove('hidden');
+  resizeCanvas(); updateGameScale();
+
+  // Show intro
+  const banner = document.getElementById('level-intro');
+  if (banner) {
+    document.getElementById('level-intro-number').innerText = '🔥';
+    document.getElementById('level-intro-name').innerText = 'RAID: OMEGA PRIME';
+    document.getElementById('level-intro-mission').innerText = 'FASE 1: MINION WAVE — KUMPULKAN TIM!';
+    banner.classList.remove('hidden');
+    banner.classList.remove('fade-out');
+    banner.classList.remove('stage-clear');
+    banner.classList.remove('boss-approach');
+    void banner.offsetWidth;
+    sounds.playBossWarning();
+    triggerVibrate([200, 100, 200, 100, 300]);
+    setTimeout(() => {
+      banner.classList.add('fade-out');
+      setTimeout(() => banner.classList.add('hidden'), 500);
+    }, 2000);
+  }
+
+  setTimeout(() => {
+    isGameRunning = true;
+    isGamePaused = false;
+    levelStartTime = Date.now();
+    startSpawnLoop();
+    sounds.startBGM();
+    gameLoop();
+  }, 2100);
+}
+
+function checkRaidPhase() {
+  if (!raidState.active || gameMode !== 'coop_raid') return;
+
+  if (raidState.phase === 1) {
+    // Minion wave
+    raidState.minionKilled = levelKills;
+    if (levelKills >= raidState.minionTarget && monsters.filter(m => !m.type.startsWith('boss')).length === 0) {
+      transitionRaidPhase(2);
+    }
+  } else if (raidState.phase === 3) {
+    raidState.minionKilled = levelKills;
+    if (levelKills >= 20 && monsters.filter(m => !m.type.startsWith('boss')).length === 0) {
+      transitionRaidPhase(4);
+    }
+  }
+}
+
+function transitionRaidPhase(nextPhase) {
+  raidState.phase = nextPhase;
+  levelKills = 0;
+
+  const banner = document.getElementById('level-intro');
+  if (banner) {
+    const phaseText = nextPhase === 2 ? 'FASE 2: BOSS MUNCUL!' :
+                      nextPhase === 3 ? 'FASE 3: MINION WAVE!' :
+                      'FASE 4: ENRAGED!';
+    document.getElementById('level-intro-number').innerText = '⚔';
+    document.getElementById('level-intro-name').innerText = 'OMEGA PRIME';
+    document.getElementById('level-intro-mission').innerText = phaseText;
+    banner.classList.remove('hidden');
+    banner.classList.remove('fade-out');
+    banner.classList.remove('stage-clear');
+    banner.classList.remove('boss-approach');
+    void banner.offsetWidth;
+    sounds.playBossWarning();
+    triggerScreenFlash(0.7);
+    setTimeout(() => {
+      banner.classList.add('fade-out');
+      setTimeout(() => banner.classList.add('hidden'), 500);
+      // Spawn boss for this phase
+      if (nextPhase === 2) spawnRaidBoss(false);
+      if (nextPhase === 4) spawnRaidBoss(true);
+      if (nextPhase === 3) startSpawnLoop();
+    }, 2000);
+  }
+}
+
+function spawnRaidBoss(enraged) {
+  const W = VIRTUAL_WIDTH, S = GAME_SCALE;
+  const bossNum = raidState.bossNum;
+  const hp = enraged ? Math.floor(raidState.bossMaxHp * 0.6) : raidState.bossMaxHp;
+  const size = (BOSS_SIZES[bossNum] || 75) * S * (enraged ? 1.3 : 1);
+
+  if (enraged) {
+    // Enraged: 3x spawn rate, +50% speed, HP regen
+    monsters.push({
+      x: W / 2, startX: W / 2, y: -100 * S,
+      speed: 1.5 * S, size: size, hp: hp, maxHp: hp,
+      color: '#ff0055', type: `boss${bossNum}`, algorithm: `boss_${bossNum}`,
+      shootTimer: 0, minionTimer: 0, enrageTimer: 0,
+      timeAlive: 0, opacity: 1, hitFlash: 0, aura: 0,
+      aimTimer: 0, aimTargetX: 0, aimTargetY: 0,
+      coreOpen: false, coreTimer: 0, coreGlow: 0, noWeakPoint: false,
+      isRaidEnraged: true
+    });
+  } else {
+    monsters.push({
+      x: W / 2, startX: W / 2, y: -100 * S,
+      speed: 1.0 * S, size: size, hp: hp, maxHp: hp,
+      color: currentTheme.accent, type: `boss${bossNum}`, algorithm: `boss_${bossNum}`,
+      shootTimer: 0, minionTimer: 0, enrageTimer: 0,
+      timeAlive: 0, opacity: 1, hitFlash: 0, aura: 0,
+      aimTimer: 0, aimTargetX: 0, aimTargetY: 0,
+      coreOpen: false, coreTimer: 0, coreGlow: 0, noWeakPoint: false,
+      isRaid: true
+    });
+  }
+  updateHUDValues();
+}
+
+function finishRaid(win) {
+  raidState.active = false;
+  isGameRunning = false;
+  isGamePaused = false;
+  stopSpawnLoop();
+  sounds.stopBGM();
+  if (win) sounds.playWin();
+
+  const elapsed = Math.floor((Date.now() - raidState.startTime) / 1000);
+
+  if (win) {
+    coins += 25000;
+    levelCoinsEarned = 25000;
+    try { DB.set('pahlawan_coins', coins); } catch(e) {}
+
+    // Unlock exclusive skin
+    const list = ownedSkins['robot'] || ['default'];
+    if (!list.includes('raid_master')) {
+      list.push('raid_master');
+      ownedSkins['robot'] = list;
+      if (SKINS['robot'] && !SKINS['robot'].find(s => s.id === 'raid_master')) {
+        SKINS['robot'].push({ id:'raid_master', name:'Raid Master', color:'#ff2e44', price:0 });
+      }
+      saveSkins();
+    }
+  }
+
+  const $ = id => document.getElementById(id);
+  const rt = $('result-title');
+  if (rt) rt.innerText = win ? '🏆 RAID SELESAI!' : 'RAID GAGAL';
+  const rpn = $('result-player-name'); if (rpn) rpn.innerText = playerName;
+  const rs = $('result-score'); if (rs) rs.innerText = score;
+  const rc = $('result-coins'); if (rc) rc.innerText = `+${levelCoinsEarned}`;
+  const rl = $('result-level'); if (rl) rl.innerText = `Fase ${raidState.phase}/4`;
+  const rk = $('result-kills'); if (rk) rk.innerText = `${elapsed}s`;
+  const sc = $('result-stars');
+  if (sc) sc.innerHTML = win ? '<span style="color:#ffd700;font-size:12px;">⭐ RAID MASTER SKIN ⭐</span>' : '<span style="color:#566a8c;font-size:12px;">—</span>';
+  const icon = $('result-icon');
+  if (icon) { icon.innerHTML = win ? '<use href="#i-trophy"/>' : '<use href="#i-skull"/>'; icon.classList.toggle('fail', !win); }
+  const nb = $('btn-next-level'); if (nb) nb.classList.add('hidden');
+  const rb = $('btn-retry-level'); if (rb) rb.classList.remove('hidden');
+  const certBtn = $('btn-view-certificate'); if (certBtn) certBtn.classList.add('hidden');
+  document.getElementById('modal-result').classList.remove('hidden');
+}
+
+// Hook level objectives for raid
+const _origCheckLevelObjectives24b = checkLevelObjectives;
+checkLevelObjectives = function() {
+  if (gameMode === 'coop_raid') {
+    checkRaidPhase();
+    return;
+  }
+  return _origCheckLevelObjectives24b.call(this);
+};
+
+// Hook boss death for raid
+const _origOnLevelCleared24b = onLevelCleared;
+onLevelCleared = function() {
+  if (gameMode === 'coop_raid') {
+    if (raidState.phase === 2) {
+      // Boss 1 defeated → next minion wave
+      transitionRaidPhase(3);
+    } else if (raidState.phase === 4) {
+      // Enraged defeated → win
+      finishRaid(true);
+    }
+    return;
+  }
+  return _origOnLevelCleared24b.call(this);
+};
+
+// Hook player hit for raid
+const _origHandlePlayerHit24 = handlePlayerHit;
+handlePlayerHit = function() {
+  if (gameMode === 'coop_raid') {
+    raidState.sharedHp--;
+    updateRaidUI();
+    triggerScreenFlash(0.5);
+    screenShake = 15;
+    if (raidState.sharedHp <= 0) {
+      if (raidState.sharedRevives > 0) {
+        raidState.sharedRevives--;
+        raidState.sharedHp = 10;
+        spawnFloatingText(playerX, VIRTUAL_HEIGHT * 0.5, 'SHARED REVIVE!', '#39ff14');
+        triggerScreenFlash(0.6);
+      } else {
+        finishRaid(false);
+      }
+    }
+    return;
+  }
+  return _origHandlePlayerHit24.call(this);
+};
+
+// =============================================================
+// M2. PET SHOP
+// =============================================================
+const PET_PRICES = {
+  astro_dog: 0,     // free starter
+  nova_cat:  1500,
+  star_owl:  2500,
+  void_bat:  3000
+};
+
+function renderPetShop() {
+  const grid = document.getElementById('pet-shop-grid');
+  const slots = document.getElementById('pet-active-slots');
+  const coinEl = document.getElementById('pet-coin-count');
+  if (!grid) return;
+
+  if (coinEl) coinEl.innerText = coins;
+
+  grid.innerHTML = Object.entries(PETS).map(([pid, pet]) => {
+    const isOwned = ownedPets.includes(pid);
+    const isActive = activePets.includes(pid);
+    const price = PET_PRICES[pid] || 0;
+    let cls = 'pet-shop-card';
+    if (isOwned) cls += ' owned';
+    if (isActive) cls += ' active-pet';
+    return `
+      <div class="${cls}" data-pet="${pid}">
+        <div class="pet-shop-icon">
+          <svg viewBox="0 0 40 40"><use href="#${pet.icon}"/></svg>
+        </div>
+        <div class="pet-shop-name">${pet.name}</div>
+        <div class="pet-shop-desc">${pet.desc}</div>
+        <div class="pet-shop-price ${isOwned ? 'owned' : ''}">
+          ${isOwned ? '✓ OWNED' : `<svg viewBox="0 0 24 24"><use href="#i-coin"/></svg>${price}`}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  grid.querySelectorAll('.pet-shop-card').forEach(card => {
+    card.onclick = () => handlePetShopClick(card.dataset.pet);
+  });
+
+  // Active slots
+  if (slots) {
+    slots.innerHTML = '';
+    for (let i = 0; i < 3; i++) {
+      const pid = activePets[i];
+      const pet = pid ? PETS[pid] : null;
+      const slot = document.createElement('div');
+      slot.className = 'pet-active-slot' + (pet ? ' filled' : '');
+      if (pet) slot.innerHTML = `<svg viewBox="0 0 40 40"><use href="#${pet.icon}"/></svg>`;
+      slots.appendChild(slot);
+    }
+  }
+}
+
+async function handlePetShopClick(petId) {
+  const isOwned = ownedPets.includes(petId);
+  const isActive = activePets.includes(petId);
+  const price = PET_PRICES[petId] || 0;
+
+  if (!isOwned) {
+    if (coins < price) { alert(`Koin tidak cukup! Butuh ${price} koin.`); return; }
+    coins -= price;
+    try { DB.set('pahlawan_coins', coins); } catch(e) {}
+    ownedPets.push(petId);
+    if (activePets.length < 3) activePets.push(petId);
+    await savePets();
+    try { sounds.playUnlock(); } catch(e) {}
+  } else {
+    // Toggle active
+    if (isActive) {
+      activePets = activePets.filter(p => p !== petId);
+    } else {
+      if (activePets.length >= 3) {
+        activePets.shift();
+      }
+      activePets.push(petId);
+    }
+    await savePets();
+    try { sounds.playPowerup(); } catch(e) {}
+  }
+
+  renderPetStrip();
+  renderPetShop();
+  updateHUDValues();
+}
+
+// =============================================================
+// M3. WEATHER SYSTEM
+// =============================================================
+const WEATHER_TYPES = [
+  { id:'clear',   name:'CLEAR',         icon:'i-star',  effect:'none',           desc:'Tidak ada efek' },
+  { id:'rain',    name:'METEOR RAIN',   icon:'i-bolt',  effect:'spawn_fast',     desc:'Musuh spawn 20% lebih cepat' },
+  { id:'snow',    name:'ICE CRYSTALS',  icon:'i-snow',  effect:'slow',           desc:'Musuh 15% lebih lambat, koin +20%' },
+  { id:'meteor',  name:'METEOR STORM',  icon:'i-warn',  effect:'high_risk',      desc:'Musuh +30% damage, koin +50%' },
+  { id:'fog',     name:'COSMIC FOG',    icon:'i-shield',effect:'low_visibility', desc:'Visibilitas turun, pierce +1' },
+  { id:'aurora',  name:'AURORA',        icon:'i-star',  effect:'heal',           desc:'Heal +1 HP per 30 detik' }
+];
+
+let currentWeather = null;
+let weatherTimer = 0;
+let weatherCheckCounter = 0;
+
+function rollWeather() {
+  // Weather changes every 2-3 minutes
+  if (currentWeather && weatherCheckCounter < 3600) return; // ~60 seconds
+  weatherCheckCounter = 0;
+  // 60% chance clear, else random
+  if (Math.random() < 0.6) {
+    setWeather('clear');
+  } else {
+    const types = WEATHER_TYPES.filter(w => w.id !== 'clear');
+    const pick = types[Math.floor(Math.random() * types.length)];
+    setWeather(pick.id);
+  }
+}
+
+function setWeather(weatherId) {
+  const w = WEATHER_TYPES.find(x => x.id === weatherId) || WEATHER_TYPES[0];
+  currentWeather = w;
+  renderWeatherOverlay(w);
+  const badge = document.getElementById('weather-badge');
+  if (badge) {
+    if (w.id === 'clear') {
+      badge.classList.add('hidden');
+    } else {
+      badge.classList.remove('hidden');
+      badge.innerHTML = `<svg viewBox="0 0 24 24"><use href="#${w.icon}"/></svg><span>${w.name}</span>`;
+    }
+  }
+  console.log('🌦️ [Weather]', w.name);
+}
+
+function renderWeatherOverlay(w) {
+  let overlay = document.getElementById('weather-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'weather-overlay';
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = '';
+
+  if (w.id === 'clear') return;
+
+  if (w.id === 'rain') {
+    for (let i = 0; i < 60; i++) {
+      const r = document.createElement('div');
+      r.className = 'weather-particle weather-rain';
+      r.style.left = Math.random() * 100 + '%';
+      r.style.animationDelay = (Math.random() * 1.5) + 's';
+      r.style.animationDuration = (0.5 + Math.random() * 0.5) + 's';
+      overlay.appendChild(r);
+    }
+  } else if (w.id === 'snow') {
+    for (let i = 0; i < 40; i++) {
+      const s = document.createElement('div');
+      s.className = 'weather-particle weather-snow';
+      s.style.left = Math.random() * 100 + '%';
+      s.style.animationDelay = (Math.random() * 6) + 's';
+      s.style.animationDuration = (4 + Math.random() * 4) + 's';
+      overlay.appendChild(s);
+    }
+  } else if (w.id === 'meteor') {
+    for (let i = 0; i < 8; i++) {
+      const m = document.createElement('div');
+      m.className = 'weather-particle weather-meteor';
+      m.style.left = (-30 + Math.random() * 30) + '%';
+      m.style.top = (-30 + Math.random() * 30) + '%';
+      m.style.animationDelay = (Math.random() * 3) + 's';
+      overlay.appendChild(m);
+    }
+  } else if (w.id === 'fog') {
+    const f = document.createElement('div');
+    f.className = 'weather-fog';
+    overlay.appendChild(f);
+  } else if (w.id === 'aurora') {
+    const a = document.createElement('div');
+    a.className = 'weather-aurora';
+    overlay.appendChild(a);
+  }
+}
+
+// Apply weather effects in gameLoop
+const _origGameLoopWeather = gameLoop;
+gameLoop = function() {
+  if (isGameRunning && !isGamePaused) {
+    weatherCheckCounter++;
+    rollWeather();
+
+    // Weather effect: heal
+    if (currentWeather && currentWeather.effect === 'heal') {
+      weatherTimer++;
+      if (weatherTimer >= 1800) { // 30s
+        weatherTimer = 0;
+        if (playerHitPoints < PLAYER_MAX_HIT_POINTS) {
+          playerHitPoints++;
+          spawnFloatingText(playerX, VIRTUAL_HEIGHT * 0.6, '+1 HP', '#39ff14');
+          updateLivesDisplay();
+        }
+      }
+    } else {
+      weatherTimer = 0;
+    }
+  }
+  _origGameLoopWeather.call(this);
+};
+
+// Weather badge in HUD
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    if (!document.getElementById('weather-badge')) {
+      const badge = document.createElement('div');
+      badge.id = 'weather-badge';
+      badge.className = 'hidden';
+      const hudOverlay = document.getElementById('hud-overlay');
+      if (hudOverlay) hudOverlay.appendChild(badge);
+    }
+  }, 900);
+});
+
+// =============================================================
+// M4. PHOTO MODE
+// =============================================================
+let photoModeActive = false;
+
+function togglePhotoMode() {
+  photoModeActive = !photoModeActive;
+  const overlay = document.getElementById('photo-mode');
+  const btn = document.getElementById('btn-photo');
+  if (!overlay) return;
+
+  if (photoModeActive) {
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('data-filter', 'none');
+    document.querySelectorAll('.photo-filter').forEach(f => {
+      f.classList.toggle('active', f.dataset.filter === 'none');
+    });
+    // Pause game
+    if (isGameRunning && !isGamePaused) {
+      isGamePaused = true;
+      photoModeActive = true;
+      window._photoPrevPause = false;
+    }
+  } else {
+    overlay.classList.add('hidden');
+    if (window._photoPrevPause === false && isGameRunning) {
+      isGamePaused = false;
+      requestAnimationFrame(gameLoop);
+    }
+  }
+}
+
+async function savePhoto() {
+  const canvas = document.getElementById('gameCanvas');
+  if (!canvas) return;
+  try {
+    const filter = document.getElementById('photo-mode').getAttribute('data-filter') || 'none';
+    const dataURL = canvas.toDataURL('image/png');
+    // Apply filter via second canvas
+    const img = new Image();
+    img.src = dataURL;
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = canvas.width;
+      c.height = canvas.height;
+      const cx = c.getContext('2d');
+      // Apply CSS filter via context filter
+      if (filter === 'sepia') cx.filter = 'sepia(0.7) saturate(1.2)';
+      else if (filter === 'vivid') cx.filter = 'saturate(1.8) contrast(1.15)';
+      else if (filter === 'bw') cx.filter = 'grayscale(1) contrast(1.2)';
+      else if (filter === 'cool') cx.filter = 'hue-rotate(-20deg) saturate(1.3)';
+      else if (filter === 'warm') cx.filter = 'hue-rotate(15deg) saturate(1.4) brightness(1.05)';
+      cx.drawImage(img, 0, 0);
+
+      // Add watermark
+      cx.filter = 'none';
+      cx.font = 'bold ' + Math.floor(c.height / 40) + 'px Orbitron, sans-serif';
+      cx.textAlign = 'right';
+      cx.fillStyle = 'rgba(255, 215, 0, 0.8)';
+      cx.shadowColor = '#000';
+      cx.shadowBlur = 8;
+      cx.fillText('PAHLAWAN BINTANG', c.width - 30, c.height - 30);
+
+      const finalURL = c.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = finalURL;
+      a.download = `PahlawanBintang_${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      try { sounds.playCoin(); } catch(e) {}
+      spawnFloatingText(VIRTUAL_WIDTH / 2, VIRTUAL_HEIGHT / 2, '📸 FOTO DISIMPAN!', '#ffd700');
+    };
+  } catch(e) {
+    console.error('Photo save failed:', e);
+    alert('Gagal menyimpan foto');
+  }
+}
+
+// =============================================================
+// M5. INIT — Event bindings untuk semua fitur baru
+// =============================================================
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const $ = id => document.getElementById(id);
+
+    // Raid
+    const btnRaid = $('btn-raid');
+    if (btnRaid) btnRaid.onclick = () => openRaidModal();
+    const btnStartRaid = $('btn-start-raid');
+    if (btnStartRaid) btnStartRaid.onclick = () => {
+      $('modal-raid').classList.add('hidden');
+      try { requestFullscreenAndLandscape(); } catch(e) {}
+      startRaid();
+    };
+    const btnCloseRaid = $('btn-close-raid');
+    if (btnCloseRaid) btnCloseRaid.onclick = () => $('modal-raid').classList.add('hidden');
+
+    // Pets
+    const btnPets = $('btn-pets');
+    if (btnPets) btnPets.onclick = () => {
+      renderPetShop();
+      $('modal-pets').classList.remove('hidden');
+    };
+    const btnClosePets = $('btn-close-pets');
+    if (btnClosePets) btnClosePets.onclick = () => $('modal-pets').classList.add('hidden');
+
+    // Photo mode
+    const btnPhoto = $('btn-photo');
+    if (btnPhoto) {
+      btnPhoto.classList.remove('hidden'); // show always
+      btnPhoto.onclick = () => togglePhotoMode();
+    }
+    const btnPhotoClose = $('btn-photo-close');
+    if (btnPhotoClose) btnPhotoClose.onclick = () => {
+      if (photoModeActive) togglePhotoMode();
+    };
+    document.querySelectorAll('.photo-filter').forEach(f => {
+      f.onclick = () => {
+        document.querySelectorAll('.photo-filter').forEach(x => x.classList.remove('active'));
+        f.classList.add('active');
+        const overlay = document.getElementById('photo-mode');
+        if (overlay) overlay.setAttribute('data-filter', f.dataset.filter);
+      };
+    });
+    const btnPhotoSave = $('btn-photo-save');
+    if (btnPhotoSave) btnPhotoSave.onclick = () => savePhoto();
+
+    console.log('✅ [Legacy 2] All bindings ready');
+  }, 2200);
+});
+
+console.log('✅ [game.js] v24.0.0 — LEGACY PART 2 LOADED');
