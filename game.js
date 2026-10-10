@@ -1,15 +1,14 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v20.9
-// "Friendly & Variety Edition"
+// PAHLAWAN BINTANG — game.js v20.9.1
+// "Friendly & Variety Edition + Stage Clear Delay"
 // ------------------------------------------------------------
-// v20.9 NEW:
-//   1. Desktop Control Hints Panel (auto-show di laptop)
-//   2. Keyboard shortcuts lengkap: ←→/AD (gerak), SPACE (fire),
-//      Q/W/E (skill), ESC (pause), H (toggle hints)
-//   3. 5 musuh baru: triangle, hexagon, star, diamond, worm
-//   4. 10 bentuk boss unik per level (5,10,15,20,25,30,35,40,45,50)
-//   5. Auto-detect touch vs desktop — hints panel tidak muncul di HP
-//   6. triggerSkillByKey() untuk Q/W/E
+// v20.9.1 NEW:
+//   1. Stage Clear banner + delay 2.5s (normal) / 3.5s (boss)
+//      supaya hero bisa collect koin & bonus sebelum narasi
+//   2. levelClearPending + stageClearTimer state
+//   3. Boss death via bullet/bomb → delay + banner
+//   4. Normal level complete → delay + banner
+//   5. Endless wave clear → delay + banner
 // =============================================================
 
 // =============================================================
@@ -1324,6 +1323,10 @@ let nextBossSpawnTime = 0;
 let levelStartTime = 0;
 let levelDamageTaken = 0;
 
+// 🔥 v20.9.1 — Delay after kill before level/narrative transition
+let levelClearPending = false;
+let stageClearTimer = null;
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas ? canvas.getContext('2d') : null;
 let deferredPrompt;
@@ -1509,7 +1512,7 @@ window.addEventListener('load', async () => {
   try { await loadGameData(); } catch (e) { levelsData = generate30Levels(); }
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=20.6').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=20.9.1').catch(err => console.log('SW Fail:', err));
   }
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
@@ -1645,7 +1648,7 @@ function recolorStars() {
 
 async function loadGameData() {
   try {
-    const [rl] = await Promise.all([fetch('./levels.json?v=20.7')]);
+    const [rl] = await Promise.all([fetch('./levels.json?v=20.9.1')]);
     if (rl.ok) levelsData = await rl.json();
   } catch (err) { levelsData = generate30Levels(); }
 }
@@ -2179,7 +2182,7 @@ function setupDesktopHints($) {
 }
 
 // =============================================================
-// 🔥 v20.9 — JOYSTICK HANDLER
+// 🔥 JOYSTICK HANDLER
 // =============================================================
 function setupJoystick() {
   const joystick = document.getElementById('analog-joystick');
@@ -2265,7 +2268,7 @@ function setupJoystick() {
 }
 
 // =============================================================
-// 🔥 v20.9 — FIRE BUTTON
+// 🔥 FIRE BUTTON
 // =============================================================
 function setupFireButton() {
   const btn = document.getElementById('btn-fire');
@@ -2571,10 +2574,21 @@ function setupEventListeners() {
           monsters.splice(i, 1);
           monsters.forEach(mn => createBurstParticles3D(mn.x, mn.y, mn.color, 20));
           monsters = [];
-          if (gameMode === 'endless') setTimeout(() => { endlessWave++; endlessKillsThisWave = 0; updateHUDValues(); }, 1500);
-          else if (gameMode === 'daily') setTimeout(() => handleDailyBossDefeated(), 1500);
-          else if (gameMode === 'coop') setTimeout(() => mpHostLevelComplete(), 1500);
-          else setTimeout(() => onLevelCleared(), 1500);
+          // 🔥 v20.9.1 — Stage clear delay
+          stopSpawnLoop();
+          if (!levelClearPending) {
+            levelClearPending = true;
+            showStageClearBanner();
+            stageClearTimer = setTimeout(() => {
+              stageClearTimer = null;
+              levelClearPending = false;
+              hideStageClearBanner();
+              if (gameMode === 'endless') { endlessWave++; endlessKillsThisWave = 0; updateHUDValues(); startSpawnLoop(); }
+              else if (gameMode === 'daily') handleDailyBossDefeated();
+              else if (gameMode === 'coop') mpHostLevelComplete();
+              else onLevelCleared();
+            }, 3500);
+          }
           break;
         }
       } else {
@@ -2689,7 +2703,6 @@ function setupEventListeners() {
     } else playNextStoryLine();
   }, true);
 
-  // 🔥 v20.9 — DESKTOP HINTS SETUP
   setupDesktopHints($);
 }
 
@@ -2848,6 +2861,12 @@ function goToMainMenu() {
   if (fb) fb.dataset.pressed = '1';
 
   if (typeof window._hideDesktopHints === 'function') window._hideDesktopHints();
+
+  // 🔥 v20.9.1 — clean stage clear state
+  if (stageClearTimer) { clearTimeout(stageClearTimer); stageClearTimer = null; }
+  levelClearPending = false;
+  const lvlBanner = document.getElementById('level-intro');
+  if (lvlBanner) lvlBanner.classList.remove('stage-clear');
 
   stopSpawnLoop();
   mpStopHostSyncLoop();
@@ -3257,6 +3276,9 @@ function mpEndGame(win, reason) {
   hideRemotePauseOverlay();
   if (typeof window._hideDesktopHints === 'function') window._hideDesktopHints();
 
+  if (stageClearTimer) { clearTimeout(stageClearTimer); stageClearTimer = null; }
+  levelClearPending = false;
+
   const wasRole = mpRole;
   mpActive = false;
 
@@ -3458,9 +3480,34 @@ function showLevelIntro(levelConfig) {
   document.getElementById('level-intro-mission').innerText = levelConfig.algorithm.startsWith('boss_')
     ? 'DEFEAT THE BOSS' : `${levelConfig.targetKills} KILLS · TARGET ${levelConfig.targetScore}`;
   banner.classList.remove('hidden'); banner.classList.remove('fade-out');
+  banner.classList.remove('stage-clear');
   void banner.offsetWidth;
   sounds.playLevelIntro();
   setTimeout(() => { banner.classList.add('fade-out'); setTimeout(() => banner.classList.add('hidden'), 500); }, 1800);
+}
+
+// 🔥 v20.9.1 — Stage Clear banner (delay sebelum narasi/result)
+function showStageClearBanner() {
+  const banner = document.getElementById('level-intro');
+  if (!banner) return;
+  document.getElementById('level-intro-number').innerText = '✓';
+  document.getElementById('level-intro-name').innerText = 'STAGE CLEAR!';
+  document.getElementById('level-intro-mission').innerText = 'AMBIL KOIN & BONUS!';
+  banner.classList.remove('hidden');
+  banner.classList.remove('fade-out');
+  banner.classList.add('stage-clear');
+  void banner.offsetWidth;
+  try { sounds.playWin(); } catch(e) {}
+  try { triggerVibrate([100, 50, 100, 50, 200]); } catch(e) {}
+  triggerScreenFlash(0.6);
+}
+
+function hideStageClearBanner() {
+  const banner = document.getElementById('level-intro');
+  if (!banner) return;
+  banner.classList.add('fade-out');
+  banner.classList.remove('stage-clear');
+  setTimeout(() => banner.classList.add('hidden'), 500);
 }
 
 async function startCurrentLevel() {
@@ -3504,6 +3551,16 @@ function resetLevelState() {
   comboBoostActive = { coins: false, firerate: false, magnet: false };
   comboBoostLastNotified = 0;
   levelDamageTaken = 0;
+
+  // 🔥 v20.9.1 — reset stage clear state
+  if (stageClearTimer) {
+    clearTimeout(stageClearTimer);
+    stageClearTimer = null;
+  }
+  levelClearPending = false;
+  const banner = document.getElementById('level-intro');
+  if (banner) banner.classList.remove('stage-clear');
+
   const cb = document.getElementById('combo-boost-indicator');
   if (cb) cb.classList.remove('show');
 }
@@ -3521,7 +3578,6 @@ function actuallyStartLevel(levelConfig) {
   levelStartTime = Date.now();
   levelDamageTaken = 0;
 
-  // 🔥 v20.9 — show desktop hints
   if (IS_DESKTOP && typeof window._showDesktopHints === 'function') {
     window._showDesktopHints();
   }
@@ -3703,7 +3759,6 @@ function spawnMonsterLoop(token) {
         n = Math.ceil(n * spawnMultiplier);
         for (let c = 0; c < n; c++) {
           const type = typeList[Math.floor(Math.random() * typeList.length)];
-          // 🔥 v20.9 — stats per type extended
           let hp = 1;
           let canShoot = false;
           let baseSize = 30 * S;
@@ -3718,7 +3773,6 @@ function spawnMonsterLoop(token) {
           else if (type === 'star')    { hp = 2; baseSize = 30 * S; speedMult = 0.95; canShoot = true; }
           else if (type === 'diamond') { hp = 2; baseSize = 32 * S; speedMult = 1.1; }
           else if (type === 'worm')    { hp = 3; baseSize = 36 * S; speedMult = 1.05; }
-          // else jelly: hp=1, baseSize=30, speedMult=1.0
 
           monsters.push({
             x: Math.random() * (W - 120 * S) + 60 * S,
@@ -3852,32 +3906,76 @@ function showKillStreak(title, count) {
 
 function checkLevelObjectives() {
   if (gameMode === 'coop' && mpActive && mpRole !== 'host') return;
+
+  // 🔥 v20.9.1 — Endless mode dengan delay
   if (gameMode === 'endless') {
     if (endlessKillsThisWave >= ENDLESS_KILLS_PER_WAVE && monsters.length === 0) {
-      endlessWave++; endlessKillsThisWave = 0;
-      sounds.playWin();
-      spawnFloatingText(VIRTUAL_WIDTH/2, VIRTUAL_HEIGHT/2, `WAVE ${endlessWave}`, '#ffd700');
-      updateHUDValues();
+      if (!levelClearPending) {
+        levelClearPending = true;
+        showStageClearBanner();
+        stopSpawnLoop();
+        stageClearTimer = setTimeout(() => {
+          stageClearTimer = null;
+          levelClearPending = false;
+          hideStageClearBanner();
+          endlessWave++;
+          endlessKillsThisWave = 0;
+          updateHUDValues();
+          spawnFloatingText(VIRTUAL_WIDTH/2, VIRTUAL_HEIGHT/2, `WAVE ${endlessWave}`, '#ffd700');
+          startSpawnLoop();
+        }, 2500);
+      }
     }
     return;
   }
+
   if (gameMode === 'daily') return;
+
+  // 🔥 v20.9.1 — Co-op dengan delay
   if (gameMode === 'coop') {
     const lc = levelsData[currentLevelIndex] || levelsData[0];
-    if (levelKills >= lc.targetKills * 1.5 && monsters.length === 0) mpHostLevelComplete();
+    if (levelKills >= lc.targetKills * 1.5 && monsters.length === 0) {
+      if (!levelClearPending) {
+        levelClearPending = true;
+        showStageClearBanner();
+        stopSpawnLoop();
+        stageClearTimer = setTimeout(() => {
+          stageClearTimer = null;
+          levelClearPending = false;
+          hideStageClearBanner();
+          mpHostLevelComplete();
+        }, 2500);
+      }
+    }
     return;
   }
+
+  // 🔥 v20.9.1 — Normal mode dengan delay
   const lc = levelsData[currentLevelIndex] || levelsData[0];
   if (lc.algorithm.startsWith('boss_')) return;
+
   if (levelKills >= lc.targetKills) {
-    if (score >= lc.targetScore) onLevelCleared();
-    else onLevelFailed("SKOR BELUM MENCAPAI TARGET");
+    if (score >= lc.targetScore) {
+      if (!levelClearPending) {
+        levelClearPending = true;
+        showStageClearBanner();
+        stopSpawnLoop();
+        stageClearTimer = setTimeout(() => {
+          stageClearTimer = null;
+          levelClearPending = false;
+          hideStageClearBanner();
+          onLevelCleared();
+        }, 2500);
+      }
+    } else {
+      onLevelFailed("SKOR BELUM MENCAPAI TARGET");
+    }
   }
 }
 
 // =============================================================
-// END OF PART 1 — Sections 1-17
-// Lanjut ke Part 2 (Sections 18-34) di response berikutnya
+// END OF PART 1/2 — Sections 1-17
+// Lanjut ke Part 2/2 (Sections 18-34) di response berikutnya
 // =============================================================
 
 // =============================================================
@@ -4259,7 +4357,7 @@ function drawBullet(ctx, b, S) {
 }
 
 // =============================================================
-// 🔥 v20.9 — EXTENDED ENEMY SHAPE DRAWING
+// 18d. EXTENDED ENEMY SHAPE DRAWING (v20.9)
 // =============================================================
 function drawEnemyShapeExtended(ctx, m, S, theme) {
   const type = m.type;
@@ -4456,7 +4554,7 @@ function drawEnemyShapeExtended(ctx, m, S, theme) {
 }
 
 // =============================================================
-// 🔥 v20.9 — UNIQUE BOSS SHAPES (10 bosses, 10 bentuk unik)
+// 18e. UNIQUE BOSS SHAPES (v20.9) — 10 boss, 10 bentuk unik
 // =============================================================
 function drawBossUniqueShape(ctx, m, S, theme, bossNum) {
   const size = m.size;
@@ -4857,7 +4955,6 @@ function drawBossUniqueShape(ctx, m, S, theme, bossNum) {
   ctx.lineWidth = 5 * S; ctx.strokeStyle = '#ffd700'; ctx.stroke();
 }
 
-// Helper: draw glowing core (weak point)
 function drawBossCore(ctx, size, color1, color2, t) {
   ctx.save();
   const pulse = 0.85 + Math.sin(t * 8) * 0.15;
@@ -4919,9 +5016,7 @@ function gameLoop() {
   ctx.fillRect(0, H - groundH - 5, W, 5);
   ctx.globalAlpha = 1;
 
-  // ==========================================================
   // LOCAL PLAYER MOVEMENT (VELOCITY-BASED)
-  // ==========================================================
   if (localPlayerActive) {
     let moveInput = 0;
     let useJoystick = false;
@@ -5144,10 +5239,21 @@ function gameLoop() {
             dropBossLoot(m.x, m.y, parseInt(m.type.replace('boss','')) || 5);
             monsters.forEach(mn => createBurstParticles3D(mn.x, mn.y, mn.color, 20));
             monsters = [];
-            if (gameMode === 'endless') setTimeout(() => { endlessWave++; endlessKillsThisWave = 0; updateHUDValues(); }, 1500);
-            else if (gameMode === 'daily') setTimeout(() => handleDailyBossDefeated(), 1500);
-            else if (gameMode === 'coop') setTimeout(() => mpHostLevelComplete(), 1500);
-            else setTimeout(() => onLevelCleared(), 1500);
+            // 🔥 v20.9.1 — Stage clear delay (3.5s untuk boss)
+            stopSpawnLoop();
+            if (!levelClearPending) {
+              levelClearPending = true;
+              showStageClearBanner();
+              stageClearTimer = setTimeout(() => {
+                stageClearTimer = null;
+                levelClearPending = false;
+                hideStageClearBanner();
+                if (gameMode === 'endless') { endlessWave++; endlessKillsThisWave = 0; updateHUDValues(); startSpawnLoop(); }
+                else if (gameMode === 'daily') handleDailyBossDefeated();
+                else if (gameMode === 'coop') mpHostLevelComplete();
+                else onLevelCleared();
+              }, 3500);
+            }
           } else checkLevelObjectives();
         } else spawnFloatingText(m.x, m.y, 'HIT', '#ff4757');
         break;
@@ -5715,7 +5821,6 @@ function drawRemoteMonsters(ctx, W, H, S, heroPlayerY) {
       ctx.restore();
       ctx.globalAlpha = m.opacity || 1.0;
 
-      // 🔥 v20.9 — remote boss unique shape
       const bossNum = parseInt(m.type.replace('boss','')) || 5;
       drawBossUniqueShape(ctx, m, S, currentTheme, bossNum);
     } else if (m.type === 'donut') {
@@ -5736,7 +5841,6 @@ function drawRemoteMonsters(ctx, W, H, S, heroPlayerY) {
       ctx.fillStyle = '#00d2d3'; ctx.fill();
       ctx.strokeStyle = '#fff'; ctx.stroke();
     } else if (m.type && ['triangle','hexagon','star','diamond','worm'].includes(m.type)) {
-      // 🔥 v20.9 — remote extended enemies
       drawEnemyShapeExtended(ctx, m, S, currentTheme);
     } else {
       const rg = ctx.createRadialGradient(-m.size*0.3, -m.size*0.3, m.size*0.1, 0, 0, m.size);
@@ -6010,6 +6114,7 @@ function startEndless() {
       document.getElementById('level-intro-mission').innerText = 'SURVIVE AS LONG AS YOU CAN';
       const b = document.getElementById('level-intro');
       b.classList.remove('hidden'); b.classList.remove('fade-out');
+      b.classList.remove('stage-clear');
       void b.offsetWidth;
       sounds.playLevelIntro();
       setTimeout(() => { b.classList.add('fade-out'); setTimeout(() => b.classList.add('hidden'), 500); }, 1800);
@@ -6127,6 +6232,7 @@ function startDaily() {
       document.getElementById('level-intro-name').innerText = getBossName(fb);
       document.getElementById('level-intro-mission').innerText = 'DAILY 3 BOS · 1/3';
       b.classList.remove('hidden'); b.classList.remove('fade-out');
+      b.classList.remove('stage-clear');
       void b.offsetWidth;
       sounds.playLevelIntro();
       setTimeout(() => { b.classList.add('fade-out'); setTimeout(() => b.classList.add('hidden'), 500); }, 1800);
@@ -6150,6 +6256,7 @@ function handleDailyBossDefeated() {
     document.getElementById('level-intro-name').innerText = getBossName(nb);
     document.getElementById('level-intro-mission').innerText = (dailyBossIndex === 2) ? 'FINAL BOSS!' : 'BOSS DEFEATED! NEXT...';
     b.classList.remove('hidden'); b.classList.remove('fade-out');
+    b.classList.remove('stage-clear');
     void b.offsetWidth;
     sounds.playBossWarning();
     setTimeout(() => { b.classList.add('fade-out'); setTimeout(() => b.classList.add('hidden'), 500); }, 2200);
@@ -6686,5 +6793,5 @@ window.addEventListener('load', () => {
 });
 
 // =============================================================
-// END OF FILE — v20.9 (Friendly & Variety Edition)
+// END OF FILE — v20.9.1 (Friendly & Variety Edition + Stage Clear Delay)
 // =============================================================
