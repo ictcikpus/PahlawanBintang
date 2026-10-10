@@ -1034,6 +1034,96 @@ canvas{display:block}
     </button>
   </div>
 </div>
+  <!-- REPLAY / HIGHLIGHT MODAL -->
+<div id="modal-replay" class="modal hidden">
+  <div class="modal-box replay-box">
+    <div class="replay-badge">🎬 HIGHLIGHT MOMENT</div>
+    <h2 class="replay-title" id="replay-title">MOMEN EPIK</h2>
+    <div class="replay-viewport" id="replay-viewport">
+      <canvas id="replay-canvas" width="640" height="360"></canvas>
+      <div class="replay-play-icon" id="replay-play-icon">
+        <svg viewBox="0 0 24 24"><use href="#i-play"/></svg>
+      </div>
+      <div class="replay-progress" id="replay-progress">
+        <div class="replay-progress-fill" id="replay-progress-fill"></div>
+      </div>
+    </div>
+    <div class="replay-stats" id="replay-stats">
+      <div class="replay-stat">
+        <div class="rs-label">KILLS</div>
+        <div class="rs-value" id="rs-kills">0</div>
+      </div>
+      <div class="replay-stat">
+        <div class="rs-label">COMBO</div>
+        <div class="rs-value" id="rs-combo">0x</div>
+      </div>
+      <div class="replay-stat">
+        <div class="rs-label">SCORE</div>
+        <div class="rs-value" id="rs-score">0</div>
+      </div>
+    </div>
+    <div class="replay-actions">
+      <button id="btn-replay-watch" class="btn-primary" type="button">
+        <svg class="ico"><use href="#i-play"/></svg>
+        <span>PUTAR ULANG</span>
+      </button>
+      <button id="btn-replay-share" class="btn-share" type="button">
+        <svg class="ico"><use href="#i-download"/></svg>
+        <span>BAGIKAN</span>
+      </button>
+    </div>
+    <button id="btn-close-replay" class="btn-secondary" type="button">TUTUP</button>
+  </div>
+</div>
+
+<!-- PERFORMANCE SETTINGS MODAL -->
+<div id="modal-perf" class="modal hidden">
+  <div class="modal-box">
+    <h2><svg class="ico-lg"><use href="#i-bolt"/></svg> PERFORMA</h2>
+    <p class="mp-subtitle">Sesuaikan untuk perangkat kamu. Ubah jika game terasa lambat.</p>
+    <div class="perf-item">
+      <div class="perf-label">
+        <strong>Efek Visual</strong>
+        <small>Kurangi particle & glow untuk performa lebih baik</small>
+      </div>
+      <div class="perf-toggle" id="perf-toggle-effects">
+        <div class="perf-slider"></div>
+      </div>
+    </div>
+    <div class="perf-item">
+      <div class="perf-label">
+        <strong>Screen Shake</strong>
+        <small>Getaran layar saat efek besar</small>
+      </div>
+      <div class="perf-toggle active" id="perf-toggle-shake">
+        <div class="perf-slider"></div>
+      </div>
+    </div>
+    <div class="perf-item">
+      <div class="perf-label">
+        <strong>Musik Latar (BGM)</strong>
+        <small>Matikan jika baterai cepat habis</small>
+      </div>
+      <div class="perf-toggle active" id="perf-toggle-bgm">
+        <div class="perf-slider"></div>
+      </div>
+    </div>
+    <div class="perf-item">
+      <div class="perf-label">
+        <strong>Getaran</strong>
+        <small>Haptic feedback saat menembak</small>
+      </div>
+      <div class="perf-toggle active" id="perf-toggle-vibrate">
+        <div class="perf-slider"></div>
+      </div>
+    </div>
+    <div class="perf-info-box">
+      <div><strong>FPS:</strong> <span id="perf-fps">--</span></div>
+      <div><strong>Perangkat:</strong> <span id="perf-device">--</span></div>
+    </div>
+    <button id="btn-close-perf" class="btn-secondary" type="button">TUTUP</button>
+  </div>
+</div>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="./multiplayer.js?v=20.9"></script>
