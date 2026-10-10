@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css?v=20.8" />
+  <link rel="stylesheet" href="./style.css?v=20.8.2" />
 </head>
 <body class="no-select">
 
@@ -327,7 +327,7 @@
   <div class="menu-box">
 
     <div class="menu-topbar">
-      <div class="version-badge">v20.8</div>
+      <div class="version-badge">v20.8.2</div>
       <button id="btn-audio" class="btn-audio" title="Suara" type="button">
         <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
       </button>
@@ -551,6 +551,13 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- 🔥 v20.8.2: FIRE BUTTON (opsional, toggle manual shoot) -->
+    <div class="ctrl-cluster ctrl-right fire-cluster">
+      <button id="btn-fire" class="btn-fire" aria-label="Tembak" type="button" data-pressed="1">
+        <svg class="fire-icon" viewBox="0 0 24 24"><use href="#i-bolt"/></svg>
+      </button>
     </div>
 
     <div class="ctrl-cluster ctrl-right skill-row">
@@ -1224,9 +1231,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <!-- ============ MULTIPLAYER ENGINE ============ -->
-<script src="./multiplayer.js?v=20.8"></script>
+<script src="./multiplayer.js?v=20.8.2"></script>
 
 <!-- ============ GAME SCRIPT ============ -->
-<script src="./game.js?v=20.8.1"></script>
+<script src="./game.js?v=20.8.2"></script>
 </body>
 </html>
