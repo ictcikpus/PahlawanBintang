@@ -1,13 +1,17 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v20.8.1
-// "Analog Joystick Responsive Edition"
+// PAHLAWAN BINTANG — game.js v20.8.2
+// "Ultra Responsive Controller Edition"
 // ------------------------------------------------------------
-// v20.8.1 NEW:
-//   1. Velocity-based joystick movement (tanpa double smoothing)
-//   2. Perceptual curve (pow 0.7) — tilt kecil tetap responsif
-//   3. Dynamic lerp untuk keyboard/pointer tap
-//   4. Guest local prediction (hilangkan rubber-band effect)
-//   5. Host sync rate 33ms untuk co-op
+// v20.8.2 CHANGES:
+//   1. playerSpeed: 9 → 11 (hero lebih lincah)
+//   2. PLAYER_LERP: 0.22 → 0.30 (keyboard/tap lebih responsif)
+//   3. JOYSTICK_DEADZONE: 0.10 → 0.06 (lebih peka)
+//   4. JOYSTICK_CURVE: 0.7 → 0.65 (lebih linear)
+//   5. JOYSTICK_SPEED_MULT: 1.35 → 1.55 (full-tilt lebih cepat)
+//   6. Haptic feedback pada joystick, skill, fire, pause
+//   7. e.stopPropagation() di joystick onPointerDown
+//   8. Fire button manual (opsional, default aktif)
+//   9. Haptic saat boss killed
 // =============================================================
 
 // =============================================================
@@ -34,7 +38,7 @@ try {
 }
 
 // =============================================================
-// 🔥 v20.7 — HERO DATA (10 HERO)
+// 🔥 HERO DATA (10 HERO)
 // =============================================================
 const HERO_DATA = {
   robot: {
@@ -1245,8 +1249,8 @@ let reviveQuota = 3;
 
 let playerX = 0;
 let playerTargetX = 0;
-const PLAYER_LERP = 0.22;
-let playerSpeed = 9;
+const PLAYER_LERP = 0.30;        // 🔥 v20.8.2: 0.22 → 0.30
+let playerSpeed = 11;            // 🔥 v20.8.2: 9 → 11
 let playerPulse = 0;
 
 let playerHitPoints = 3;
@@ -1297,17 +1301,20 @@ let comboBoostLastNotified = 0;
 let isMovingLeft = false;
 let isMovingRight = false;
 
-// 🔥 v20.8.1 — Analog Joystick State
-let joystickAxis = 0;              // -1 = kiri penuh, 0 = tengah, 1 = kanan penuh
+// 🔥 v20.8.2 — Analog Joystick State (TUNED)
+let joystickAxis = 0;
 let joystickActive = false;
 let joystickPointerId = null;
 let joystickCenterX = 0;
 let joystickCenterY = 0;
 let joystickRadius = 0;
 let joystickMaxOffset = 0;
-const JOYSTICK_DEADZONE = 0.10;    // sedikit lebih kecil = lebih responsif
-const JOYSTICK_CURVE = 0.7;        // perceptual curve exponent
-const JOYSTICK_SPEED_MULT = 1.35;  // multiplier kecepatan analog
+const JOYSTICK_DEADZONE = 0.06;      // 🔥 v20.8.2: 0.10 → 0.06 (lebih peka)
+const JOYSTICK_CURVE = 0.65;         // 🔥 v20.8.2: 0.7 → 0.65 (lebih linear)
+const JOYSTICK_SPEED_MULT = 1.55;    // 🔥 v20.8.2: 1.35 → 1.55 (full-tilt lebih cepat)
+
+// 🔥 v20.8.2 — Fire button state (manual shoot)
+let fireButtonPressed = true;        // default aktif (auto-fire)
 
 let currentActor = localStorage.getItem('pahlawan_actor') || 'robot';
 let playerName = localStorage.getItem('pahlawan_nama') || 'Pahlawan';
@@ -1603,7 +1610,7 @@ function handleOrientationChange() {
     updateGameScale();
     playerX = VIRTUAL_WIDTH / 2;
     playerTargetX = playerX;
-    playerSpeed = 9 * GAME_SCALE;
+    playerSpeed = 11 * GAME_SCALE;    // 🔥 v20.8.2: 9 → 11
     if (mpActive && mpRole === 'host') {
       mpGuestX = VIRTUAL_WIDTH * 0.75;
       mpGuestTargetX = mpGuestX;
@@ -2174,7 +2181,7 @@ function updateActorGridUI() {
 }
 
 // =============================================================
-// 🔥 v20.8.1 — ANALOG JOYSTICK HANDLER (RESPONSIVE)
+// 🔥 v20.8.2 — ANALOG JOYSTICK HANDLER (ULTRA RESPONSIVE)
 // =============================================================
 function setupJoystick() {
   const joystick = document.getElementById('analog-joystick');
@@ -2184,7 +2191,7 @@ function setupJoystick() {
     return;
   }
 
-  const KNOB_RATIO = 0.42;
+  const KNOB_RATIO = 0.46;                            // 🔥 v20.8.2: 0.42 → 0.46 (match CSS)
   const MAX_OFFSET_RATIO = 1 - KNOB_RATIO;
 
   const updateKnobVisual = (dx, dy) => {
@@ -2203,7 +2210,6 @@ function setupJoystick() {
     } else {
       const sign = rawAxis > 0 ? 1 : -1;
       const abs = (Math.abs(rawAxis) - JOYSTICK_DEADZONE) / (1 - JOYSTICK_DEADZONE);
-      // 🔥 Perceptual curve: tilt kecil tetap terasa responsif
       joystickAxis = sign * Math.pow(Math.min(1, abs), JOYSTICK_CURVE);
     }
 
@@ -2233,11 +2239,13 @@ function setupJoystick() {
     if (joystickPointerId !== null) return;
 
     e.preventDefault();
+    e.stopPropagation();                                    // 🔥 v20.8.2: cegah bubble ke canvas
     joystickPointerId = e.pointerId;
     joystickActive = true;
     joystick.classList.add('is-active');
 
     try { joystick.setPointerCapture(e.pointerId); } catch(err) {}
+    try { triggerVibrate(8); } catch(err) {}                // 🔥 v20.8.2: haptic engage
 
     refreshCenter();
     updateKnobVisual(e.clientX - joystickCenterX, e.clientY - joystickCenterY);
@@ -2266,7 +2274,41 @@ function setupJoystick() {
   window.addEventListener('orientationchange', () => { if (joystickActive) setTimeout(refreshCenter, 350); });
   document.addEventListener('visibilitychange', () => { if (document.hidden && joystickActive) resetKnob(); });
 
-  console.log('✅ [Joystick] Ready (v20.8.1 responsive)');
+  console.log('✅ [Joystick] Ready (v20.8.2 ULTRA RESPONSIVE)');
+}
+
+// =============================================================
+// 🔥 v20.8.2 — FIRE BUTTON HANDLER
+// =============================================================
+function setupFireButton() {
+  const btn = document.getElementById('btn-fire');
+  if (!btn) {
+    console.warn('⚠️ [Fire] Tombol tidak ditemukan (opsional, auto-fire tetap aktif)');
+    return;
+  }
+
+  const press = (e) => {
+    if (e) e.preventDefault();
+    if (!isGameRunning || isGamePaused) return;
+    if (mpSpectatorMode) return;
+    btn.dataset.pressed = '1';
+    fireButtonPressed = true;
+    try { triggerVibrate(5); } catch(err) {}
+  };
+
+  const release = (e) => {
+    if (e) e.preventDefault();
+    btn.dataset.pressed = '0';
+    fireButtonPressed = false;
+  };
+
+  btn.addEventListener('pointerdown', press);
+  btn.addEventListener('pointerup', release);
+  btn.addEventListener('pointercancel', release);
+  btn.addEventListener('pointerleave', release);
+  btn.addEventListener('lostpointercapture', release);
+
+  console.log('✅ [Fire] Button ready');
 }
 
 // =============================================================
@@ -2360,7 +2402,11 @@ function setupEventListeners() {
     if (currentAchievementDetailId) claimAchievementReward(currentAchievementDetailId);
   };
 
-  const bPause = $('btn-pause'); if (bPause) bPause.onclick = pauseGame;
+  const bPause = $('btn-pause');
+  if (bPause) bPause.onclick = () => {
+    try { triggerVibrate(10); } catch(e) {}   // 🔥 v20.8.2
+    pauseGame();
+  };
   const bResume = $('btn-resume-game'); if (bResume) bResume.onclick = resumeGame;
   const bPHero = $('btn-pause-change-hero');
   if (bPHero) bPHero.onclick = () => { updateActorGridUI(); $('modal-actors').classList.remove('hidden'); };
@@ -2393,17 +2439,20 @@ function setupEventListeners() {
     };
   }
 
-  // 🔥 v20.8.1 — ANALOG JOYSTICK setup
+  // 🔥 v20.8.2 — ANALOG JOYSTICK + FIRE BUTTON setup
   setupJoystick();
+  setupFireButton();
 
   // Keyboard fallback
   window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isMovingLeft = true;
     if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') isMovingRight = true;
+    if (e.key === ' ' || e.key === 'Spacebar') { fireButtonPressed = true; }   // 🔥 v20.8.2: SPACE to fire
   });
   window.addEventListener('keyup', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') isMovingLeft = false;
     if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') isMovingRight = false;
+    if (e.key === ' ' || e.key === 'Spacebar') { fireButtonPressed = false; }  // 🔥 v20.8.2
   });
 
   if (canvas) {
@@ -2466,6 +2515,7 @@ function setupEventListeners() {
   if (bFreeze) bFreeze.onclick = () => {
     if (freezeCharges <= 0 || isFrozen || isGamePaused || !isGameRunning) return;
     if (mpSpectatorMode) return;
+    try { triggerVibrate(15); } catch(e) {}   // 🔥 v20.8.2
     if (mpActive && mpRole === 'guest') { freezeCharges--; updateSkillButtonsUI(); mpSendGuestSkill(1); return; }
     freezeCharges--; isFrozen = true; freezeFramesRemaining = 210;
     sounds.playFreeze(); triggerVibrate([50, 50, 50]);
@@ -2477,6 +2527,7 @@ function setupEventListeners() {
   if (bShield) bShield.onclick = () => {
     if (shieldCharges <= 0 || isShieldActive || isGamePaused || !isGameRunning) return;
     if (mpSpectatorMode) return;
+    try { triggerVibrate(15); } catch(e) {}   // 🔥 v20.8.2
     if (mpActive && mpRole === 'guest') { shieldCharges--; updateSkillButtonsUI(); mpSendGuestSkill(2); return; }
     shieldCharges--; isShieldActive = true; shieldTimer = 300;
     sounds.playShield(); triggerVibrate([30, 30, 60]);
@@ -2488,6 +2539,7 @@ function setupEventListeners() {
   if (bBomb) bBomb.onclick = () => {
     if (bombCharges <= 0 || isGamePaused || !isGameRunning) return;
     if (mpSpectatorMode) return;
+    try { triggerVibrate(20); } catch(e) {}   // 🔥 v20.8.2
     if (mpActive && mpRole === 'guest') { bombCharges--; updateSkillButtonsUI(); mpSendGuestSkill(3); return; }
     bombCharges--; screenShake = 22;
     sounds.playBomb(); triggerVibrate([100, 50, 100]);
@@ -2761,14 +2813,17 @@ function updateSkillButtonsUI() {
 }
 
 function goToMainMenu() {
-  // 🔥 v20.8.1 — reset joystick
+  // 🔥 v20.8.2 — reset joystick + fire
   joystickAxis = 0;
   joystickActive = false;
   joystickPointerId = null;
+  fireButtonPressed = true;
   const jk = document.getElementById('joystick-knob');
   if (jk) jk.style.transform = 'translate(-50%, -50%)';
   const je = document.getElementById('analog-joystick');
   if (je) je.classList.remove('is-active');
+  const fb = document.getElementById('btn-fire');
+  if (fb) fb.dataset.pressed = '1';
 
   stopSpawnLoop();
   mpStopHostSyncLoop();
@@ -3293,7 +3348,7 @@ function mpActuallyStartCoop() {
 
 function mpStartHostSyncLoop() {
   if (mpSyncTimer) clearInterval(mpSyncTimer);
-  // 🔥 v20.8.1 — 33ms (~30fps) untuk co-op lebih responsif
+  // 🔥 v20.8.2 — 33ms = 30fps sync (dari multiplayer.js STATE_THROTTLE_MS)
   mpSyncTimer = setInterval(() => {
     if (!mpActive || mpRole !== 'host' || !isGameRunning) return;
     mpHostSendState();
@@ -3433,7 +3488,7 @@ function resetLevelState() {
 }
 
 function actuallyStartLevel(levelConfig) {
-  playerSpeed = 9 * GAME_SCALE;
+  playerSpeed = 11 * GAME_SCALE;    // 🔥 v20.8.2: 9 → 11
   freezeCharges = playerLoadout.includes('freeze') ? upgradeFreeze : 0;
   shieldCharges = playerLoadout.includes('shield') ? upgradeShield : 0;
   bombCharges   = playerLoadout.includes('bomb') ? upgradeBomb : 0;
@@ -3779,10 +3834,10 @@ function checkLevelObjectives() {
 
 // =============================================================
 // END OF PART 1 — Sections 1-17
-// Lanjut ke Part 2 (Sections 18-34)
+// Lanjut ke Part 2 (Sections 18-34) di response berikutnya
 // =============================================================
 
-// =============================================================
+  // =============================================================
 // 18. DRAW HERO (10 HERO VISUAL BERBEDA)
 // =============================================================
 function drawHeroVector(ctx, x, y, type, isRemote) {
@@ -4162,7 +4217,7 @@ function drawBullet(ctx, b, S) {
 
 // =============================================================
 // 19. GAME LOOP (HOST / SINGLE)
-// 🔥 v20.8.1 — JOYSTICK RESPONSIVE FIX DI SINI
+// 🔥 v20.8.2 — VELOCITY-BASED MOVEMENT + DYNAMIC LERP + FIRE BUTTON
 // =============================================================
 function gameLoop() {
   if (!isGameRunning || isGamePaused) return;
@@ -4211,7 +4266,7 @@ function gameLoop() {
   ctx.globalAlpha = 1;
 
   // ==========================================================
-  // 🔥 v20.8.1 FIX — LOCAL PLAYER MOVEMENT (VELOCITY-BASED)
+  // 🔥 v20.8.2 FIX — LOCAL PLAYER MOVEMENT (VELOCITY-BASED)
   // ==========================================================
   if (localPlayerActive) {
     let moveInput = 0;
@@ -4227,7 +4282,7 @@ function gameLoop() {
     }
 
     if (useJoystick) {
-      // 🔥 Velocity-based: langsung gerakkan hero, TANPA lerp
+      // Velocity-based: langsung gerakkan hero, TANPA lerp
       playerX += moveInput * playerSpeed * JOYSTICK_SPEED_MULT;
       playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
       playerTargetX = playerX; // sinkronkan target
@@ -4259,7 +4314,7 @@ function gameLoop() {
   const heroPlayerY = H - 45 * S;
 
   // ==========================================================
-  // 🔥 v20.8.1 FIX — GUEST INPUT HANDLING (VELOCITY-BASED)
+  // 🔥 v20.8.2 FIX — GUEST INPUT HANDLING (VELOCITY-BASED)
   // ==========================================================
   if (mpActive && mpRole === 'host' && !mpRemoteGuestSpectator) {
     let guestMove = 0;
@@ -4326,13 +4381,13 @@ function gameLoop() {
   }
   // ==========================================================
 
-  // Local shooting (per-hero)
+  // Local shooting (per-hero) — 🔥 v20.8.2: fire button + dynamic FR
   const hero = HERO_DATA[currentActor] || HERO_DATA.robot;
   const comboFRMult = comboBoostActive.firerate ? 0.8 : 1.0;
   const fireInterval = Math.max(60, (hero.fireRate - (upgradeFireRate - 1) * 15) * comboFRMult);
   const now = Date.now();
 
-  if (localPlayerActive && now - lastShotTime > fireInterval) {
+  if (localPlayerActive && fireButtonPressed && now - lastShotTime > fireInterval) {
     const shotY = H - 65 * S;
 
     if (isMegaShot) {
@@ -4419,7 +4474,11 @@ function gameLoop() {
           updateComboBoosts();
           spawnFloatingText(m.x, m.y, `+${gained}`, '#ffd700');
 
-          if (isB) { triggerScreenFlash(0.6); triggerHitStop(6); }
+          if (isB) {
+            triggerScreenFlash(0.6);
+            triggerHitStop(6);
+            try { triggerVibrate([100, 40, 100]); } catch(e) {}   // 🔥 v20.8.2: haptic boss kill
+          }
           else if (m.size > 30 * GAME_SCALE) { triggerHitStop(2); }
 
           if (m.algorithm === 'splitter' && m.size > 22 * S) {
@@ -4871,7 +4930,7 @@ function drawParallaxStars(ctx, W, H) {
 
 // =============================================================
 // 19b. GUEST RENDER-ONLY LOOP (dengan LOCAL PREDICTION)
-// 🔥 v20.8.1 FIX — guest local prediction untuk joystick
+// 🔥 v20.8.2 — guest local prediction untuk joystick
 // =============================================================
 function gameLoopGuest() {
   const W = VIRTUAL_WIDTH;
@@ -4912,13 +4971,13 @@ function gameLoopGuest() {
 
   const heroPlayerY = H - 45 * S;
 
-  // 🔥 v20.8.1 — kirim analog axis
+  // 🔥 v20.8.2 — kirim analog axis + fire state
   if (MP && MP.isConnected) {
     MP.sendInput({
       left: localPlayerActive ? isMovingLeft : false,
       right: localPlayerActive ? isMovingRight : false,
       moveX: localPlayerActive ? joystickAxis : 0,
-      shoot: localPlayerActive,
+      shoot: localPlayerActive && fireButtonPressed,
       skill1: mpGuestInput.skill1 || false,
       skill2: mpGuestInput.skill2 || false,
       skill3: mpGuestInput.skill3 || false,
@@ -4936,7 +4995,7 @@ function gameLoopGuest() {
   }
 
   // ==========================================================
-  // 🔥 v20.8.1 FIX — GUEST LOCAL PREDICTION
+  // 🔥 v20.8.2 FIX — GUEST LOCAL PREDICTION
   // ==========================================================
   if (localPlayerActive && Math.abs(joystickAxis) > 0.02) {
     // Joystick aktif: prediksi lokal untuk hilangkan lag jaringan
@@ -5363,7 +5422,7 @@ function startEndless() {
     resizeCanvas(); updateGameScale();
     const d = { level: 999, targetKills: ENDLESS_KILLS_PER_WAVE, targetScore: 0, algorithm: 'linear', types: ['jelly'] };
     showLoadoutModal(d, () => {
-      playerSpeed = 9 * GAME_SCALE;
+      playerSpeed = 11 * GAME_SCALE;   // 🔥 v20.8.2: 9 → 11
       freezeCharges = playerLoadout.includes('freeze') ? upgradeFreeze : 0;
       shieldCharges = playerLoadout.includes('shield') ? upgradeShield : 0;
       bombCharges = playerLoadout.includes('bomb') ? upgradeBomb : 0;
@@ -5479,7 +5538,7 @@ function startDaily() {
     resizeCanvas(); updateGameScale();
     const d = { level: 999, targetKills: 1, targetScore: 0, algorithm: 'boss_daily', types: ['boss'] };
     showLoadoutModal(d, () => {
-      playerSpeed = 9 * GAME_SCALE;
+      playerSpeed = 11 * GAME_SCALE;   // 🔥 v20.8.2: 9 → 11
       freezeCharges = playerLoadout.includes('freeze') ? upgradeFreeze : 0;
       shieldCharges = (currentDailyModifier.id !== 'no_shield' && playerLoadout.includes('shield')) ? upgradeShield : 0;
       bombCharges = playerLoadout.includes('bomb') ? upgradeBomb : 0;
@@ -6049,5 +6108,5 @@ window.addEventListener('load', () => {
 });
 
 // =============================================================
-// END OF FILE — v20.8.1 (Analog Joystick Responsive Edition)
+// END OF FILE — v20.8.2 (Ultra Responsive Controller Edition)
 // =============================================================
