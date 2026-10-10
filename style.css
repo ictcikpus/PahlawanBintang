@@ -1,7 +1,7 @@
 /* =============================================================
    PAHLAWAN BINTANG — style.css v20.9.1
    Complete stylesheet — landscape-first, ringan, defensive
-   ------------------------------------------------------------
+   -----------------------------------------------------------
    v20.9.1 NEW:
    - Stage Clear banner (delay loot collection)
    ============================================================= */
@@ -3164,5 +3164,242 @@ input:focus-visible,
 }
 
 /* =============================================================
-   END OF v20.9.1 STYLE.CSS — COMPLETE
+   🔥 v20.10.0 — FLUID SCALING + BOSS PHASE VISUAL
+   Append ke akhir style.css
+   ============================================================= */
+
+/* ---------------------------------------------------------------
+   A. STAGE CLEAR — Lebih Dramatis
+   --------------------------------------------------------------- */
+#level-intro.stage-clear {
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: stageClearPulse 1.2s ease-in-out infinite;
+}
+
+#level-intro.stage-clear .level-intro-inner {
+  animation: stageClearZoom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes stageClearZoom {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+#level-intro.stage-clear .level-intro-number {
+  color: #39ff14;
+  text-shadow:
+    0 0 20px #39ff14,
+    0 0 40px rgba(57, 255, 20, 0.7),
+    0 0 60px rgba(57, 255, 20, 0.4);
+  animation: stageClearBounce 0.8s ease-out;
+}
+
+@keyframes stageClearBounce {
+  0% { transform: scale(0.3) rotate(-12deg); opacity: 0; }
+  50% { transform: scale(1.2) rotate(4deg); }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+#level-intro.stage-clear .level-intro-name {
+  color: #ffffff;
+  font-size: clamp(20px, 4.5vmin, 34px);
+  text-shadow:
+    0 0 14px #39ff14,
+    0 0 28px rgba(57, 255, 20, 0.6);
+  letter-spacing: 0.15em;
+  animation: stageClearNamePulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes stageClearNamePulse {
+  0% { opacity: 0.9; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1.02); }
+}
+
+#level-intro.stage-clear .level-intro-divider {
+  background: linear-gradient(90deg, transparent, #39ff14, transparent);
+  box-shadow: 0 0 16px #39ff14;
+  height: 3px;
+}
+
+#level-intro.stage-clear .level-intro-label {
+  color: #39ff14;
+  letter-spacing: 0.4em;
+  animation: stageClearPulse 0.6s ease-in-out infinite;
+}
+
+#level-intro.stage-clear .level-intro-mission {
+  color: #ffd700;
+  font-weight: 800;
+  font-size: clamp(12px, 2vmin, 16px);
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.7);
+  animation: stageClearBlink 0.7s ease-in-out infinite;
+}
+
+@keyframes stageClearBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+#level-intro.stage-clear .level-intro-inner::after {
+  content: '💰 Kumpulkan koin & bonus dulu!';
+  display: block;
+  margin-top: 14px;
+  font-size: clamp(11px, 1.8vmin, 14px);
+  color: #fff;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+  animation: stageClearBlink 0.9s ease-in-out infinite;
+}
+
+/* ---------------------------------------------------------------
+   B. BOSS APPROACH — Banner Peringatan Boss
+   --------------------------------------------------------------- */
+#level-intro.boss-approach {
+  background: rgba(60, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: bossApproachPulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes bossApproachPulse {
+  0% { background: rgba(60, 0, 0, 0.75); }
+  100% { background: rgba(120, 0, 0, 0.95); }
+}
+
+#level-intro.boss-approach .level-intro-number {
+  color: #ff2200;
+  font-size: clamp(50px, 12vmin, 90px);
+  text-shadow:
+    0 0 20px #ff2200,
+    0 0 40px rgba(255, 34, 0, 0.7),
+    0 0 80px rgba(255, 34, 0, 0.4);
+  animation: bossShake 0.12s ease-in-out infinite;
+}
+
+@keyframes bossShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+#level-intro.boss-approach .level-intro-name {
+  color: #ffd700;
+  font-size: clamp(22px, 5vmin, 38px);
+  text-shadow:
+    0 0 16px #ffd700,
+    0 0 32px rgba(255, 215, 0, 0.6);
+  letter-spacing: 0.2em;
+  animation: bossNameFlare 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes bossNameFlare {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.05); }
+}
+
+#level-intro.boss-approach .level-intro-divider {
+  background: linear-gradient(90deg, transparent, #ff2200, transparent);
+  box-shadow: 0 0 16px #ff2200;
+  height: 3px;
+}
+
+#level-intro.boss-approach .level-intro-label {
+  color: #ff2200;
+  letter-spacing: 0.4em;
+  animation: bossApproachPulse 0.3s ease-in-out infinite;
+}
+
+#level-intro.boss-approach .level-intro-mission {
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  animation: stageClearBlink 0.5s ease-in-out infinite;
+}
+
+#level-intro.boss-approach .level-intro-inner::after {
+  content: '⚠️ PERINGATAN ⚠️';
+  display: block;
+  margin-top: 14px;
+  font-size: clamp(12px, 2vmin, 16px);
+  color: #ff2200;
+  letter-spacing: 0.2em;
+  font-weight: 900;
+  text-shadow: 0 0 12px #ff2200;
+  animation: bossShake 0.2s ease-in-out infinite;
+}
+
+/* ---------------------------------------------------------------
+   C. HUD BOSS PHASE INDICATOR
+   --------------------------------------------------------------- */
+.hud-pill.boss-phase {
+  background: rgba(60, 0, 0, 0.75);
+  border-color: rgba(255, 34, 0, 0.6);
+  animation: bossApproachPulse 0.6s ease-in-out infinite;
+}
+
+.hud-pill.boss-phase .hud-value {
+  color: #ff2200;
+  text-shadow: 0 0 8px #ff2200;
+}
+
+/* ---------------------------------------------------------------
+   D. RESPONSIVE TWEAKS untuk DEVICE BESAR
+   --------------------------------------------------------------- */
+@media (min-width: 768px) {
+  .hud-pill {
+    padding: 5px 12px;
+    font-size: clamp(12px, 1.4vmin, 15px);
+  }
+  .hud-lives {
+    padding: 5px 12px;
+  }
+  .heart-icon {
+    width: clamp(18px, 2vmin, 24px);
+    height: clamp(18px, 2vmin, 24px);
+  }
+}
+
+@media (min-width: 1200px) {
+  .hud-pill {
+    padding: 6px 14px;
+    font-size: 15px;
+  }
+  #btn-pause, .btn-hints-toggle {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* ---------------------------------------------------------------
+   E. LOADING SPEED UP (kurangi animasi delay)
+   --------------------------------------------------------------- */
+#loading-screen.fade-out {
+  transition: opacity 0.3s ease;
+}
+
+/* ---------------------------------------------------------------
+   F. TABLET / IPAD LANDSCAPE — arena lebih luas
+   --------------------------------------------------------------- */
+@media (orientation: landscape) and (min-width: 1024px) {
+  .analog-joystick {
+    width: clamp(160px, 22vmin, 220px);
+    height: clamp(160px, 22vmin, 220px);
+  }
+  #btn-fire {
+    width: clamp(80px, 11vmin, 100px);
+    height: clamp(80px, 11vmin, 100px);
+  }
+  #btn-freeze, #btn-shield, #btn-bomb {
+    width: clamp(56px, 7vmin, 72px);
+    height: clamp(56px, 7vmin, 72px);
+  }
+}
+
+/* =============================================================
+   END v20.10.0 STYLE.CSS ADDITIONS
    ============================================================= */
