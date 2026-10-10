@@ -1,10 +1,12 @@
 // ============================================================
-// PAHLAWAN BINTANG — multiplayer.js v20.8
-// "Analog Sync Edition"
+// PAHLAWAN BINTANG — multiplayer.js v20.8.2
+// "Ultra Responsive Analog Sync Edition"
 // ------------------------------------------------------------
-// v20.8:
-//   - Dukungan `moveX` (float analog axis -1..1) untuk joystick
-//   - Backward compat dengan `left`/`right` boolean
+// v20.8.2 CHANGES:
+//   1. INPUT_THROTTLE_MS: 33 → 16  (60fps input dari guest)
+//   2. STATE_THROTTLE_MS: 50 → 33  (30fps state sync dari host)
+//   3. PING_INTERVAL_MS: 3000 → 2000 (deteksi disconnect lebih cepat)
+//   4. Kompatibel penuh dengan game.js v20.8.2
 // ============================================================
 
 (function() {
@@ -14,10 +16,10 @@ const MP_CONFIG = {
   ROOM_CODE_LENGTH: 4,
   ROOM_CODE_CHARS: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
   ROOM_TIMEOUT_MS: 60 * 60 * 1000,
-  PING_INTERVAL_MS: 3000,
+  PING_INTERVAL_MS: 2000,       // 🔥 v20.8.2: 3000 → 2000
   PING_TIMEOUT_MS: 15000,
-  INPUT_THROTTLE_MS: 33,
-  STATE_THROTTLE_MS: 50,
+  INPUT_THROTTLE_MS: 16,        // 🔥 v20.8.2: 33 → 16 (60fps)
+  STATE_THROTTLE_MS: 33,        // 🔥 v20.8.2: 50 → 33 (30fps)
   CONNECT_TIMEOUT_MS: 25000,
   ICE_GATHERING_TIMEOUT_MS: 3000,
 
@@ -93,7 +95,7 @@ class MultiplayerEngine {
     this._onRoomJoined = null;
     this._onRoomFull = null;
 
-    console.log('🎮 [MP] MultiplayerEngine initialized (v20.8)');
+    console.log('🎮 [MP] MultiplayerEngine initialized (v20.8.2)');
   }
 
   async createRoom(mode, playerName) {
@@ -227,7 +229,7 @@ class MultiplayerEngine {
     } catch(e) { console.warn('⚠️ [MP] startGame error:', e); }
   }
 
-  // 🔥 v20.8 — Forward moveX (analog axis)
+  // 🔥 v20.8.2 — Forward moveX (analog axis) dengan throttle 16ms
   sendInput(input) {
     if (!this.isConnected) return;
     const now = Date.now();
@@ -759,5 +761,5 @@ class MultiplayerEngine {
 
 window.MultiplayerEngine = MultiplayerEngine;
 window.MP = new MultiplayerEngine();
-console.log('✅ [MP] multiplayer.js loaded (v20.8)');
+console.log('✅ [MP] multiplayer.js loaded (v20.8.2)');
 })();
