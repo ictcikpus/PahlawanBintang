@@ -14,7 +14,28 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css?v=20.9" />
+  <link rel="stylesheet" href="./style.css?v=20.9.1" />
+
+  <!-- 🔥 v20.9.1 — CRITICAL FALLBACK CSS (safety net) -->
+  <style>
+    *,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;padding:0;width:100%;height:100vh;height:100dvh;overflow:hidden;background:#05061a;color:#e6eefc;font-family:system-ui,-apple-system,sans-serif;user-select:none;-webkit-user-select:none;overscroll-behavior:none;touch-action:manipulation}
+    #loading-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#05061a;z-index:9999;color:#e6eefc}
+    #gameCanvas{position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;display:block;z-index:1;touch-action:none}
+    #screen-main-menu{position:fixed;inset:0;z-index:10;overflow:hidden}
+    .hero-logo{width:clamp(70px,18vmin,160px)!important;height:clamp(70px,18vmin,160px)!important;position:relative;display:flex;align-items:center;justify-content:center;margin:0 auto}
+    .logo-star{width:100%!important;height:100%!important;max-width:160px!important;max-height:160px!important;display:block}
+    .hidden{display:none!important}
+    .menu-box{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px;overflow:hidden}
+    #hud-overlay{position:fixed;inset:0;pointer-events:none;z-index:60}
+    .modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,.75)}
+    .modal-box{width:min(96vw,560px);max-height:90vh;overflow-y:auto;padding:16px;border-radius:14px;background:rgba(15,22,54,.95);border:2px solid rgba(0,210,255,.25);color:#e6eefc}
+    button{font-family:inherit;color:inherit;background:transparent;border:none;cursor:pointer}
+    canvas{display:block}
+    .loader-emblem{position:relative;width:80px;height:80px}
+    .loader-ring{position:absolute;inset:0;width:100%;height:100%;color:#00d2ff;fill:none}
+    .loader-core{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40%;height:40%;color:#ffd700;fill:currentColor}
+  </style>
 </head>
 <body class="no-select">
 
@@ -252,12 +273,9 @@
       <ellipse cx="50" cy="105" rx="38" ry="45" fill="#00d2ff"/>
       <circle cx="50" cy="42" r="28" fill="#ffd8b0"/>
       <path d="M22 40 Q50 -10 78 40 L82 55 Q50 40 18 55 Z" fill="#1e90ff"/>
-      <path d="M22 40 Q50 -10 78 40" stroke="#00d2ff" stroke-width="3" fill="none"/>
       <circle cx="40" cy="44" r="3" fill="#0a0d24"/>
       <circle cx="60" cy="44" r="3" fill="#0a0d24"/>
       <path d="M42 56 Q50 62 58 56" stroke="#a0522d" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <path d="M14 55 Q10 70 16 82 Q30 78 34 62 Z" fill="#1e90ff"/>
-      <path d="M86 55 Q90 70 84 82 Q70 78 66 62 Z" fill="#1e90ff"/>
     </symbol>
     <symbol id="i-aria" viewBox="0 0 100 100">
       <ellipse cx="50" cy="105" rx="38" ry="45" fill="#a55eea"/>
@@ -265,10 +283,8 @@
       <path d="M24 32 Q50 8 76 32 Q76 20 50 12 Q24 20 24 32 Z" fill="#4a2c8f"/>
       <circle cx="40" cy="46" r="7" fill="none" stroke="#00d2d3" stroke-width="2"/>
       <circle cx="60" cy="46" r="7" fill="none" stroke="#00d2d3" stroke-width="2"/>
-      <line x1="47" y1="46" x2="53" y2="46" stroke="#00d2d3" stroke-width="2"/>
       <circle cx="40" cy="46" r="2" fill="#0a0d24"/>
       <circle cx="60" cy="46" r="2" fill="#0a0d24"/>
-      <path d="M43 60 Q50 64 57 60" stroke="#a0522d" stroke-width="2" fill="none" stroke-linecap="round"/>
     </symbol>
     <symbol id="i-rival" viewBox="0 0 100 100">
       <ellipse cx="50" cy="105" rx="40" ry="45" fill="#2f3542"/>
@@ -276,25 +292,19 @@
       <path d="M20 40 L80 40 L75 20 Q50 5 25 20 Z" fill="#1a1a2a"/>
       <path d="M28 44 L72 44 L68 60 L32 60 Z" fill="#0a0d24" opacity="0.9"/>
       <path d="M34 48 L44 48 M56 48 L66 48" stroke="#ff2e88" stroke-width="2.5" stroke-linecap="round"/>
-      <path d="M40 74 Q50 78 60 74" stroke="#7a7a8a" stroke-width="2" fill="none" stroke-linecap="round"/>
     </symbol>
     <symbol id="i-villain" viewBox="0 0 100 100">
       <ellipse cx="50" cy="105" rx="42" ry="45" fill="#1a001a"/>
       <circle cx="50" cy="44" r="30" fill="#0a000a"/>
       <path d="M20 42 Q50 -5 80 42 Q50 30 20 42 Z" fill="#2a0033"/>
-      <path d="M30 40 Q50 32 70 40 L70 45 Q50 40 30 45 Z" fill="#ff0055"/>
       <circle cx="38" cy="42" r="3" fill="#ff0055"/>
       <circle cx="62" cy="42" r="3" fill="#ff0055"/>
       <path d="M40 62 Q50 70 60 62" stroke="#ff0055" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <path d="M30 55 Q25 70 30 85 Q42 82 45 65 Z" fill="#2a0033"/>
-      <path d="M70 55 Q75 70 70 85 Q58 82 55 65 Z" fill="#2a0033"/>
     </symbol>
     <symbol id="i-hero-portrait" viewBox="0 0 100 100">
       <ellipse cx="50" cy="105" rx="38" ry="45" fill="#00d2ff"/>
       <circle cx="50" cy="44" r="28" fill="#ffd8b0"/>
       <path d="M20 38 Q50 -5 80 38 L80 48 Q50 40 20 48 Z" fill="#1e90ff"/>
-      <rect x="20" y="34" width="60" height="6" fill="#0a0d24" opacity="0.7"/>
-      <path d="M26 40 L42 40 M58 40 L74 40" stroke="#00d2ff" stroke-width="2.5" stroke-linecap="round"/>
       <circle cx="34" cy="40" r="2.5" fill="#00d2ff"/>
       <circle cx="66" cy="40" r="2.5" fill="#00d2ff"/>
       <path d="M42 58 Q50 64 58 58" stroke="#a0522d" stroke-width="2" fill="none" stroke-linecap="round"/>
@@ -339,7 +349,7 @@
   <div class="menu-box">
 
     <div class="menu-topbar">
-      <div class="version-badge">v20.9</div>
+      <div class="version-badge">v20.9.1</div>
       <button id="btn-audio" class="btn-audio" title="Suara" type="button">
         <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
       </button>
@@ -350,11 +360,9 @@
       <div class="logo-ring logo-ring-1"></div>
       <div class="logo-ring logo-ring-2"></div>
       <div class="logo-ring logo-ring-3"></div>
-
       <div class="logo-orbit logo-orbit-1"><div class="planet planet-cyan"></div></div>
       <div class="logo-orbit logo-orbit-2"><div class="planet planet-gold"></div></div>
       <div class="logo-orbit logo-orbit-3"><div class="planet planet-pink"></div></div>
-
       <div class="logo-star-wrap">
         <svg class="logo-star" viewBox="0 0 100 100">
           <defs>
@@ -370,19 +378,11 @@
               <stop offset="75%" stop-color="#ffd700"/>
               <stop offset="100%" stop-color="#ff8a00"/>
             </linearGradient>
-            <linearGradient id="starCoreInner" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#ffffff"/>
-              <stop offset="100%" stop-color="#fff8dc"/>
-            </linearGradient>
           </defs>
           <circle cx="50" cy="50" r="48" fill="url(#starCoreGlow)"/>
-          <path d="M50 6 L61.8 38.2 L96 38.2 L68.1 58.9 L79.9 91.1 L50 70.4 L20.1 91.1 L31.9 58.9 L4 38.2 L38.2 38.2 Z"
-                fill="#ff8a00" opacity="0.5" filter="blur(3px)"/>
           <path d="M50 10 L60.5 39.3 L91 39.3 L66 57.6 L76.5 87 L50 68.7 L23.5 87 L34 57.6 L9 39.3 L39.5 39.3 Z"
                 fill="url(#starCoreBody)"
                 stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round"/>
-          <path d="M50 22 L55 38 L71 38 L58 47 L63 63 L50 54 L37 63 L42 47 L29 38 L45 38 Z"
-                fill="url(#starCoreInner)" opacity="0.5"/>
           <circle cx="50" cy="46" r="5" fill="#ffffff" opacity="0.95"/>
           <circle cx="50" cy="46" r="2.5" fill="#fff8dc"/>
         </svg>
@@ -468,7 +468,6 @@
           <span class="menu-card-label">PERINGKAT</span>
         </div>
       </button>
-
       <button id="btn-achievements" class="menu-card" type="button">
         <div class="menu-card-inner">
           <div class="menu-card-icon-wrap c-pink">
@@ -478,7 +477,6 @@
           <span id="achievement-badge-count" class="menu-card-badge hidden">0</span>
         </div>
       </button>
-
       <button id="btn-endless" class="menu-card" type="button">
         <div class="menu-card-inner">
           <div class="menu-card-icon-wrap c-green">
@@ -534,7 +532,6 @@
         <span id="hud-coins" class="hud-value">0</span>
       </div>
     </div>
-
     <div class="hud-right">
       <div id="hud-lives" class="hud-lives"></div>
       <button id="btn-hints-toggle" class="btn-hints-toggle hidden" title="Kontrol (H)" type="button">
@@ -567,13 +564,11 @@
         </div>
       </div>
     </div>
-
     <div class="ctrl-cluster ctrl-right fire-cluster">
       <button id="btn-fire" class="btn-fire" aria-label="Tembak" type="button" data-pressed="1">
         <svg class="fire-icon" viewBox="0 0 24 24"><use href="#i-bolt"/></svg>
       </button>
     </div>
-
     <div class="ctrl-cluster ctrl-right skill-row">
       <button id="btn-freeze" class="btn-skill skill-freeze" aria-label="Freeze" type="button">
         <svg class="skill-icon" viewBox="0 0 24 24"><use href="#i-snow"/></svg>
@@ -591,7 +586,7 @@
   </div>
 </div>
 
-<!-- ============ 🔥 v20.9 — DESKTOP CONTROL HINTS ============ -->
+<!-- ============ DESKTOP CONTROL HINTS ============ -->
 <div id="desktop-hints" class="hidden" aria-hidden="true">
   <div class="hint-panel">
     <div class="hint-header">
@@ -664,7 +659,6 @@
   <div class="killstreak-sub" id="killstreak-sub">10 KILLS</div>
 </div>
 
-<!-- ============ FLOATING TEXT ============ -->
 <div id="popup-container"></div>
 
 <!-- ============ SPECTATOR OVERLAY ============ -->
@@ -687,7 +681,6 @@
   </div>
 </div>
 
-<!-- ============ ACHIEVEMENT TOAST CONTAINER ============ -->
 <div id="achievement-toast-container"></div>
 
 <!-- ============ MODAL: PAUSE ============ -->
@@ -713,7 +706,7 @@
   </div>
 </div>
 
-<!-- ============ MODAL: PILIH HERO (10 HERO) ============ -->
+<!-- ============ MODAL: PILIH HERO ============ -->
 <div id="modal-actors" class="modal hidden">
   <div class="modal-box">
     <h2>PILIH HERO</h2>
@@ -1159,7 +1152,7 @@
   </div>
 </div>
 
-<!-- ============ MODAL: LOBBY (WAITING) ============ -->
+<!-- ============ MODAL: LOBBY ============ -->
 <div id="modal-mp-lobby" class="modal hidden">
   <div class="modal-box mp-lobby-box">
     <h2 id="mp-lobby-title">ROOM DIBUAT</h2>
@@ -1232,7 +1225,7 @@
   </div>
 </div>
 
-<!-- ============ MODAL: MATH QUIZ UNLOCK ============ -->
+<!-- ============ MODAL: MATH QUIZ ============ -->
 <div id="modal-math-quiz" class="modal hidden">
   <div class="modal-box">
     <h2 id="math-quiz-title">
@@ -1298,6 +1291,6 @@
 <script src="./multiplayer.js?v=20.9"></script>
 
 <!-- ============ GAME SCRIPT ============ -->
-<script src="./game.js?v=20.9"></script>
+<script src="./game.js?v=20.9.1"></script>
 </body>
 </html>
