@@ -6,14 +6,14 @@
 // v20.10.0: Fluid scaling + Boss minion phase
 // ============================================================
 
-const CACHE_NAME = 'pahlawan-bintang-v20.10.0';
-const CACHE_VERSION = '20.10.0';
+const CACHE_NAME = 'pahlawan-bintang-v20.10.1';
+const CACHE_VERSION = '20.10.1';
 
 const CORE_FILES = [
   './',
   './index.html',
-  './style.css?v=20.10.0',
-  './game.js?v=20.10.0',
+  './style.css?v=20.10.1',
+  './game.js?v=20.10.1',
   './multiplayer.js?v=20.9',
   './achievements.json',
   './levels.json',
