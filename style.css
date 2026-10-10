@@ -1631,3 +1631,399 @@ kbd{display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(255,2
   70%{transform:translate(-50%,-50%) scale(1) rotate(0); opacity:1}
   100%{transform:translate(-50%,-50%) scale(1.3) rotate(5deg); opacity:0}
 }
+/* =============================================================
+   v24.0 BAGIAN 2 — Raid + Pets + Weather + Photo
+   ============================================================= */
+
+/* === RAID MODAL === */
+.raid-box{
+  max-width:min(94vw,480px);
+  text-align:center;
+  background:linear-gradient(160deg, rgba(30,5,10,.98), rgba(10,2,8,.99));
+  border:2px solid rgba(255,46,68,.6);
+  box-shadow:0 30px 80px rgba(0,0,0,.9), 0 0 60px rgba(255,46,68,.4);
+}
+.raid-badge{
+  display:inline-block;
+  padding:4px 14px;
+  border-radius:999px;
+  font-family:'Orbitron',sans-serif;
+  font-size:10px;font-weight:800;letter-spacing:.15em;
+  background:linear-gradient(90deg, rgba(255,46,68,.3), rgba(255,140,0,.3));
+  border:1px solid rgba(255,46,68,.7);
+  color:#ff6b78;
+  box-shadow:0 0 20px rgba(255,46,68,.5);
+  margin-bottom:14px;
+  animation:badgePulse 2s ease-in-out infinite;
+}
+.raid-boss-preview{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px;
+  border-radius:12px;
+  background:linear-gradient(135deg, rgba(255,46,68,.15), rgba(20,10,30,.6));
+  border:1px solid rgba(255,46,68,.5);
+  margin-bottom:14px;
+}
+.raid-boss-icon{
+  width:64px;height:64px;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(255,46,68,.4), transparent 70%);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+  animation:pulse 2s ease-in-out infinite;
+}
+.raid-boss-icon svg{
+  width:40px;height:40px;
+  fill:#ff2e44;
+  filter:drop-shadow(0 0 12px #ff2e44);
+}
+.raid-boss-info{text-align:left;flex:1}
+.raid-boss-info strong{
+  display:block;
+  font-family:'Orbitron',sans-serif;
+  font-size:16px;
+  color:#ff6b78;
+  letter-spacing:.06em;
+}
+.raid-boss-info small{
+  display:block;
+  font-family:'Rajdhani',sans-serif;
+  font-size:12px;
+  color:#93a5c4;
+  margin-top:4px;
+}
+.raid-phases{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin-bottom:14px;
+}
+.raid-phase{
+  padding:8px 4px;
+  border-radius:10px;
+  background:rgba(20,10,30,.6);
+  border:1px solid rgba(255,46,68,.3);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+}
+.rp-num{
+  width:22px;height:22px;
+  border-radius:50%;
+  background:#ff2e44;
+  color:#fff;
+  font-family:'Orbitron',sans-serif;
+  font-size:11px;
+  font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+}
+.rp-label{
+  font-family:'Orbitron',sans-serif;
+  font-size:8.5px;
+  color:#93a5c4;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  text-align:center;
+}
+
+/* === PET SHOP === */
+.pet-shop-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:8px;
+  margin-bottom:12px;
+}
+.pet-shop-card{
+  padding:12px 8px;
+  border-radius:12px;
+  background:linear-gradient(160deg, rgba(20,30,70,.8), rgba(8,12,32,.9));
+  border:1.5px solid rgba(255,255,255,.1);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  cursor:pointer;
+  transition:all .2s;
+  text-align:center;
+  position:relative;
+}
+.pet-shop-card:active{transform:scale(.96)}
+.pet-shop-card.owned{
+  border-color:rgba(46,213,115,.5);
+  background:linear-gradient(160deg, rgba(46,213,115,.15), rgba(20,30,70,.8));
+}
+.pet-shop-card.active-pet{
+  border-color:#ffd700;
+  box-shadow:0 0 16px rgba(255,215,0,.5);
+}
+.pet-shop-card.active-pet::before{
+  content:'✓ AKTIF';
+  position:absolute;
+  top:4px;right:4px;
+  font-family:'Orbitron',sans-serif;
+  font-size:8px;
+  font-weight:800;
+  padding:2px 6px;
+  border-radius:4px;
+  background:#ffd700;
+  color:#1a1200;
+}
+.pet-shop-icon{
+  width:48px;height:48px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle, rgba(0,210,255,.3), transparent 70%);
+}
+.pet-shop-icon svg{
+  width:30px;height:30px;
+  fill:currentColor;
+  color:#00d2ff;
+  filter:drop-shadow(0 0 8px currentColor);
+}
+.pet-shop-card[data-pet="nova_cat"] .pet-shop-icon{background:radial-gradient(circle, rgba(255,165,2,.3), transparent 70%)}
+.pet-shop-card[data-pet="nova_cat"] .pet-shop-icon svg{color:#ffa502}
+.pet-shop-card[data-pet="star_owl"] .pet-shop-icon{background:radial-gradient(circle, rgba(255,215,0,.3), transparent 70%)}
+.pet-shop-card[data-pet="star_owl"] .pet-shop-icon svg{color:#ffd700}
+.pet-shop-card[data-pet="void_bat"] .pet-shop-icon{background:radial-gradient(circle, rgba(165,94,234,.3), transparent 70%)}
+.pet-shop-card[data-pet="void_bat"] .pet-shop-icon svg{color:#a55eea}
+.pet-shop-name{
+  font-family:'Orbitron',sans-serif;
+  font-size:11px;
+  font-weight:700;
+  color:#e6eefc;
+  letter-spacing:.04em;
+}
+.pet-shop-desc{
+  font-family:'Rajdhani',sans-serif;
+  font-size:11px;
+  color:#93a5c4;
+  line-height:1.3;
+}
+.pet-shop-price{
+  font-family:'Orbitron',sans-serif;
+  font-size:11px;
+  font-weight:800;
+  color:#ffd700;
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+}
+.pet-shop-price svg{width:12px;height:12px;fill:currentColor}
+.pet-shop-price.owned{color:#2ed573}
+.pet-active-bar{
+  padding:10px;
+  border-radius:12px;
+  background:rgba(0,0,0,.4);
+  border:1px dashed rgba(0,210,255,.4);
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.pet-active-label{
+  font-family:'Orbitron',sans-serif;
+  font-size:10px;
+  color:#93a5c4;
+  letter-spacing:.1em;
+}
+.pet-active-slots{
+  display:flex;
+  gap:6px;
+  flex:1;
+}
+.pet-active-slot{
+  width:36px;height:36px;
+  border-radius:50%;
+  background:rgba(255,255,255,.06);
+  border:1.5px dashed rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;
+}
+.pet-active-slot.filled{
+  background:radial-gradient(circle, rgba(0,210,255,.3), transparent 70%);
+  border:1.5px solid #00d2ff;
+}
+.pet-active-slot svg{
+  width:22px;height:22px;
+  fill:#00d2ff;
+  color:#00d2ff;
+}
+
+/* === PHOTO MODE === */
+#photo-mode{
+  position:fixed;
+  inset:0;
+  z-index:200;
+  background:transparent;
+  pointer-events:none;
+}
+#photo-mode:not(.hidden){pointer-events:auto}
+.photo-top-bar{
+  position:absolute;
+  top:0;left:0;right:0;
+  padding:calc(var(--pad) + var(--safe-top)) calc(var(--pad) + var(--safe-right)) 0 calc(var(--pad) + var(--safe-left));
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  z-index:2;
+  pointer-events:none;
+}
+.photo-top-bar>*{pointer-events:auto}
+.photo-title{
+  font-family:'Orbitron',sans-serif;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.12em;
+  color:#fff;
+  padding:6px 14px;
+  border-radius:999px;
+  background:rgba(0,0,0,.6);
+  border:1px solid rgba(0,210,255,.4);
+}
+.photo-btn{
+  width:36px;height:36px;
+  border-radius:50%;
+  background:rgba(0,0,0,.7);
+  border:1.5px solid rgba(255,71,87,.5);
+  color:#ff4757;
+  font-size:16px;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.photo-controls{
+  position:absolute;
+  top:calc(var(--pad) + var(--safe-top) + 50px);
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(0,0,0,.7);
+  border:1px solid rgba(0,210,255,.35);
+  z-index:2;
+  max-width:calc(100vw - 32px);
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.photo-controls::-webkit-scrollbar{display:none}
+.photo-filter{
+  padding:6px 12px;
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+  color:#93a5c4;
+  font-family:'Orbitron',sans-serif;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.05em;
+  border:1px solid transparent;
+  white-space:nowrap;
+}
+.photo-filter.active{
+  background:rgba(0,210,255,.25);
+  color:#00d2ff;
+  border-color:rgba(0,210,255,.6);
+}
+.photo-bottom-bar{
+  position:absolute;
+  bottom:calc(var(--pad) + var(--safe-bottom));
+  left:50%;
+  transform:translateX(-50%);
+  z-index:2;
+}
+.photo-bottom-bar button{
+  min-width:200px;
+  box-shadow:0 8px 24px rgba(0,0,0,.8), 0 0 20px rgba(0,210,255,.4);
+}
+/* Photo filters */
+#photo-mode[data-filter="sepia"]{filter:sepia(.7) saturate(1.2)}
+#photo-mode[data-filter="vivid"]{filter:saturate(1.8) contrast(1.15)}
+#photo-mode[data-filter="bw"]{filter:grayscale(1) contrast(1.2)}
+#photo-mode[data-filter="cool"]{filter:hue-rotate(-20deg) saturate(1.3)}
+#photo-mode[data-filter="warm"]{filter:hue-rotate(15deg) saturate(1.4) brightness(1.05)}
+
+/* === WEATHER OVERLAY === */
+#weather-overlay{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:5;
+  overflow:hidden;
+}
+.weather-particle{
+  position:absolute;
+  pointer-events:none;
+}
+.weather-rain{
+  width:1.5px;
+  height:14px;
+  background:linear-gradient(to bottom, transparent, rgba(200,220,255,.8));
+  animation:rainFall 0.8s linear infinite;
+}
+@keyframes rainFall{
+  from{transform:translateY(-20px)}
+  to{transform:translateY(100vh)}
+}
+.weather-snow{
+  width:4px;height:4px;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 0 4px #fff;
+  animation:snowFall 6s linear infinite;
+}
+@keyframes snowFall{
+  from{transform:translateY(-10px) translateX(0)}
+  to{transform:translateY(100vh) translateX(50px)}
+}
+.weather-meteor{
+  width:3px;height:20px;
+  background:linear-gradient(to bottom, transparent, #ff8a00, #fff);
+  border-radius:3px;
+  box-shadow:0 0 8px #ff8a00;
+  animation:meteorFallWeather 3s linear infinite;
+}
+@keyframes meteorFallWeather{
+  0%{transform:translate(-50px,-50px) rotate(45deg); opacity:0}
+  10%{opacity:1}
+  100%{transform:translate(calc(100vw + 50px), calc(100vh + 50px)) rotate(45deg); opacity:0}
+}
+.weather-fog{
+  position:absolute;
+  inset:0;
+  background:radial-gradient(ellipse at center, transparent 30%, rgba(200,220,255,.15) 100%);
+  animation:fogPulse 8s ease-in-out infinite;
+}
+@keyframes fogPulse{0%,100%{opacity:.6}50%{opacity:1}}
+.weather-aurora{
+  position:absolute;
+  top:0;left:0;right:0;
+  height:50%;
+  background:linear-gradient(180deg, rgba(0,255,200,.15) 0%, rgba(100,0,255,.1) 50%, transparent 100%);
+  animation:auroraWave 12s ease-in-out infinite;
+}
+@keyframes auroraWave{
+  0%,100%{transform:translateX(-10%) scaleY(1)}
+  50%{transform:translateX(10%) scaleY(1.15)}
+}
+#weather-badge{
+  position:absolute;
+  top:calc(var(--pad) + var(--safe-top) + 80px);
+  right:calc(var(--pad) + var(--safe-right));
+  padding:4px 10px;
+  border-radius:999px;
+  background:rgba(0,0,0,.6);
+  border:1px solid rgba(255,255,255,.3);
+  font-family:'Orbitron',sans-serif;
+  font-size:9.5px;
+  font-weight:700;
+  letter-spacing:.08em;
+  color:#fff;
+  z-index:6;
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+#weather-badge svg{
+  width:12px;height:12px;
+  fill:currentColor;
+}
