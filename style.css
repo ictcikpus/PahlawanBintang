@@ -276,46 +276,266 @@ input:focus{border-color:var(--accent)}
 }
 
 /* =============================================================
-   HUD
+   HUD v21.2 — Compact, Translucent, Center Clear
+   Joystick: bottom-left | Fire: bottom-right | Skills: vertical above fire
    ============================================================= */
 #hud-overlay{position:fixed;inset:0;pointer-events:none;z-index:60}
-#hud-overlay>*{pointer-events:auto}
+#hud-overlay > *{pointer-events:auto}
+
+/* --- Top bar --- */
 .hud-top{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:calc(var(--pad) + var(--safe-top)) calc(var(--pad) + var(--safe-right)) 0 calc(var(--pad) + var(--safe-left));pointer-events:none}
 .hud-left,.hud-right{display:flex;align-items:center;gap:5px;pointer-events:auto;min-width:0}
-.hud-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(0,210,255,.2);font-size:var(--fs-xs);font-weight:700;white-space:nowrap;color:var(--text);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.hud-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.45);border:1px solid rgba(0,210,255,.22);font-size:var(--fs-xs);font-weight:700;white-space:nowrap;color:var(--text);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .hud-label{font-size:9px;opacity:.7;letter-spacing:.05em}
 .hud-value{color:var(--accent)}
 .hud-ico{color:var(--accent)}
 .hud-ico.gold{color:var(--accent-2)}
-.hud-lives{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,71,87,.3);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.hud-lives{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.45);border:1px solid rgba(255,71,87,.3);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .heart-icon{width:clamp(14px,2.4vmin,20px);height:clamp(14px,2.4vmin,20px);color:var(--danger);fill:currentColor;filter:drop-shadow(0 0 3px rgba(255,71,87,.5))}
 .heart-icon.partial{opacity:.5}
-.btn-pause,.btn-hints-toggle{width:var(--tap);height:var(--tap);border-radius:50%;background:rgba(0,0,0,.6);border:1px solid var(--border-soft);display:inline-flex;align-items:center;justify-content:center;color:var(--accent);transition:transform .08s ease,background .15s ease}
-.btn-pause:active,.btn-hints-toggle:active{transform:scale(.9);background:rgba(0,210,255,.25)}
+.btn-pause,.btn-hints-toggle{width:var(--tap);height:var(--tap);border-radius:50%;background:rgba(0,0,0,.5);border:1px solid var(--border-soft);display:inline-flex;align-items:center;justify-content:center;color:var(--accent);transition:transform .08s ease,background .15s ease;opacity:.75}
+.btn-pause:active,.btn-hints-toggle:active{transform:scale(.9);background:rgba(0,210,255,.25);opacity:1}
 #hud-combo-pill{position:absolute;top:calc(var(--pad) + var(--safe-top) + 42px);left:50%;transform:translateX(-50%);padding:4px 14px;border-radius:999px;background:rgba(255,215,0,.15);border:1px solid var(--accent-2);color:var(--accent-2);font-size:var(--fs-xs);font-weight:800;letter-spacing:.05em;text-shadow:0 0 8px rgba(255,215,0,.6)}
-.hud-bottom{position:absolute;bottom:0;left:0;right:0;display:flex;align-items:flex-end;justify-content:space-between;gap:var(--pad);padding:0 calc(var(--pad) + var(--safe-right)) calc(var(--pad) + var(--safe-bottom)) calc(var(--pad) + var(--safe-left));pointer-events:none}
-.ctrl-cluster{display:flex;align-items:center;gap:clamp(6px,1.2vmin,12px);pointer-events:auto}
-.skill-row{flex-direction:row-reverse}
-.analog-joystick{position:relative;width:clamp(120px,22vmin,160px);height:clamp(120px,22vmin,160px);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;cursor:grab;pointer-events:auto}
-.joystick-base{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at center,rgba(0,20,50,.55) 0%,rgba(0,0,0,.78) 80%);border:2px solid rgba(0,210,255,.4);box-shadow:inset 0 0 24px rgba(0,0,0,.7),0 0 24px rgba(0,210,255,.18),0 6px 16px rgba(0,0,0,.5);overflow:hidden;transition:border-color .15s ease,box-shadow .15s ease}
-.joystick-decor{position:absolute;top:50%;transform:translateY(-50%);width:16%;height:16%;color:rgba(0,210,255,.4);pointer-events:none;transition:color .2s ease,transform .2s ease}
-.joystick-decor-left{left:6%}.joystick-decor-right{right:6%}
-.joystick-decor svg{width:100%;height:100%;fill:currentColor}
-.analog-joystick.is-active .joystick-decor-left,.analog-joystick.is-active .joystick-decor-right{color:rgba(255,215,0,.85);transform:translateY(-50%) scale(1.15)}
-.joystick-knob{position:absolute;width:46%;height:46%;left:50%;top:50%;border-radius:50%;background:radial-gradient(circle at 32% 28%,#7ad4ff 0%,#00a3e0 55%,#005a8a 100%);border:2px solid rgba(255,255,255,.9);box-shadow:0 3px 10px rgba(0,0,0,.6),inset 0 -3px 8px rgba(0,0,0,.35),inset 0 3px 6px rgba(255,255,255,.25);transform:translate(-50%,-50%);transition:box-shadow .15s ease;will-change:transform;pointer-events:none;display:flex;align-items:center;justify-content:center}
-.joystick-knob-inner{width:30%;height:30%;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.9) 0%,transparent 70%)}
-.btn-fire{width:clamp(80px,16vmin,110px);height:clamp(80px,16vmin,110px);border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff6b78 0%,#ff2e44 45%,#a01020 100%);border:3px solid rgba(255,255,255,.85);box-shadow:0 6px 20px rgba(255,46,68,.6),inset 0 -5px 15px rgba(0,0,0,.4),inset 0 5px 15px rgba(255,255,255,.25);display:inline-flex;align-items:center;justify-content:center;color:#fff;transition:transform .08s ease,box-shadow .1s ease;touch-action:none;user-select:none}
-.btn-fire .fire-icon{width:40%;height:40%;color:#fff;filter:drop-shadow(0 0 6px rgba(255,255,255,.7))}
-.btn-fire[data-pressed="1"]{transform:scale(.95);box-shadow:0 4px 12px rgba(255,46,68,.7),inset 0 -3px 10px rgba(0,0,0,.5);background:radial-gradient(circle at 35% 30%,#ff4d5e 0%,#cc1a30 45%,#7a0818 100%)}
-.btn-skill{width:clamp(48px,9vmin,64px);height:clamp(48px,9vmin,64px);border-radius:50%;border:2px solid rgba(255,255,255,.7);display:inline-flex;align-items:center;justify-content:center;position:relative;color:#fff;transition:transform .08s ease,box-shadow .15s ease,opacity .15s ease}
-.btn-skill .skill-icon{width:52%;height:52%;filter:drop-shadow(0 0 4px rgba(0,0,0,.5))}
-.skill-freeze{background:radial-gradient(circle at 35% 30%,#a8e6ff 0%,#4da6ff 60%,#005a8a 100%);box-shadow:0 4px 12px rgba(77,166,255,.4),inset 0 -3px 8px rgba(0,0,0,.3)}
-.skill-shield{background:radial-gradient(circle at 35% 30%,#6bf0b3 0%,#1abc9c 60%,#0a5a4a 100%);box-shadow:0 4px 12px rgba(46,213,115,.4),inset 0 -3px 8px rgba(0,0,0,.3)}
-.skill-bomb{background:radial-gradient(circle at 35% 30%,#ff9aa2 0%,#ff4757 60%,#8a1020 100%);box-shadow:0 4px 12px rgba(255,71,87,.4),inset 0 -3px 8px rgba(0,0,0,.3)}
-.btn-skill:active{transform:scale(.9)}
-.btn-skill.disabled{opacity:.4;pointer-events:none}
-.skill-count{position:absolute;bottom:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#ffd700;color:#1a1200;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;border:2px solid #05061a}
 
+/* --- Bottom bar (container tanpa flex, anak absolute) --- */
+.hud-bottom{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+
+/* --- Joystick — bottom-left corner --- */
+.ctrl-cluster{display:flex;align-items:center;gap:clamp(6px,1.2vmin,12px);pointer-events:auto}
+.ctrl-left{
+  position:absolute;
+  left:calc(var(--pad) + var(--safe-left));
+  bottom:calc(var(--pad) + var(--safe-bottom));
+  z-index:3;
+  align-items:flex-end;
+}
+
+/* --- Fire button — bottom-right corner --- */
+.fire-cluster{
+  position:absolute;
+  right:calc(var(--pad) + var(--safe-right));
+  bottom:calc(var(--pad) + var(--safe-bottom));
+  z-index:3;
+  align-items:flex-end;
+}
+
+/* --- Skills — vertical column above fire button, right side --- */
+.skill-row{
+  position:absolute;
+  right:calc(var(--pad) + var(--safe-right));
+  bottom:calc(var(--pad) + var(--safe-bottom) + clamp(74px, 12vmin, 96px));
+  flex-direction:column;
+  gap:clamp(6px, 1vmin, 10px);
+  z-index:3;
+  align-items:center;
+}
+
+/* =================== JOYSTICK — Small & Translucent =================== */
+.analog-joystick{
+  position:relative;
+  width:clamp(84px, 12vmin, 112px);
+  height:clamp(84px, 12vmin, 112px);
+  touch-action:none;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  cursor:grab;
+  pointer-events:auto;
+  opacity:.5;
+  transition:opacity .25s ease;
+}
+.analog-joystick.is-active,
+.analog-joystick:active{opacity:1;cursor:grabbing}
+
+.joystick-base{
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  background:radial-gradient(circle at center,
+    rgba(0,30,70,.4) 0%,
+    rgba(0,0,0,.55) 80%);
+  border:1.5px solid rgba(0,210,255,.42);
+  box-shadow:
+    inset 0 0 12px rgba(0,0,0,.5),
+    0 0 12px rgba(0,210,255,.14);
+  overflow:hidden;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+.analog-joystick.is-active .joystick-base{
+  border-color:rgba(0,210,255,.75);
+  box-shadow:
+    inset 0 0 12px rgba(0,0,0,.55),
+    0 0 20px rgba(0,210,255,.38);
+}
+
+.joystick-decor{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  width:16%;
+  height:16%;
+  color:rgba(0,210,255,.5);
+  pointer-events:none;
+  transition:color .2s ease, transform .2s ease;
+}
+.joystick-decor-left{left:6%}
+.joystick-decor-right{right:6%}
+.joystick-decor svg{width:100%;height:100%;fill:currentColor}
+.analog-joystick.is-active .joystick-decor-left,
+.analog-joystick.is-active .joystick-decor-right{
+  color:rgba(255,215,0,.9);
+  transform:translateY(-50%) scale(1.2);
+}
+
+.joystick-knob{
+  position:absolute;
+  width:44%;
+  height:44%;
+  left:50%;
+  top:50%;
+  border-radius:50%;
+  background:radial-gradient(circle at 32% 28%,
+    rgba(122,212,255,.85) 0%,
+    rgba(0,163,224,.82) 55%,
+    rgba(0,90,138,.82) 100%);
+  border:1.5px solid rgba(255,255,255,.75);
+  box-shadow:
+    0 2px 6px rgba(0,0,0,.4),
+    inset 0 -2px 5px rgba(0,0,0,.3),
+    inset 0 2px 4px rgba(255,255,255,.22);
+  transform:translate(-50%,-50%);
+  will-change:transform;
+  pointer-events:none;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.joystick-knob-inner{
+  width:28%;
+  height:28%;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(255,255,255,.85) 0%, transparent 70%);
+}
+
+/* =================== FIRE BUTTON — Small & Translucent =================== */
+.btn-fire{
+  width:clamp(64px, 9.6vmin, 86px);
+  height:clamp(64px, 9.6vmin, 86px);
+  border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,
+    rgba(255,107,120,.72) 0%,
+    rgba(255,46,68,.68) 45%,
+    rgba(160,16,32,.7) 100%);
+  border:2px solid rgba(255,255,255,.65);
+  box-shadow:
+    0 4px 12px rgba(255,46,68,.38),
+    inset 0 -3px 10px rgba(0,0,0,.35),
+    inset 0 3px 8px rgba(255,255,255,.2);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  transition:transform .08s ease, box-shadow .1s ease, opacity .25s ease;
+  touch-action:none;
+  user-select:none;
+  opacity:.55;
+}
+.btn-fire:active,
+.btn-fire[data-pressed="1"]{
+  opacity:1;
+  transform:scale(.94);
+  box-shadow:
+    0 3px 10px rgba(255,46,68,.6),
+    inset 0 -2px 8px rgba(0,0,0,.5);
+  background:radial-gradient(circle at 35% 30%,
+    rgba(255,77,94,.9) 0%,
+    rgba(204,26,48,.9) 45%,
+    rgba(122,8,24,.9) 100%);
+}
+.btn-fire .fire-icon{
+  width:42%;
+  height:42%;
+  color:#fff;
+  filter:drop-shadow(0 0 4px rgba(255,255,255,.7));
+}
+
+/* =================== SKILL BUTTONS — Small & Translucent =================== */
+.btn-skill{
+  width:clamp(40px, 6.4vmin, 50px);
+  height:clamp(40px, 6.4vmin, 50px);
+  border-radius:50%;
+  border:1.5px solid rgba(255,255,255,.55);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  color:#fff;
+  transition:transform .08s ease, opacity .25s ease;
+  opacity:.62;
+}
+.btn-skill:active{
+  opacity:1;
+  transform:scale(.88);
+}
+.btn-skill .skill-icon{
+  width:50%;
+  height:50%;
+  filter:drop-shadow(0 0 3px rgba(0,0,0,.5));
+}
+.skill-freeze{
+  background:radial-gradient(circle at 35% 30%,
+    rgba(168,230,255,.75) 0%,
+    rgba(77,166,255,.7) 60%,
+    rgba(0,90,138,.72) 100%);
+  box-shadow:0 3px 8px rgba(77,166,255,.35);
+}
+.skill-shield{
+  background:radial-gradient(circle at 35% 30%,
+    rgba(107,240,179,.75) 0%,
+    rgba(26,188,156,.7) 60%,
+    rgba(10,90,74,.72) 100%);
+  box-shadow:0 3px 8px rgba(46,213,115,.35);
+}
+.skill-bomb{
+  background:radial-gradient(circle at 35% 30%,
+    rgba(255,154,162,.75) 0%,
+    rgba(255,71,87,.7) 60%,
+    rgba(138,16,32,.72) 100%);
+  box-shadow:0 3px 8px rgba(255,71,87,.35);
+}
+.btn-skill.disabled{opacity:.25;pointer-events:none}
+
+.skill-count{
+  position:absolute;
+  bottom:-3px;
+  right:-3px;
+  min-width:16px;
+  height:16px;
+  padding:0 4px;
+  border-radius:999px;
+  background:rgba(255,215,0,.95);
+  color:#1a1200;
+  font-size:9.5px;
+  font-weight:800;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:1.5px solid rgba(5,6,26,.9);
+  box-shadow:0 1px 3px rgba(0,0,0,.5);
+  line-height:1;
+}
+
+/* === Landscape kecil — susun skill horizontal di atas fire === */
+@media (orientation:landscape) and (max-height:500px){
+  .skill-row{
+    flex-direction:row;
+    bottom:calc(var(--pad) + var(--safe-bottom) + clamp(66px, 11vmin, 82px));
+  }
+}
 /* =============================================================
    HINTS
    ============================================================= */
