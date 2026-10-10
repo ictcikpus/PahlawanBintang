@@ -7,13 +7,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Pahlawan Bintang"/>
 <meta name="format-detection" content="telephone=no"/>
 <title>Pahlawan Bintang</title>
 <link rel="manifest" href="./manifest.json"/>
+<link rel="apple-touch-icon" href="./icon-192.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css?v=21.0.0"/>
+<link rel="stylesheet" href="./style.css?v=21.1.0"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;width:100%;height:100vh;height:100dvh;overflow:hidden;background:#02030e;color:#e6eefc;font-family:system-ui,-apple-system,sans-serif;user-select:none;-webkit-user-select:none;overscroll-behavior:none;touch-action:manipulation}
@@ -29,6 +31,20 @@ canvas{display:block}
 .loader-emblem{position:relative;width:80px;height:80px}
 .loader-ring{position:absolute;inset:0;width:100%;height:100%;color:#00d2ff;fill:none}
 .loader-core{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40%;height:40%;color:#ffd700;fill:currentColor}
+/* PWA install bar - always visible */
+#pwa-install-bar{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);transform:translateX(-50%);z-index:999;display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:999px;background:linear-gradient(135deg,rgba(0,210,255,.25),rgba(165,94,234,.25));border:1.5px solid rgba(0,210,255,.55);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 8px 24px rgba(0,0,0,.5),0 0 20px rgba(0,210,255,.25);color:#fff;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;letter-spacing:.04em;white-space:nowrap;animation:pwaFloat 3s ease-in-out infinite}
+@keyframes pwaFloat{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-4px)}}
+#pwa-install-bar svg{width:18px;height:18px;fill:none;stroke:#00d2ff;stroke-width:2.2;flex-shrink:0}
+#pwa-install-bar:active{transform:translateX(-50%) scale(.96)}
+/* iOS install helper */
+#ios-install-help{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.ios-help-box{max-width:340px;padding:20px;border-radius:16px;background:rgba(15,22,54,.98);border:2px solid rgba(0,210,255,.4);text-align:center;color:#e6eefc}
+.ios-help-box h3{margin:0 0 12px;font-family:'Orbitron',sans-serif;color:#00d2ff;font-size:16px}
+.ios-help-box .ios-step{display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px;border-radius:10px;background:rgba(0,210,255,.08);border:1px solid rgba(0,210,255,.2);font-size:13px;text-align:left}
+.ios-help-box .ios-step-num{width:24px;height:24px;border-radius:50%;background:#00d2ff;color:#041020;font-family:'Orbitron',sans-serif;font-weight:800;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.ios-help-box .ios-step svg{width:20px;height:20px;fill:currentColor;color:#ffd700;flex-shrink:0}
+.ios-help-box button{margin-top:12px;width:100%;padding:10px;border-radius:10px;background:linear-gradient(180deg,#00d2ff,#0095d9);color:#041020;font-family:'Orbitron',sans-serif;font-weight:700;font-size:12px}
 </style>
 </head>
 <body class="no-select">
@@ -48,10 +64,10 @@ canvas{display:block}
 <symbol id="i-tiger" viewBox="0 0 40 40"><ellipse cx="20" cy="22" rx="14" ry="12" fill="currentColor"/><path d="M8 14 L6 4 L14 10 Z" fill="currentColor"/><path d="M32 14 L34 4 L26 10 Z" fill="currentColor"/><circle cx="15" cy="20" r="2" fill="#05061a"/><circle cx="25" cy="20" r="2" fill="#05061a"/></symbol>
 <symbol id="i-eagle" viewBox="0 0 40 40"><path d="M20 6 L4 18 L14 20 L10 32 L20 26 L30 32 L26 20 L36 18 Z" fill="currentColor"/><circle cx="20" cy="18" r="2" fill="#05061a"/></symbol>
 <symbol id="i-samurai" viewBox="0 0 40 40"><circle cx="20" cy="14" r="8" fill="currentColor"/><path d="M12 14 L28 14 L26 22 L14 22 Z" fill="#05061a"/><path d="M14 22 L12 36 L28 36 L26 22 Z" fill="currentColor"/></symbol>
-<symbol id="i-alien" viewBox="0 0 40 40"><ellipse cx="20" cy="16" rx="14" ry="10" fill="currentColor"/><ellipse cx="20" cy="24" rx="10" ry="12" fill="currentColor" opacity="0.85"/><circle cx="14" cy="14" r="2.5" fill="#05061a"/><circle cx="26" cy="14" r="2.5" fill="#05061a"/><circle cx="14" cy="14" r="1" fill="#39ff14"/><circle cx="26" cy="14" r="1" fill="#39ff14"/></symbol>
+<symbol id="i-alien" viewBox="0 0 40 40"><ellipse cx="20" cy="16" rx="14" ry="10" fill="currentColor"/><ellipse cx="20" cy="24" rx="10" ry="12" fill="currentColor" opacity="0.85"/><circle cx="14" cy="14" r="2.5" fill="#05061a"/><circle cx="26" cy="14" r="2.5" fill="#05061a"/></symbol>
 <symbol id="i-mecha" viewBox="0 0 40 40"><rect x="6" y="12" width="28" height="18" rx="2" fill="currentColor"/><rect x="10" y="4" width="20" height="10" rx="2" fill="currentColor" opacity=".7"/><circle cx="14" cy="20" r="2" fill="#05061a"/><circle cx="26" cy="20" r="2" fill="#05061a"/></symbol>
 <symbol id="i-wolf" viewBox="0 0 40 40"><path d="M8 14 L6 2 L16 10 L20 6 L24 10 L34 2 L32 14 Q32 30 20 34 Q8 30 8 14 Z" fill="currentColor"/><circle cx="15" cy="18" r="2" fill="#00d2ff"/><circle cx="25" cy="18" r="2" fill="#00d2ff"/></symbol>
-<symbol id="i-bee" viewBox="0 0 40 40"><ellipse cx="20" cy="20" rx="10" ry="14" fill="currentColor"/><rect x="12" y="14" width="16" height="4" fill="#05061a"/><rect x="12" y="24" width="16" height="4" fill="#05061a"/><ellipse cx="8" cy="12" rx="6" ry="4" fill="#ffffff" opacity="0.6"/><ellipse cx="32" cy="12" rx="6" ry="4" fill="#ffffff" opacity="0.6"/></symbol>
+<symbol id="i-bee" viewBox="0 0 40 40"><ellipse cx="20" cy="20" rx="10" ry="14" fill="currentColor"/><rect x="12" y="14" width="16" height="4" fill="#05061a"/><rect x="12" y="24" width="16" height="4" fill="#05061a"/></symbol>
 <symbol id="i-kraken" viewBox="0 0 40 40"><ellipse cx="20" cy="14" rx="12" ry="10" fill="currentColor"/><circle cx="14" cy="12" r="3" fill="#05061a"/><circle cx="26" cy="12" r="3" fill="#05061a"/><path d="M10 20 Q6 30 4 36 M16 24 Q14 32 12 38 M24 24 Q26 32 28 38 M30 20 Q34 30 36 36" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/></symbol>
 <symbol id="i-titan" viewBox="0 0 40 40"><rect x="10" y="6" width="20" height="20" rx="3" fill="currentColor"/><rect x="6" y="26" width="28" height="12" rx="2" fill="currentColor"/><circle cx="16" cy="16" r="2.5" fill="#05061a"/><circle cx="24" cy="16" r="2.5" fill="#05061a"/></symbol>
 <symbol id="i-angel" viewBox="0 0 40 40"><circle cx="20" cy="14" r="6" fill="currentColor"/><path d="M6 20 Q4 8 16 12 Z" fill="#ffffff" opacity="0.9"/><path d="M34 20 Q36 8 24 12 Z" fill="#ffffff" opacity="0.9"/><path d="M14 22 L12 36 L20 30 L28 36 L26 22 Z" fill="currentColor"/></symbol>
@@ -79,7 +95,6 @@ canvas{display:block}
 <symbol id="i-sound-off" viewBox="0 0 24 24"><path d="M4 9 H8 L13 5 V19 L8 15 H4 Z" fill="currentColor"/><path d="M17 9 L22 14 M22 9 L17 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
 <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 2 L23 22 H1 Z" fill="currentColor"/><rect x="11" y="9" width="2" height="8" rx="1" fill="#05061a"/><rect x="11" y="18" width="2" height="2" rx="1" fill="#05061a"/></symbol>
 <symbol id="i-skull" viewBox="0 0 24 24"><path d="M12 2 C6 2 4 6 4 11 V15 L6 18 V21 H10 V19 H14 V21 H18 V18 L20 15 V11 C20 6 18 2 12 2 Z" fill="currentColor"/><circle cx="9" cy="11" r="2" fill="#05061a"/><circle cx="15" cy="11" r="2" fill="#05061a"/></symbol>
-<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2" fill="currentColor"/><path d="M8 10 V7 A4 4 0 0 1 16 7 V10" stroke="currentColor" stroke-width="2" fill="none"/></symbol>
 <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 21 C4 15 2 10 2 7 A5 5 0 0 1 12 5 A5 5 0 0 1 22 7 C22 10 20 15 12 21 Z" fill="currentColor"/></symbol>
 <symbol id="i-chev-left" viewBox="0 0 24 24"><path d="M15 5 L8 12 L15 19" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="i-chev-right" viewBox="0 0 24 24"><path d="M9 5 L16 12 L9 19" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -96,6 +111,7 @@ canvas{display:block}
 <symbol id="i-rival" viewBox="0 0 100 100"><ellipse cx="50" cy="105" rx="40" ry="45" fill="#2f3542"/><circle cx="50" cy="44" r="28" fill="#2a2a3a"/><path d="M28 44 L72 44 L68 60 L32 60 Z" fill="#0a0d24" opacity="0.9"/></symbol>
 <symbol id="i-villain" viewBox="0 0 100 100"><ellipse cx="50" cy="105" rx="42" ry="45" fill="#1a001a"/><circle cx="50" cy="44" r="30" fill="#0a000a"/><circle cx="38" cy="42" r="3" fill="#ff0055"/><circle cx="62" cy="42" r="3" fill="#ff0055"/></symbol>
 <symbol id="i-hero-portrait" viewBox="0 0 100 100"><ellipse cx="50" cy="105" rx="38" ry="45" fill="#00d2ff"/><circle cx="50" cy="44" r="28" fill="#ffd8b0"/><path d="M20 38 Q50 -5 80 38 L80 48 Q50 40 20 48 Z" fill="#1e90ff"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12 V20 H20 V12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M12 3 V14 M8 7 L12 3 L16 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 </defs>
 </svg>
 
@@ -111,6 +127,7 @@ canvas{display:block}
 
 <canvas id="gameCanvas" aria-label="Game Canvas"></canvas>
 
+<!-- ============ MAIN MENU — REDESIGNED v21.1 ============ -->
 <div id="screen-main-menu" class="screen">
   <div class="cosmic-bg">
     <div class="galaxy-core"></div>
@@ -125,87 +142,186 @@ canvas{display:block}
     <div class="shooting-stars">
       <div class="shooting-star ss-1"></div><div class="shooting-star ss-2"></div>
       <div class="shooting-star ss-3"></div><div class="shooting-star ss-4"></div>
-      <div class="shooting-star ss-5"></div>
+      <div class="shooting-star ss-5"></div><div class="shooting-star ss-6"></div>
+    </div>
+    <div class="floating-particles">
+      <span class="fp fp-1"></span><span class="fp fp-2"></span><span class="fp fp-3"></span>
+      <span class="fp fp-4"></span><span class="fp fp-5"></span><span class="fp fp-6"></span>
+      <span class="fp fp-7"></span><span class="fp fp-8"></span>
     </div>
     <div class="vignette"></div>
   </div>
 
   <div class="menu-container">
-    <div class="menu-topbar">
-      <div class="brand-mini">
-        <svg class="brand-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
-        <span class="brand-text">PAHLAWAN BINTANG</span>
-        <span class="version-chip">v21.0</span>
+    <!-- ========== HEADER ========== -->
+    <div class="menu-header">
+      <div class="brand-mark">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24"><use href="#i-star"/></svg>
+        </div>
+        <div class="brand-info">
+          <span class="brand-name">PAHLAWAN BINTANG</span>
+          <span class="brand-tag">Galactic Defender</span>
+        </div>
       </div>
-      <button id="btn-audio" class="btn-audio" title="Suara" type="button"><svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg></button>
+      <div class="header-actions">
+        <button id="btn-audio" class="icon-btn" title="Suara" type="button">
+          <svg viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
+        </button>
+        <span class="version-pill">v21.1</span>
+      </div>
     </div>
 
-    <div class="hero-logo">
-      <div class="logo-aura"></div>
-      <div class="logo-ring logo-ring-1"></div>
-      <div class="logo-ring logo-ring-2"></div>
-      <div class="logo-ring logo-ring-3"></div>
-      <div class="logo-orbit logo-orbit-1"><div class="planet planet-cyan"></div></div>
-      <div class="logo-orbit logo-orbit-2"><div class="planet planet-gold"></div></div>
-      <div class="logo-orbit logo-orbit-3"><div class="planet planet-pink"></div></div>
-      <div class="logo-star-wrap">
-        <svg class="logo-star" viewBox="0 0 100 100">
+    <!-- ========== HERO EMBLEM ========== -->
+    <div class="emblem-wrap">
+      <div class="emblem-halo"></div>
+      <div class="emblem-ring emblem-ring-1"></div>
+      <div class="emblem-ring emblem-ring-2"></div>
+      <div class="emblem-ring emblem-ring-3"></div>
+      <div class="emblem-orbit emblem-orbit-1"><div class="emblem-planet planet-cyan"></div></div>
+      <div class="emblem-orbit emblem-orbit-2"><div class="emblem-planet planet-gold"></div></div>
+      <div class="emblem-orbit emblem-orbit-3"><div class="emblem-planet planet-pink"></div></div>
+      <div class="emblem-core">
+        <svg viewBox="0 0 100 100" class="emblem-star">
           <defs>
-            <radialGradient id="starCoreGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffffff" stop-opacity="1"/><stop offset="25%" stop-color="#fff8dc" stop-opacity="0.9"/><stop offset="55%" stop-color="#ffd700" stop-opacity="0.6"/><stop offset="100%" stop-color="#ff8a00" stop-opacity="0"/></radialGradient>
-            <linearGradient id="starCoreBody" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ffffff"/><stop offset="40%" stop-color="#ffe680"/><stop offset="75%" stop-color="#ffd700"/><stop offset="100%" stop-color="#ff8a00"/></linearGradient>
+            <radialGradient id="starCoreGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+              <stop offset="25%" stop-color="#fff8dc" stop-opacity="0.9"/>
+              <stop offset="55%" stop-color="#ffd700" stop-opacity="0.6"/>
+              <stop offset="100%" stop-color="#ff8a00" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="starCoreBody" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="40%" stop-color="#ffe680"/>
+              <stop offset="75%" stop-color="#ffd700"/>
+              <stop offset="100%" stop-color="#ff8a00"/>
+            </linearGradient>
           </defs>
           <circle cx="50" cy="50" r="48" fill="url(#starCoreGlow)"/>
           <path d="M50 10 L60.5 39.3 L91 39.3 L66 57.6 L76.5 87 L50 68.7 L23.5 87 L34 57.6 L9 39.3 L39.5 39.3 Z" fill="url(#starCoreBody)" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round"/>
           <circle cx="50" cy="46" r="5" fill="#ffffff" opacity="0.95"/>
           <circle cx="50" cy="46" r="2.5" fill="#fff8dc"/>
         </svg>
-        <div class="sparkle-burst burst-1">✦</div><div class="sparkle-burst burst-2">✦</div>
-        <div class="sparkle-burst burst-3">✦</div><div class="sparkle-burst burst-4">✦</div>
+        <div class="sparkle-burst burst-1">✦</div>
+        <div class="sparkle-burst burst-2">✦</div>
+        <div class="sparkle-burst burst-3">✦</div>
+        <div class="sparkle-burst burst-4">✦</div>
       </div>
     </div>
 
-    <div class="title-stack">
-      <h1 class="title-main">PAHLAWAN</h1>
-      <div class="title-separator"><div class="sep-line"></div><svg class="sep-star" viewBox="0 0 24 24"><use href="#i-star"/></svg><div class="sep-line"></div></div>
-      <h1 class="title-main highlight">BINTANG</h1>
+    <!-- ========== TITLE ========== -->
+    <div class="title-block">
+      <h1 class="title-line">PAHLAWAN</h1>
+      <div class="title-sep">
+        <span class="title-line-sep"></span>
+        <svg viewBox="0 0 24 24"><use href="#i-star"/></svg>
+        <span class="title-line-sep"></span>
+      </div>
+      <h1 class="title-line highlight">BINTANG</h1>
+      <p class="subtitle">Selamatkan Galaksi dari Invasi Monster</p>
     </div>
 
-    <p class="tagline"><svg class="tagline-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg><span>Selamatkan Galaksi dari Invasi Monster</span><svg class="tagline-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg></p>
-
-    <div class="input-wrap">
-      <svg class="input-ico" viewBox="0 0 24 24"><use href="#i-user"/></svg>
+    <!-- ========== INPUT ========== -->
+    <div class="input-box">
+      <svg class="input-icon" viewBox="0 0 24 24"><use href="#i-user"/></svg>
       <input id="player-name-input" type="text" placeholder="Masukkan Nama Pahlawan" maxlength="14"/>
     </div>
 
-    <button id="btn-prepare-play" class="btn-hero" type="button">
-      <div class="btn-hero-content"><svg class="btn-hero-icon" viewBox="0 0 24 24"><use href="#i-play"/></svg><span class="btn-hero-text">LANJUTKAN MISI</span></div>
-    </button>
-
-    <button id="btn-multiplayer" class="btn-mp" type="button">
-      <div class="btn-mp-content"><svg class="btn-mp-icon" viewBox="0 0 24 24"><use href="#i-users"/></svg><span class="btn-mp-text">MAIN BARENG TEMAN</span></div>
-      <div class="btn-mp-badge">2P</div>
-    </button>
-
-    <button id="btn-level-select" type="button" class="hidden"><svg class="ico"><use href="#i-star"/></svg><span>PILIH LEVEL</span></button>
-
-    <div class="menu-grid">
-      <button id="btn-select-actor" class="menu-card" type="button"><div class="menu-card-inner"><div class="menu-card-icon-wrap c-blue"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-mask"/></svg></div><span class="menu-card-label">HERO</span></div></button>
-      <button id="btn-shop" class="menu-card" type="button"><div class="menu-card-inner"><div class="menu-card-icon-wrap c-gold"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-shop"/></svg></div><span class="menu-card-label">TOKO</span></div></button>
-      <button id="btn-leaderboard" class="menu-card" type="button"><div class="menu-card-inner"><div class="menu-card-icon-wrap c-purple"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div><span class="menu-card-label">PERINGKAT</span></div></button>
-      <button id="btn-achievements" class="menu-card" type="button"><div class="menu-card-inner"><div class="menu-card-icon-wrap c-pink"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div><span class="menu-card-label">MISI</span><span id="achievement-badge-count" class="menu-card-badge hidden">0</span></div></button>
-      <button id="btn-endless" class="menu-card" type="button"><div class="menu-card-inner"><div class="menu-card-icon-wrap c-green"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg></div><span class="menu-card-label">ENDLESS</span></div></button>
-      <button id="btn-daily" class="menu-card" type="button"><div class="menu-card-inner"><div class="menu-card-icon-wrap c-red"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div><span class="menu-card-label">DAILY</span></div></button>
+    <!-- ========== PRIMARY ACTIONS ========== -->
+    <div class="action-stack">
+      <button id="btn-prepare-play" class="btn-main" type="button">
+        <span class="btn-main-bg"></span>
+        <span class="btn-main-content">
+          <svg viewBox="0 0 24 24"><use href="#i-play"/></svg>
+          <span>LANJUTKAN MISI</span>
+        </span>
+      </button>
+      <button id="btn-multiplayer" class="btn-alt" type="button">
+        <span class="btn-alt-content">
+          <svg viewBox="0 0 24 24"><use href="#i-users"/></svg>
+          <span>MAIN BARENG TEMAN</span>
+        </span>
+        <span class="btn-alt-badge">2P</span>
+      </button>
+      <button id="btn-level-select" type="button" class="hidden btn-level">
+        <svg viewBox="0 0 24 24"><use href="#i-star"/></svg>
+        <span>PILIH LEVEL</span>
+      </button>
     </div>
 
-    <button id="btn-pwa-install" class="btn-install hidden" type="button"><svg class="ico"><use href="#i-download"/></svg><span>INSTALL APLIKASI</span></button>
+    <!-- ========== FEATURE GRID ========== -->
+    <div class="feature-grid">
+      <button id="btn-select-actor" class="feature-card" type="button">
+        <div class="card-glow glow-blue"></div>
+        <div class="card-icon icon-blue"><svg viewBox="0 0 24 24"><use href="#i-mask"/></svg></div>
+        <span class="card-label">HERO</span>
+        <span class="card-sub">20 Karakter</span>
+      </button>
+      <button id="btn-shop" class="feature-card" type="button">
+        <div class="card-glow glow-gold"></div>
+        <div class="card-icon icon-gold"><svg viewBox="0 0 24 24"><use href="#i-shop"/></svg></div>
+        <span class="card-label">TOKO</span>
+        <span class="card-sub">10 Upgrade</span>
+      </button>
+      <button id="btn-leaderboard" class="feature-card" type="button">
+        <div class="card-glow glow-purple"></div>
+        <div class="card-icon icon-purple"><svg viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div>
+        <span class="card-label">PERINGKAT</span>
+        <span class="card-sub">Global</span>
+      </button>
+      <button id="btn-achievements" class="feature-card" type="button">
+        <div class="card-glow glow-pink"></div>
+        <div class="card-icon icon-pink"><svg viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div>
+        <span class="card-label">MISI</span>
+        <span class="card-sub">Achievements</span>
+        <span id="achievement-badge-count" class="card-badge hidden">0</span>
+      </button>
+      <button id="btn-endless" class="feature-card" type="button">
+        <div class="card-glow glow-green"></div>
+        <div class="card-icon icon-green"><svg viewBox="0 0 24 24"><use href="#i-star"/></svg></div>
+        <span class="card-label">ENDLESS</span>
+        <span class="card-sub">∞ Waves</span>
+      </button>
+      <button id="btn-daily" class="feature-card" type="button">
+        <div class="card-glow glow-red"></div>
+        <div class="card-icon icon-red"><svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg></div>
+        <span class="card-label">DAILY</span>
+        <span class="card-sub">3 Bos</span>
+      </button>
+    </div>
 
-    <div class="menu-footer">
-      <span class="footer-dot"></span><span>Hero: <strong id="selected-actor-name">Robot Cyber</strong></span>
-      <span class="footer-dot"></span><span>Progress: <strong id="saved-level-display">Level 1</strong></span>
+    <!-- ========== FOOTER STATS ========== -->
+    <div class="footer-stats">
+      <div class="stat-chip">
+        <svg viewBox="0 0 24 24"><use href="#i-mask"/></svg>
+        <span>Hero: <strong id="selected-actor-name">Robot Cyber</strong></span>
+      </div>
+      <div class="stat-chip">
+        <svg viewBox="0 0 24 24"><use href="#i-star"/></svg>
+        <span>Progress: <strong id="saved-level-display">Level 1</strong></span>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- ============ PWA INSTALL BAR ============ -->
+<button id="pwa-install-bar" class="hidden" type="button">
+  <svg viewBox="0 0 24 24"><use href="#i-download"/></svg>
+  <span>INSTALL APLIKASI</span>
+</button>
+
+<!-- ============ iOS INSTALL HELPER ============ -->
+<div id="ios-install-help" class="hidden">
+  <div class="ios-help-box">
+    <h3>📱 Install ke Home Screen</h3>
+    <div class="ios-step"><span class="ios-step-num">1</span><span>Tap tombol <strong>Share</strong> <svg viewBox="0 0 24 24" style="display:inline;width:14px;height:14px;vertical-align:-2px;fill:#00d2ff"><use href="#i-share"/></svg> di Safari</span></div>
+    <div class="ios-step"><span class="ios-step-num">2</span><span>Pilih <strong>"Add to Home Screen"</strong></span></div>
+    <div class="ios-step"><span class="ios-step-num">3</span><span>Tap <strong>"Add"</strong> untuk install</span></div>
+    <button type="button" onclick="document.getElementById('ios-install-help').classList.add('hidden')">MENGERTI</button>
+  </div>
+</div>
+
+<!-- HUD -->
 <div id="hud-overlay" class="hidden">
   <div class="hud-top">
     <div class="hud-left">
@@ -242,6 +358,7 @@ canvas{display:block}
   </div>
 </div>
 
+<!-- HINTS -->
 <div id="desktop-hints" class="hidden" aria-hidden="true">
   <div class="hint-panel">
     <div class="hint-header">
@@ -599,6 +716,6 @@ canvas{display:block}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="./multiplayer.js?v=20.9"></script>
-<script src="./game.js?v=21.2.0"></script>
+<script src="./game.js?v=21.1.0"></script>
 </body>
 </html>
