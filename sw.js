@@ -2,23 +2,23 @@
 // PAHLAWAN BINTANG — Service Worker v20.8
 // ============================================================
 
-const CACHE_VERSION = 'v20.8.2';
+const CACHE_VERSION = 'v20.9';
 const CACHE_NAME = `pahlawan-bintang-${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
   './',
-  './index.html?v=20.8.2',
-  './style.css?v=20.8.2',
-  './multiplayer.js?v=20.8.2',
-  './game.js?v=20.8.2',
+  './index.html?v=20.9',
+  './style.css?v=20.9',
+  './multiplayer.js?v=20.9',
+  './game.js?v=20.9',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
 ];
 
 const DATA_ASSETS = [
-  './levels.json?v=20.8',
-  './achievements.json?v=20.8'
+  './levels.json?v=20.9',
+  './achievements.json?v=20.9'
 ];
 
 const BYPASS_HOSTS = [
@@ -117,7 +117,7 @@ async function networkFirst(request) {
   } catch (e) {
     const cached = await caches.match(request);
     if (cached) return cached;
-    const indexCached = await caches.match('./index.html?v=20.8.2') ||
+    const indexCached = await caches.match('./index.html?v=20.9') ||
                         await caches.match('./index.html');
     if (indexCached) return indexCached;
     return new Response('Offline', { status: 503, statusText: 'Offline' });
