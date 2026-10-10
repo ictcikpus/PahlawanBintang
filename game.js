@@ -2474,19 +2474,34 @@ function spawnMonsterLoop(token) {
         levelConfig.types = [`boss${b}`];
         levelConfig.bossHp = 150 + endlessWave * 60;
       }
-    } else if (gameMode === 'daily') {
-      if (Date.now() < nextBossSpawnTime) {}
-      else if (monsters.length === 0 && dailyBossIndex < 3 && dailyBossSequence.length === 3 && bossPhase === 'boss') {
-        const bossNum = dailyBossSequence[dailyBossIndex];
-        const baseHp = getBossBaseHp(bossNum);
-        const scale = [1, 1.2, 1.5][dailyBossIndex] || 1;
-        const hpVal = Math.floor(baseHp * scale);
-        const bossSize = (BOSS_SIZES[bossNum] || 75) * S;
-        const theme = getBossTheme(bossNum);
-        currentTheme = theme; applyThemeToDocument(theme); recolorStars();
-        triggerBossSiren();
-        monsters.push({ x: W / 2, startX: W / 2, y: -100 * S, speed: (1.0 + dailyBossIndex * 0.15) * S, size: bossSize, hp: hpVal, maxHp: hpVal, color: theme.accent, type: `boss${bossNum}`, algorithm: `boss_${bossNum}`, shootTimer: 0, minionTimer: 0, enrageTimer: 0, timeAlive: 0, opacity: 1, hitFlash: 0, aura: 0, aimTimer: 0, aimTargetX: 0, aimTargetY: 0, coreOpen: false, coreTimer: 0, coreGlow: 0, noWeakPoint: false });
-        updateHUDValues();
+        } else if (gameMode === 'daily') {
+      // ✅ FIX: Set levelConfig agar minion spawn saat fase 'minions'
+      if (bossPhase === 'minions') {
+        levelConfig = {
+          level: 999,
+          targetKills: bossMinionsTarget,
+          targetScore: 0,
+          speed: 1.0 * S,
+          spawnRate: 500,
+          algorithm: 'boss_daily',
+          types: ['jelly', 'triangle', 'worm', 'cloud']
+        };
+      } else if (bossPhase === 'boss') {
+        if (Date.now() < nextBossSpawnTime) {
+          // delay sebelum spawn boss
+        } else if (monsters.length === 0 && dailyBossIndex < 3 && dailyBossSequence.length === 3) {
+          const bossNum = dailyBossSequence[dailyBossIndex];
+          const baseHp = getBossBaseHp(bossNum);
+          const scale = [1, 1.2, 1.5][dailyBossIndex] || 1;
+          const hpVal = Math.floor(baseHp * scale);
+          const bossSize = (BOSS_SIZES[bossNum] || 75) * S;
+          const theme = getBossTheme(bossNum);
+          currentTheme = theme; applyThemeToDocument(theme); recolorStars();
+          triggerBossSiren();
+          monsters.push({ x: W / 2, startX: W / 2, y: -100 * S, speed: (1.0 + dailyBossIndex * 0.15) * S, size: bossSize, hp: hpVal, maxHp: hpVal, color: theme.accent, type: `boss${bossNum}`, algorithm: `boss_${bossNum}`, shootTimer: 0, minionTimer: 0, enrageTimer: 0, timeAlive: 0, opacity: 1, hitFlash: 0, aura: 0, aimTimer: 0, aimTargetX: 0, aimTargetY: 0, coreOpen: false, coreTimer: 0, coreGlow: 0, noWeakPoint: false });
+          updateHUDValues();
+          console.log('👑 [Daily] Boss spawned:', bossNum, '| Index:', dailyBossIndex);
+        }
       }
     } else if (gameMode === 'coop') {
       levelConfig = levelsData[currentLevelIndex] || levelsData[0];
@@ -4869,7 +4884,9 @@ function handleDailyBossDefeated() {
   const c = document.getElementById('daily-boss-' + dIdx + '-check'); if (c) c.classList.remove('hidden');
   const s = document.querySelector('.daily-boss-slot[data-slot="' + dIdx + '"]'); if (s) s.classList.add('completed');
   if (dailyBossIndex >= 3) { finalizeDaily(true); return; }
-  bossPhase = 'minions'; bossMinionsKilled = 0;
+  bossPhase = 'minions';
+  bossMinionsKilled = 0;
+  levelKills = 0; // ✅ FIX: reset agar minion count benar
   bossMinionsTarget = 8 + dailyBossIndex * 3;
   const b = document.getElementById('level-intro');
   if (b) {
