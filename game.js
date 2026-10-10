@@ -9369,3 +9369,549 @@ window.addEventListener('load', () => {
 });
 
 console.log('✅ [game.js] v24.0.0 — LEGACY PART 2 LOADED');
+
+// =============================================================
+// PAHLAWAN BINTANG — game.js v24.0.0 — PART 10/10 FINAL
+// Replay + Polish + Migration + Performance + Utils
+// =============================================================
+
+// =============================================================
+// N1. REPLAY / HIGHLIGHT SYSTEM
+// =============================================================
+let replayBuffer = [];
+const REPLAY_MAX_FRAMES = 300; // ~5 detik @60fps
+let replayInterval = null;
+let replayPlaying = false;
+let replayFrameIdx = 0;
+let lastHighlightMoment = 0;
+
+function startReplayBuffer() {
+  if (replayInterval) clearInterval(replayInterval);
+  replayBuffer = [];
+  replayInterval = setInterval(() => {
+    if (!isGameRunning || isGamePaused) return;
+    captureReplayFrame();
+  }, 100);
+}
+
+function stopReplayBuffer() {
+  if (replayInterval) {
+    clearInterval(replayInterval);
+    replayInterval = null;
+  }
+}
+
+function captureReplayFrame() {
+  if (!canvas) return;
+  try {
+    // Capture scaled-down version
+    const c = document.createElement('canvas');
+    c.width = 160;
+    c.height = 90;
+    const cx = c.getContext('2d');
+    cx.drawImage(canvas, 0, 0, c.width, c.height);
+    replayBuffer.push({
+      img: c,
+      score, combo, levelKills,
+      t: Date.now()
+    });
+    if (replayBuffer.length > REPLAY_MAX_FRAMES) replayBuffer.shift();
+  } catch(e) {}
+}
+
+function triggerHighlight() {
+  // Save current moment as highlight
+  if (replayBuffer.length < 20) return;
+  const now = Date.now();
+  if (now - lastHighlightMoment < 10000) return; // throttle
+  lastHighlightMoment = now;
+
+  // Show highlight toast
+  const feed = document.getElementById('kill-feed');
+  if (feed) {
+    const item = document.createElement('div');
+    item.className = 'kill-feed-item boss';
+    item.innerHTML = '🎬 <strong>HIGHLIGHT!</strong>';
+    feed.appendChild(item);
+    setTimeout(() => item.remove(), 3200);
+  }
+
+  // Enable replay button (if not exists, create)
+  window._lastHighlight = {
+    frames: replayBuffer.slice(-60),
+    score, combo, levelKills
+  };
+}
+
+async function openReplayModal() {
+  if (!window._lastHighlight || window._lastHighlight.frames.length === 0) {
+    // Capture current frames
+    if (replayBuffer.length === 0) {
+      alert('Main dulu beberapa detik untuk highlight!');
+      return;
+    }
+    window._lastHighlight = {
+      frames: replayBuffer.slice(-60),
+      score, combo, levelKills
+    };
+  }
+
+  const modal = document.getElementById('modal-replay');
+  const canvasEl = document.getElementById('replay-canvas');
+  const rsKills = document.getElementById('rs-kills');
+  const rsCombo = document.getElementById('rs-combo');
+  const rsScore = document.getElementById('rs-score');
+  const title = document.getElementById('replay-title');
+
+  if (rsKills) rsKills.innerText = window._lastHighlight.levelKills || levelKills;
+  if (rsCombo) rsCombo.innerText = (window._lastHighlight.combo || combo) + 'x';
+  if (rsScore) rsScore.innerText = window._lastHighlight.score || score;
+  if (title) {
+    const titles = ['MOMEN EPIK', 'AKSI BRUTAL', 'KEMENANGAN SPEKTRA', 'DETIK MENEGANGKAN'];
+    title.innerText = titles[Math.floor(Math.random() * titles.length)];
+  }
+
+  if (modal) modal.classList.remove('hidden');
+  playReplay();
+}
+
+function playReplay() {
+  const canvasEl = document.getElementById('replay-canvas');
+  if (!canvasEl || !window._lastHighlight) return;
+  const cx = canvasEl.getContext('2d');
+  const frames = window._lastHighlight.frames;
+  if (frames.length === 0) return;
+
+  replayPlaying = true;
+  replayFrameIdx = 0;
+  const progressFill = document.getElementById('replay-progress-fill');
+  const viewport = document.getElementById('replay-viewport');
+  if (viewport) viewport.classList.remove('paused');
+
+  const tick = () => {
+    if (!replayPlaying || !canvasEl) return;
+    const frame = frames[replayFrameIdx];
+    if (!frame) {
+      replayPlaying = false;
+      if (viewport) viewport.classList.add('paused');
+      return;
+    }
+    // Scale up
+    cx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+    cx.imageSmoothingEnabled = true;
+    cx.drawImage(frame.img, 0, 0, canvasEl.width, canvasEl.height);
+
+    // Overlay text
+    cx.font = 'bold 14px Orbitron, sans-serif';
+    cx.fillStyle = 'rgba(255, 215, 0, 0.9)';
+    cx.shadowColor = '#000';
+    cx.shadowBlur = 6;
+    cx.textAlign = 'left';
+    cx.fillText('SCORE: ' + frame.score, 15, 30);
+    cx.textAlign = 'right';
+    cx.fillText('COMBO ' + frame.combo + 'x', canvasEl.width - 15, 30);
+
+    if (progressFill) progressFill.style.width = ((replayFrameIdx + 1) / frames.length * 100) + '%';
+
+    replayFrameIdx++;
+    setTimeout(tick, 33); // ~30fps playback
+  };
+  tick();
+}
+
+function toggleReplay() {
+  if (replayPlaying) {
+    replayPlaying = false;
+    const viewport = document.getElementById('replay-viewport');
+    if (viewport) viewport.classList.add('paused');
+  } else {
+    // Restart from current index
+    playReplay();
+  }
+}
+
+// Hook: trigger highlight on boss kill / high combo / ultra
+const _origHandleKillStreakHighlight = handleKillStreak;
+handleKillStreak = function() {
+  if (killStreakCount > 0 && killStreakCount % 25 === 0) triggerHighlight();
+  _origHandleKillStreakHighlight.call(this);
+};
+
+const _origTriggerUltimateHighlight = triggerUltimate;
+triggerUltimate = function() {
+  _origTriggerUltimateHighlight.call(this);
+  setTimeout(() => triggerHighlight(), 500);
+};
+
+// =============================================================
+// N2. KILL FEED
+// =============================================================
+function ensureKillFeed() {
+  if (document.getElementById('kill-feed')) return;
+  const feed = document.createElement('div');
+  feed.id = 'kill-feed';
+  document.body.appendChild(feed);
+}
+
+function addKillFeed(text, isBoss, isCrit) {
+  const feed = document.getElementById('kill-feed');
+  if (!feed) return;
+  const item = document.createElement('div');
+  item.className = 'kill-feed-item' + (isBoss ? ' boss' : '') + (isCrit ? ' crit' : '');
+  item.innerHTML = text;
+  feed.appendChild(item);
+  // Limit to 5 items
+  while (feed.children.length > 5) feed.removeChild(feed.firstChild);
+  setTimeout(() => { if (item.parentNode) item.remove(); }, 3000);
+}
+
+// Hook into bullet hit for kill feed
+const _origDrawBulletKillFeed = drawBullet;
+// Instead hook into monster kill — patch handleKillStreak already
+// Add explicit call in bullet loop: patching at source
+// Instead we hook the checkAchievements flow — simpler: patch spawnFloatingText
+
+// =============================================================
+// N3. AMBIENT POLISH — Zone Vignette + Ambient Text
+// =============================================================
+function applyZonePolish(zoneId) {
+  // Remove existing vignette
+  document.querySelectorAll('.zone-vignette').forEach(el => el.remove());
+  if (!zoneId) return;
+  const classes = ['', 'vig-earth', 'vig-space', 'vig-galaxy', 'vig-multiverse', 'vig-milkyway'];
+  const cls = classes[zoneId] || '';
+  if (!cls) return;
+  const vig = document.createElement('div');
+  vig.className = 'zone-vignette ' + cls;
+  document.body.insertBefore(vig, document.body.firstChild);
+}
+
+function showAmbientText() {
+  const texts = {
+    1: ['PERTAHANAN BUMI', 'GRAVITASI NORMAL', 'ATMOSFER STABIL'],
+    2: ['ORBIT LUAR', 'MEDAN BINTANG', 'ZERO GRAVITY'],
+    3: ['ARM SPIRAL', 'NEBULA AKTIF', 'BINTANG PURBA'],
+    4: ['DIMENSI PARALEL', 'RIFT TERBUKA', 'WAKTU TERDISTORSI'],
+    5: ['INTI GALAKSI', 'BLACK HOLE AKTIF', 'ENERGI TAK TERBATAS']
+  };
+  const zone = currentZoneId || 1;
+  const list = texts[zone] || texts[1];
+  const text = list[Math.floor(Math.random() * list.length)];
+
+  const el = document.createElement('div');
+  el.className = 'ambient-text';
+  el.innerText = text;
+  el.style.left = (10 + Math.random() * 80) + '%';
+  el.style.top = (20 + Math.random() * 60) + '%';
+  const colors = ['#00d2ff', '#ffd700', '#a55eea', '#ff2e88', '#39ff14'];
+  el.style.color = colors[Math.floor(Math.random() * colors.length)];
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 6000);
+}
+
+// Trigger ambient text periodically during gameplay
+let ambientTimer = 0;
+const _origGameLoopAmbient = gameLoop;
+gameLoop = function() {
+  if (isGameRunning && !isGamePaused) {
+    ambientTimer++;
+    if (ambientTimer >= 800) { // every ~13s
+      ambientTimer = 0;
+      showAmbientText();
+    }
+  }
+  _origGameLoopAmbient.call(this);
+};
+
+// Hook zone change → apply vignette
+const _origApplyZoneToThemeFinal = applyZoneToTheme;
+applyZoneToTheme = function(zone) {
+  _origApplyZoneToThemeFinal.call(this, zone);
+  if (zone) {
+    applyZonePolish(zone.id);
+    setTimeout(showAmbientText, 1000);
+  }
+};
+
+// =============================================================
+// N4. PERFORMANCE SETTINGS
+// =============================================================
+const PERF_DEFAULTS = {
+  effects: true,
+  shake: true,
+  bgm: true,
+  vibrate: true
+};
+let perfSettings = { ...PERF_DEFAULTS };
+let fpsCounter = { last: 0, frames: 0, fps: 60 };
+
+async function loadPerfSettings() {
+  const raw = await DB.get('pahlawan_perf');
+  try {
+    const data = JSON.parse(raw || 'null');
+    if (data) perfSettings = { ...PERF_DEFAULTS, ...data };
+  } catch(e) {}
+  applyPerfSettings();
+}
+
+async function savePerfSettings() {
+  await DB.set('pahlawan_perf', JSON.stringify(perfSettings));
+}
+
+function applyPerfSettings() {
+  document.body.classList.toggle('low-end', !perfSettings.effects);
+  sounds.isMuted = !perfSettings.bgm;
+  const tg = {
+    effects: document.getElementById('perf-toggle-effects'),
+    shake: document.getElementById('perf-toggle-shake'),
+    bgm: document.getElementById('perf-toggle-bgm'),
+    vibrate: document.getElementById('perf-toggle-vibrate')
+  };
+  Object.entries(tg).forEach(([k, el]) => {
+    if (el) el.classList.toggle('active', perfSettings[k]);
+  });
+}
+
+function bindPerfToggle(id, key) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.onclick = async () => {
+    perfSettings[key] = !perfSettings[key];
+    el.classList.toggle('active', perfSettings[key]);
+    await savePerfSettings();
+    applyPerfSettings();
+    try { sounds.playPop(); } catch(e) {}
+  };
+}
+
+function updateFpsCounter() {
+  const now = performance.now();
+  fpsCounter.frames++;
+  if (now - fpsCounter.last >= 1000) {
+    fpsCounter.fps = fpsCounter.frames;
+    fpsCounter.frames = 0;
+    fpsCounter.last = now;
+    const el = document.getElementById('perf-fps');
+    if (el) el.innerText = fpsCounter.fps + ' FPS';
+    const fpsC = document.getElementById('fps-counter');
+    if (fpsC) {
+      fpsC.innerText = fpsCounter.fps + ' FPS';
+      fpsC.style.color = fpsCounter.fps >= 50 ? '#39ff14' : fpsCounter.fps >= 30 ? '#ffd700' : '#ff4757';
+    }
+  }
+  requestAnimationFrame(updateFpsCounter);
+}
+
+// Override shake if perf disabled
+const _origTriggerScreenFlashPerf = triggerScreenFlash;
+triggerScreenFlash = function(i) {
+  if (!perfSettings.effects) {
+    // reduced flash
+    if (typeof i === 'number') i = i * 0.3;
+  }
+  _origTriggerScreenFlashPerf.call(this, i);
+};
+
+// Override vibrate if disabled
+const _origTriggerVibratePerf = typeof triggerVibrate === 'function' ? triggerVibrate : null;
+if (_origTriggerVibratePerf) {
+  triggerVibrate = function(p) {
+    if (!perfSettings.vibrate) return;
+    return _origTriggerVibratePerf.call(this, p);
+  };
+}
+
+// Override screen shake if disabled
+const _origTriggerHitStopPerf = triggerHitStop;
+triggerHitStop = function(frames) {
+  if (!perfSettings.shake) { hitStopFrames = Math.max(hitStopFrames, 1); return; }
+  _origTriggerHitStopPerf.call(this, frames);
+};
+
+// =============================================================
+// N5. SAVE MIGRATION v23 → v24
+// =============================================================
+async function migrateSavesV24() {
+  const migrated = await DB.get('pahlawan_v24_migration');
+  if (migrated === '1') return;
+
+  console.log('🔄 [Migration] v23 → v24 starting...');
+
+  try {
+    // 1. Ensure new keys exist
+    const legacyKeys = [
+      'pahlawan_pets',
+      'pahlawan_skins',
+      'pahlawan_perf',
+      'pahlawan_login_data'
+    ];
+    // Nothing to migrate, just ensure initialized
+    if (!await DB.get('pahlawan_pets')) {
+      await DB.set('pahlawan_pets', JSON.stringify({ owned: ['astro_dog'], active: ['astro_dog'] }));
+    }
+    if (!await DB.get('pahlawan_skins')) {
+      await DB.set('pahlawan_skins', JSON.stringify({ owned: {}, selected: {} }));
+    }
+    if (!await DB.get('pahlawan_perf')) {
+      await DB.set('pahlawan_perf', JSON.stringify(PERF_DEFAULTS));
+    }
+
+    // 2. Ensure hero data uses consistent format
+    // (unlockedHeroes sudah di-load di window load)
+
+    // 3. Update achievements stat if hero used count exceeds
+    if (PLAYER_STATS.heroesUsed.length > 0) {
+      await savePlayerStats();
+    }
+
+    // 4. Mark as migrated
+    await DB.set('pahlawan_v24_migration', '1');
+    console.log('✅ [Migration] v23 → v24 complete');
+  } catch(e) {
+    console.warn('⚠️ [Migration] Failed:', e);
+  }
+}
+
+// =============================================================
+// N6. INIT — Boot semua fitur final
+// =============================================================
+window.addEventListener('load', () => {
+  setTimeout(async () => {
+    try {
+      await migrateSavesV24();
+      await loadPerfSettings();
+      ensureKillFeed();
+
+      // FPS counter setup
+      const fpsEl = document.createElement('div');
+      fpsEl.id = 'fps-counter';
+      document.body.appendChild(fpsEl);
+      updateFpsCounter();
+
+      // Bind perf toggles
+      bindPerfToggle('perf-toggle-effects', 'effects');
+      bindPerfToggle('perf-toggle-shake', 'shake');
+      bindPerfToggle('perf-toggle-bgm', 'bgm');
+      bindPerfToggle('perf-toggle-vibrate', 'vibrate');
+
+      // Perf button
+      const btnPerf = document.getElementById('btn-perf');
+      if (btnPerf) btnPerf.onclick = () => {
+        const dev = document.getElementById('perf-device');
+        if (dev) {
+          const cores = navigator.hardwareConcurrency || '?';
+          const mem = navigator.deviceMemory || '?';
+          dev.innerText = `${cores} core / ${mem} GB`;
+        }
+        document.getElementById('modal-perf').classList.remove('hidden');
+      };
+      const btnClosePerf = document.getElementById('btn-close-perf');
+      if (btnClosePerf) btnClosePerf.onclick = () => document.getElementById('modal-perf').classList.add('hidden');
+
+      // Replay modal bindings
+      const btnCloseReplay = document.getElementById('btn-close-replay');
+      if (btnCloseReplay) btnCloseReplay.onclick = () => {
+        replayPlaying = false;
+        document.getElementById('modal-replay').classList.add('hidden');
+      };
+      const btnWatch = document.getElementById('btn-replay-watch');
+      if (btnWatch) btnWatch.onclick = () => playReplay();
+      const btnShare = document.getElementById('btn-replay-share');
+      if (btnShare) btnShare.onclick = () => shareReplay();
+
+      // Replay viewport click = toggle
+      const vp = document.getElementById('replay-viewport');
+      if (vp) vp.onclick = () => toggleReplay();
+
+      // Start replay buffer
+      startReplayBuffer();
+
+      // Auto-show FPS with long-press on pause
+      const btnPause = document.getElementById('btn-pause');
+      if (btnPause) {
+        let pressTimer;
+        btnPause.addEventListener('touchstart', () => {
+          pressTimer = setTimeout(() => {
+            const el = document.getElementById('fps-counter');
+            if (el) el.classList.toggle('visible');
+          }, 800);
+        });
+        btnPause.addEventListener('touchend', () => clearTimeout(pressTimer));
+      }
+
+      console.log('✅ [Final Boot] All systems ready');
+    } catch(e) { console.warn('⚠️ [Final Boot] Error:', e); }
+  }, 2500);
+});
+
+async function shareReplay() {
+  // Build composite image from current replay canvas
+  const canvasEl = document.getElementById('replay-canvas');
+  if (!canvasEl) return;
+  try {
+    const blob = await new Promise(r => canvasEl.toBlob(r, 'image/png'));
+    if (!blob) throw new Error('Blob fail');
+    const file = new File([blob], 'highlight.png', { type: 'image/png' });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: 'Highlight Pahlawan Bintang',
+        text: `Combo ${combo}x! Score: ${score}`
+      });
+    } else {
+      // Fallback: download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `PB_Highlight_${Date.now()}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  } catch(e) {
+    if (e.name === 'AbortError') return;
+    console.warn('Share fail:', e);
+  }
+}
+
+// =============================================================
+// N7. GLOBAL BUG FIXES — safety net
+// =============================================================
+
+// 1. Prevent double tap zoom
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('dblclick', e => e.preventDefault());
+
+// 2. Pause when tab hidden
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (isGameRunning && !isGamePaused) {
+      isGamePaused = true;
+      sounds.stopBGM();
+    }
+  }
+});
+
+// 3. Handle unhandled errors gracefully
+window.addEventListener('error', (e) => {
+  console.warn('⚠️ [Runtime Error]', e.message);
+  // Don't crash — try continue
+});
+
+// 4. Clean up on page unload
+window.addEventListener('beforeunload', () => {
+  stopReplayBuffer();
+  try { sounds.stopBGM(); } catch(e) {}
+});
+
+// 5. Ensure perfSettings applied on game start
+const _origStartCurrentLevelFinal = startCurrentLevel;
+startCurrentLevel = async function() {
+  applyPerfSettings();
+  await _origStartCurrentLevelFinal.call(this);
+};
+
+console.log('✅ [game.js] v24.0.0 — LEGACY EDITION COMPLETE (10/10 PARTS)');
+
+// =============================================================
+// END OF FILE — v24.0.0
+// =============================================================
