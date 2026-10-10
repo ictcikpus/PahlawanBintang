@@ -1,25 +1,43 @@
-# Pahlawan Bintang — Version Log
+# 🎮 PAHLAWAN BINTANG — VERSION & CONTEXT
 
-## Current: v20.10.0
+> **Auto-generated** oleh `generate-version.js` (hanya bagian ber-marker)
+> Bagian tanpa marker = **manual edit** (aman untuk AI context)
+> Jalankan: `npm run version` atau `node generate-version.js`
 
-### File Structure
-- `index.html` — v20.10.0
-- `style.css` — v20.10.0
-- `game.js` — v20.10.0
-- `multiplayer.js` — v20.8.2 (tidak berubah)
-- `sw.js` — CACHE_NAME = pahlawan-bintang-v20.10.0
+---
 
-### Features Active
-- Analog joystick responsive
-- Desktop hints panel
-- 10 hero + 10 musuh + 10 boss unik
-- Stage clear delay (2.5s normal / 3.5s boss)
-- Boss phase: minion → boss
-- Fluid scaling (arena sesuai device)
+## 📌 CURRENT VERSION
 
-### Changelog
-- v20.9.1 → v20.10.0
-  - Fluid scaling
-  - Loading cepat
-  - Boss minion phase
-  - Stage clear dramatis
+<!-- AUTO-INFO-START -->
+| Field | Value |
+|---|---|
+| **Game Version** | `v?.?.?` |
+| **Cache Name** | `pahlawan-bintang-v?.?.?` |
+| **Last Updated** | _pending_ |
+| **Git Commit** | _pending_ |
+| **Last Commit Date** | _pending_ |
+| **Working Tree** | _pending_ |
+<!-- AUTO-INFO-END -->
+
+---
+
+## 📁 FILE STRUCTURE
+
+<!-- AUTO-FILES-START -->
+| File | Version | Status |
+|---|---|---|
+| `index.html` | — | 🟢 Stable |
+| `style.css` | — | 🟢 Stable |
+| `game.js` | — | 🟢 Stable |
+| `multiplayer.js` | — | 🟢 Stable |
+| `sw.js` | — | 🟢 Stable |
+<!-- AUTO-FILES-END -->
+
+**Legend:**
+- 🔴 Changed — versi sama dengan CACHE_NAME (perlu deploy)
+- 🟢 Stable — versi lama, tidak berubah
+- ❌ Missing — file tidak ditemukan
+
+---
+
+## 🎯 TECH STACK
