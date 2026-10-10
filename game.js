@@ -1195,7 +1195,7 @@ window.addEventListener('load', async () => {
 
   try { await loadGameData(); } catch (e) { levelsData = generate30Levels(); }
 
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=21.0.0').catch(err => console.log('SW Fail:', err));
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=24.0.0').catch(err => console.log('SW Fail:', err));
 
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
