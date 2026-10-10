@@ -1,11 +1,11 @@
-const CACHE_NAME = 'pahlawan-bintang-vv.0.0';
+const CACHE_NAME = 'pahlawan-bintang-v24.0.0';
 const CACHE_VERSION = '24.0.0';
 const CORE_FILES = [
   './',
   './index.html',
   './style.css?v=24.0.0',
   './game.js?v=24.0.0',
-  './multiplayer.js?v=20.9',
+  './multiplayer.js?v=24.0',
   './achievements.json',
   './levels.json',
   './manifest.json'
