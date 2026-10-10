@@ -1,0 +1,11 @@
+# Development files — jangan deploy ke Vercel
+generate-version.js
+VERSION.md
+CHANGELOG.md
+package.json
+package-lock.json
+.gitignore
+README.md
+*.bak
+*.log
+.DS_Store
