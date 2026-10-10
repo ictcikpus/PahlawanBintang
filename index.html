@@ -1,112 +1,107 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#02030e" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="format-detection" content="telephone=no" />
-  <title>Pahlawan Bintang</title>
-  <link rel="manifest" href="./manifest.json" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&family=Audiowide&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css?v=21.0.0" />
-  <style>
-    *,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{margin:0;padding:0;width:100%;height:100vh;height:100dvh;overflow:hidden;background:#02030e;color:#e6eefc;font-family:system-ui,-apple-system,sans-serif;user-select:none;-webkit-user-select:none;overscroll-behavior:none;touch-action:manipulation}
-    #loading-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#02030e;z-index:9999;color:#e6eefc}
-    #gameCanvas{position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;display:block;z-index:1;touch-action:none}
-    #screen-main-menu{position:fixed;inset:0;z-index:10;overflow:hidden}
-    .hidden{display:none!important}
-    #hud-overlay{position:fixed;inset:0;pointer-events:none;z-index:60}
-    .modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,.75)}
-    .modal-box{width:min(96vw,560px);max-height:90vh;overflow-y:auto;padding:16px;border-radius:14px;background:rgba(15,22,54,.95);border:2px solid rgba(0,210,255,.25);color:#e6eefc}
-    button{font-family:inherit;color:inherit;background:transparent;border:none;cursor:pointer}
-    canvas{display:block}
-    .loader-emblem{position:relative;width:80px;height:80px}
-    .loader-ring{position:absolute;inset:0;width:100%;height:100%;color:#00d2ff;fill:none}
-    .loader-core{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40%;height:40%;color:#ffd700;fill:currentColor}
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<meta name="theme-color" content="#02030e"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="format-detection" content="telephone=no"/>
+<title>Pahlawan Bintang</title>
+<link rel="manifest" href="./manifest.json"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./style.css?v=21.0.0"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;width:100%;height:100vh;height:100dvh;overflow:hidden;background:#02030e;color:#e6eefc;font-family:system-ui,-apple-system,sans-serif;user-select:none;-webkit-user-select:none;overscroll-behavior:none;touch-action:manipulation}
+#loading-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#02030e;z-index:9999;color:#e6eefc}
+#gameCanvas{position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;display:block;z-index:1;touch-action:none}
+#screen-main-menu{position:fixed;inset:0;z-index:10;overflow:hidden}
+.hidden{display:none!important}
+#hud-overlay{position:fixed;inset:0;pointer-events:none;z-index:60}
+.modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,.75)}
+.modal-box{width:min(96vw,560px);max-height:90vh;overflow-y:auto;padding:16px;border-radius:14px;background:rgba(15,22,54,.95);border:2px solid rgba(0,210,255,.25);color:#e6eefc}
+button{font-family:inherit;color:inherit;background:transparent;border:none;cursor:pointer}
+canvas{display:block}
+.loader-emblem{position:relative;width:80px;height:80px}
+.loader-ring{position:absolute;inset:0;width:100%;height:100%;color:#00d2ff;fill:none}
+.loader-core{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:40%;height:40%;color:#ffd700;fill:currentColor}
+</style>
 </head>
 <body class="no-select">
 
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
-  <defs>
-    <symbol id="i-robot" viewBox="0 0 40 40"><rect x="8" y="12" width="24" height="20" rx="3" fill="currentColor"/><rect x="12" y="4" width="16" height="10" rx="3" fill="currentColor" opacity=".65"/><rect x="4" y="16" width="5" height="12" rx="2" fill="currentColor" opacity=".8"/><rect x="31" y="16" width="5" height="12" rx="2" fill="currentColor" opacity=".8"/><circle cx="16" cy="20" r="2" fill="#05061a"/><circle cx="24" cy="20" r="2" fill="#05061a"/></symbol>
-    <symbol id="i-cannon" viewBox="0 0 40 40"><path d="M20 4 L34 30 L6 30 Z" fill="currentColor"/><circle cx="20" cy="22" r="5" fill="#05061a"/><circle cx="20" cy="22" r="2.5" fill="currentColor"/></symbol>
-    <symbol id="i-dragon" viewBox="0 0 40 40"><path d="M20 4 L28 18 L36 14 L27 28 L20 36 L13 28 L4 14 L12 18 Z" fill="currentColor"/><circle cx="16" cy="18" r="1.8" fill="#05061a"/><circle cx="24" cy="18" r="1.8" fill="#05061a"/></symbol>
-    <symbol id="i-cat" viewBox="0 0 40 40"><path d="M8 14 L6 4 L14 10 Z" fill="currentColor"/><path d="M32 14 L34 4 L26 10 Z" fill="currentColor"/><circle cx="20" cy="22" r="14" fill="currentColor"/><rect x="11" y="20" width="18" height="4" rx="2" fill="#05061a"/></symbol>
-    <symbol id="i-unicorn" viewBox="0 0 40 40"><path d="M20 2 L23 12 L17 12 Z" fill="currentColor"/><ellipse cx="20" cy="24" rx="12" ry="13" fill="currentColor"/></symbol>
-    <symbol id="i-phoenix" viewBox="0 0 40 40"><path d="M20 4 Q14 10 12 18 Q8 16 4 20 Q8 22 12 22 Q12 30 20 36 Q28 30 28 22 Q32 22 36 20 Q32 16 28 18 Q26 10 20 4 Z" fill="currentColor"/></symbol>
-    <symbol id="i-ninja" viewBox="0 0 40 40"><path d="M8 12 Q20 4 32 12 L32 26 Q20 36 8 26 Z" fill="currentColor"/><path d="M6 20 H34 V24 H6 Z" fill="#05061a" opacity="0.85"/></symbol>
-    <symbol id="i-wizard" viewBox="0 0 40 40"><path d="M20 2 L10 20 L30 20 Z" fill="currentColor"/><circle cx="14" cy="26" r="1.5" fill="#05061a"/><circle cx="26" cy="26" r="1.5" fill="#05061a"/></symbol>
-    <symbol id="i-archer" viewBox="0 0 40 40"><path d="M10 4 Q4 20 10 36" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M10 20 L32 20" stroke="#ffd700" stroke-width="2" stroke-linecap="round"/><circle cx="24" cy="14" r="4" fill="currentColor"/></symbol>
-    <symbol id="i-ghost" viewBox="0 0 40 40"><path d="M20 4 Q8 4 8 18 V34 L12 30 L16 34 L20 30 L24 34 L28 30 L32 34 V18 Q32 4 20 4 Z" fill="currentColor"/><circle cx="15" cy="18" r="2.5" fill="#05061a"/><circle cx="25" cy="18" r="2.5" fill="#05061a"/></symbol>
-    <!-- NEW 10 HEROES -->
-    <symbol id="i-tiger" viewBox="0 0 40 40"><ellipse cx="20" cy="22" rx="14" ry="12" fill="currentColor"/><path d="M8 14 L6 4 L14 10 Z" fill="currentColor"/><path d="M32 14 L34 4 L26 10 Z" fill="currentColor"/><circle cx="15" cy="20" r="2" fill="#05061a"/><circle cx="25" cy="20" r="2" fill="#05061a"/><path d="M16 28 L20 32 L24 28" stroke="#ffd700" stroke-width="1.5" fill="none"/></symbol>
-    <symbol id="i-eagle" viewBox="0 0 40 40"><path d="M20 6 L4 18 L14 20 L10 32 L20 26 L30 32 L26 20 L36 18 Z" fill="currentColor"/><circle cx="20" cy="18" r="2" fill="#05061a"/></symbol>
-    <symbol id="i-samurai" viewBox="0 0 40 40"><circle cx="20" cy="14" r="8" fill="currentColor"/><path d="M12 14 L28 14 L26 22 L14 22 Z" fill="#05061a"/><path d="M14 22 L12 36 L28 36 L26 22 Z" fill="currentColor"/><path d="M32 4 L36 4 L30 20 Z" fill="#ffd700"/></symbol>
-    <symbol id="i-alien" viewBox="0 0 40 40"><ellipse cx="20" cy="16" rx="14" ry="10" fill="currentColor"/><ellipse cx="20" cy="24" rx="10" ry="12" fill="currentColor" opacity="0.85"/><circle cx="14" cy="14" r="2.5" fill="#05061a"/><circle cx="26" cy="14" r="2.5" fill="#05061a"/><circle cx="14" cy="14" r="1" fill="#39ff14"/><circle cx="26" cy="14" r="1" fill="#39ff14"/></symbol>
-    <symbol id="i-mecha" viewBox="0 0 40 40"><rect x="6" y="12" width="28" height="18" rx="2" fill="currentColor"/><rect x="10" y="4" width="20" height="10" rx="2" fill="currentColor" opacity=".7"/><rect x="2" y="18" width="4" height="14" rx="1" fill="currentColor"/><rect x="34" y="18" width="4" height="14" rx="1" fill="currentColor"/><circle cx="14" cy="20" r="2" fill="#05061a"/><circle cx="26" cy="20" r="2" fill="#05061a"/></symbol>
-    <symbol id="i-wolf" viewBox="0 0 40 40"><path d="M8 14 L6 2 L16 10 L20 6 L24 10 L34 2 L32 14 Q32 30 20 34 Q8 30 8 14 Z" fill="currentColor"/><circle cx="15" cy="18" r="2" fill="#00d2ff"/><circle cx="25" cy="18" r="2" fill="#00d2ff"/></symbol>
-    <symbol id="i-bee" viewBox="0 0 40 40"><ellipse cx="20" cy="20" rx="10" ry="14" fill="currentColor"/><rect x="12" y="14" width="16" height="4" fill="#05061a"/><rect x="12" y="24" width="16" height="4" fill="#05061a"/><ellipse cx="8" cy="12" rx="6" ry="4" fill="#ffffff" opacity="0.6"/><ellipse cx="32" cy="12" rx="6" ry="4" fill="#ffffff" opacity="0.6"/><circle cx="17" cy="12" r="1.5" fill="#05061a"/><circle cx="23" cy="12" r="1.5" fill="#05061a"/></symbol>
-    <symbol id="i-kraken" viewBox="0 0 40 40"><ellipse cx="20" cy="14" rx="12" ry="10" fill="currentColor"/><circle cx="14" cy="12" r="3" fill="#05061a"/><circle cx="26" cy="12" r="3" fill="#05061a"/><path d="M10 20 Q6 30 4 36 M16 24 Q14 32 12 38 M24 24 Q26 32 28 38 M30 20 Q34 30 36 36" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/></symbol>
-    <symbol id="i-titan" viewBox="0 0 40 40"><rect x="10" y="6" width="20" height="20" rx="3" fill="currentColor"/><rect x="6" y="26" width="28" height="12" rx="2" fill="currentColor"/><circle cx="16" cy="16" r="2.5" fill="#05061a"/><circle cx="24" cy="16" r="2.5" fill="#05061a"/><rect x="16" y="32" width="8" height="2" fill="#ffd700"/></symbol>
-    <symbol id="i-angel" viewBox="0 0 40 40"><circle cx="20" cy="14" r="6" fill="currentColor"/><path d="M6 20 Q4 8 16 12 Z" fill="#ffffff" opacity="0.9"/><path d="M34 20 Q36 8 24 12 Z" fill="#ffffff" opacity="0.9"/><path d="M14 22 L12 36 L20 30 L28 36 L26 22 Z" fill="currentColor"/></symbol>
-    <!-- icons -->
-    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></symbol>
-    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="currentColor"/></symbol>
-    <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".3"/><circle cx="12" cy="12" r="8" fill="currentColor"/><path d="M12 7 V17 M9.5 9.5 H13 A1.75 1.75 0 0 1 13 13 H9.5 M9.5 13 H14 A1.75 1.75 0 0 1 14 16.5 H9.5" stroke="#05061a" stroke-width="1.5" fill="none" stroke-linecap="round"/></symbol>
-    <symbol id="i-snow" viewBox="0 0 24 24"><path d="M12 2 V22 M2 12 H22 M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/><circle cx="12" cy="12" r="2" fill="currentColor"/></symbol>
-    <symbol id="i-bomb" viewBox="0 0 24 24"><circle cx="11" cy="14" r="7" fill="currentColor"/><path d="M16 9 L19 6 M19 6 V9 M19 6 H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></symbol>
-    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></symbol>
-    <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 4 L20 12 L6 20 Z" fill="currentColor"/></symbol>
-    <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4 H16 V10 A4 4 0 0 1 8 10 Z" fill="currentColor"/><path d="M6 4 H4 V8 A4 4 0 0 0 6 12 M18 4 H20 V8 A4 4 0 0 1 18 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/><rect x="10" y="14" width="4" height="4" fill="currentColor"/><rect x="7" y="18" width="10" height="2" rx="1" fill="currentColor"/></symbol>
-    <symbol id="i-shop" viewBox="0 0 24 24"><path d="M4 8 H20 L18 20 H6 Z" fill="currentColor"/><path d="M8 8 V6 A4 4 0 0 1 16 6 V8" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></symbol>
-    <symbol id="i-mask" viewBox="0 0 24 24"><path d="M4 6 L8 4 L12 7 L16 4 L20 6 L19 14 A8 8 0 0 1 12 21 A8 8 0 0 1 5 14 Z" fill="currentColor"/><circle cx="9" cy="12" r="1.5" fill="#05061a"/><circle cx="15" cy="12" r="1.5" fill="#05061a"/></symbol>
-    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2 L20 6 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V6 Z" fill="currentColor"/><path d="M9 12 L11 14 L15 10" stroke="#05061a" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 L4 14 H11 L10 22 L20 9 H13 Z" fill="currentColor"/></symbol>
-    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3 V15 M7 10 L12 15 L17 10 M4 20 H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
-    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11 L12 3 L21 11 V20 H14 V14 H10 V20 H3 Z" fill="currentColor"/></symbol>
-    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12 A8 8 0 1 1 12 4 M12 4 V8 M12 4 L16 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
-    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="currentColor"/><path d="M4 20 C4 15.5 8 13 12 13 C16 13 20 15.5 20 20 Z" fill="currentColor"/></symbol>
-    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5" fill="currentColor"/><path d="M2 20 C2 16 5 14 9 14 C13 14 16 16 16 20 Z" fill="currentColor"/><circle cx="17" cy="9" r="3" fill="currentColor" opacity=".65"/><path d="M13 20 C13 17 15 15.5 17.5 15.5 C20 15.5 22 17 22 20 Z" fill="currentColor" opacity=".65"/></symbol>
-    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M12 20 L15 16.5 M2 8.5 A14 14 0 0 1 22 8.5 M5.5 12 A10 10 0 0 1 18.5 12 M9 15.5 A6 6 0 0 1 15 15.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></symbol>
-    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8 V6 A2 2 0 0 0 14 4 H6 A2 2 0 0 0 4 6 V16 A2 2 0 0 0 6 18 H8" stroke="currentColor" stroke-width="2" fill="none"/></symbol>
-    <symbol id="i-exit" viewBox="0 0 24 24"><path d="M15 4 H6 A2 2 0 0 0 4 6 V18 A2 2 0 0 0 6 20 H15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M10 12 H21 M18 9 L21 12 L18 15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-sound-on" viewBox="0 0 24 24"><path d="M4 9 H8 L13 5 V19 L8 15 H4 Z" fill="currentColor"/><path d="M16 8 A5 5 0 0 1 16 16 M19 5 A9 9 0 0 1 19 19" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></symbol>
-    <symbol id="i-sound-off" viewBox="0 0 24 24"><path d="M4 9 H8 L13 5 V19 L8 15 H4 Z" fill="currentColor"/><path d="M17 9 L22 14 M22 9 L17 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 2 L23 22 H1 Z" fill="currentColor"/><rect x="11" y="9" width="2" height="8" rx="1" fill="#05061a"/><rect x="11" y="18" width="2" height="2" rx="1" fill="#05061a"/></symbol>
-    <symbol id="i-skull" viewBox="0 0 24 24"><path d="M12 2 C6 2 4 6 4 11 V15 L6 18 V21 H10 V19 H14 V21 H18 V18 L20 15 V11 C20 6 18 2 12 2 Z" fill="currentColor"/><circle cx="9" cy="11" r="2" fill="#05061a"/><circle cx="15" cy="11" r="2" fill="#05061a"/></symbol>
-    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2" fill="currentColor"/><path d="M8 10 V7 A4 4 0 0 1 16 7 V10" stroke="currentColor" stroke-width="2" fill="none"/></symbol>
-    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 21 C4 15 2 10 2 7 A5 5 0 0 1 12 5 A5 5 0 0 1 22 7 C22 10 20 15 12 21 Z" fill="currentColor"/></symbol>
-    <symbol id="i-chev-left" viewBox="0 0 24 24"><path d="M15 5 L8 12 L15 19" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-chev-right" viewBox="0 0 24 24"><path d="M9 5 L16 12 L9 19" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12 L10 17 L19 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="5" y="9" width="2" height="2" fill="currentColor"/><rect x="9" y="9" width="2" height="2" fill="currentColor"/><rect x="13" y="9" width="2" height="2" fill="currentColor"/><rect x="17" y="9" width="2" height="2" fill="currentColor"/><rect x="7" y="15" width="10" height="1.5" fill="currentColor"/></symbol>
-    <!-- NEW SHOP ICONS -->
-    <symbol id="i-coin-multi" viewBox="0 0 24 24"><circle cx="8" cy="10" r="6" fill="currentColor"/><circle cx="16" cy="14" r="6" fill="currentColor" opacity=".6"/><path d="M8 7 V13 M6.5 8.5 H9 A1 1 0 0 1 9 10.5 H6.5" stroke="#05061a" stroke-width="1.2" fill="none" stroke-linecap="round"/></symbol>
-    <symbol id="i-life" viewBox="0 0 24 24"><path d="M12 21 C4 15 2 10 2 7 A5 5 0 0 1 12 5 A5 5 0 0 1 22 7 C22 10 20 15 12 21 Z" fill="currentColor"/><path d="M12 9 V15 M9 12 H15" stroke="#05061a" stroke-width="2" stroke-linecap="round"/></symbol>
-    <symbol id="i-combo" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9 V13 L15 15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M9 3 L12 6 L15 3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></symbol>
-    <symbol id="i-magnet" viewBox="0 0 24 24"><path d="M5 4 V13 A7 7 0 0 0 19 13 V4 H15 V13 A3 3 0 0 1 9 13 V4 Z" fill="currentColor"/><rect x="4" y="2" width="4" height="3" fill="#05061a"/><rect x="16" y="2" width="4" height="3" fill="#05061a"/></symbol>
-    <symbol id="i-crit" viewBox="0 0 24 24"><path d="M12 2 L14 9 L21 9 L15.5 13.5 L17.5 21 L12 16.5 L6.5 21 L8.5 13.5 L3 9 L10 9 Z" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="#05061a"/></symbol>
-    <symbol id="i-revive" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7 V12 L15 15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M4 12 H2 M22 12 H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-    <!-- Portraits -->
-    <symbol id="i-vega" viewBox="0 0 100 100"><ellipse cx="50" cy="105" rx="38" ry="45" fill="#00d2ff"/><circle cx="50" cy="42" r="28" fill="#ffd8b0"/><path d="M22 40 Q50 -10 78 40 L82 55 Q50 40 18 55 Z" fill="#1e90ff"/></symbol>
-    <symbol id="i-aria" viewBox="0 0 100 100"><ellipse cx="50" cy="105" rx="38" ry="45" fill="#a55eea"/><circle cx="50" cy="42" r="28" fill="#f5d0a9"/><path d="M24 32 Q50 8 76 32 Q76 20 50 12 Q24 20 24 32 Z" fill="#4a2c8f"/></symbol>
-    <symbol id="i-rival" viewBox="0 0 100 100"><ellipse cx="50" cy="105" rx="40" ry="45" fill="#2f3542"/><circle cx="50" cy="44" r="28" fill="#2a2a3a"/><path d="M28 44 L72 44 L68 60 L32 60 Z" fill="#0a0d24" opacity="0.9"/></symbol>
-    <symbol id="i-villain" viewBox="0 0 100 100"><ellipse cx="50" cy="105" rx="42" ry="45" fill="#1a001a"/><circle cx="50" cy="44" r="30" fill="#0a000a"/><circle cx="38" cy="42" r="3" fill="#ff0055"/><circle cx="62" cy="42" r="3" fill="#ff0055"/></symbol>
-    <symbol id="i-hero-portrait" viewBox="0 0 100 100"><ellipse cx="50" cy="105" rx="38" ry="45" fill="#00d2ff"/><circle cx="50" cy="44" r="28" fill="#ffd8b0"/><path d="M20 38 Q50 -5 80 38 L80 48 Q50 40 20 48 Z" fill="#1e90ff"/></symbol>
-  </defs>
+<defs>
+<symbol id="i-robot" viewBox="0 0 40 40"><rect x="8" y="12" width="24" height="20" rx="3" fill="currentColor"/><rect x="12" y="4" width="16" height="10" rx="3" fill="currentColor" opacity=".65"/><rect x="4" y="16" width="5" height="12" rx="2" fill="currentColor" opacity=".8"/><rect x="31" y="16" width="5" height="12" rx="2" fill="currentColor" opacity=".8"/><circle cx="16" cy="20" r="2" fill="#05061a"/><circle cx="24" cy="20" r="2" fill="#05061a"/></symbol>
+<symbol id="i-cannon" viewBox="0 0 40 40"><path d="M20 4 L34 30 L6 30 Z" fill="currentColor"/><circle cx="20" cy="22" r="5" fill="#05061a"/><circle cx="20" cy="22" r="2.5" fill="currentColor"/></symbol>
+<symbol id="i-dragon" viewBox="0 0 40 40"><path d="M20 4 L28 18 L36 14 L27 28 L20 36 L13 28 L4 14 L12 18 Z" fill="currentColor"/><circle cx="16" cy="18" r="1.8" fill="#05061a"/><circle cx="24" cy="18" r="1.8" fill="#05061a"/></symbol>
+<symbol id="i-cat" viewBox="0 0 40 40"><path d="M8 14 L6 4 L14 10 Z" fill="currentColor"/><path d="M32 14 L34 4 L26 10 Z" fill="currentColor"/><circle cx="20" cy="22" r="14" fill="currentColor"/><rect x="11" y="20" width="18" height="4" rx="2" fill="#05061a"/></symbol>
+<symbol id="i-unicorn" viewBox="0 0 40 40"><path d="M20 2 L23 12 L17 12 Z" fill="currentColor"/><ellipse cx="20" cy="24" rx="12" ry="13" fill="currentColor"/></symbol>
+<symbol id="i-phoenix" viewBox="0 0 40 40"><path d="M20 4 Q14 10 12 18 Q8 16 4 20 Q8 22 12 22 Q12 30 20 36 Q28 30 28 22 Q32 22 36 20 Q32 16 28 18 Q26 10 20 4 Z" fill="currentColor"/></symbol>
+<symbol id="i-ninja" viewBox="0 0 40 40"><path d="M8 12 Q20 4 32 12 L32 26 Q20 36 8 26 Z" fill="currentColor"/><path d="M6 20 H34 V24 H6 Z" fill="#05061a" opacity="0.85"/></symbol>
+<symbol id="i-wizard" viewBox="0 0 40 40"><path d="M20 2 L10 20 L30 20 Z" fill="currentColor"/><circle cx="14" cy="26" r="1.5" fill="#05061a"/><circle cx="26" cy="26" r="1.5" fill="#05061a"/></symbol>
+<symbol id="i-archer" viewBox="0 0 40 40"><path d="M10 4 Q4 20 10 36" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M10 20 L32 20" stroke="#ffd700" stroke-width="2" stroke-linecap="round"/><circle cx="24" cy="14" r="4" fill="currentColor"/></symbol>
+<symbol id="i-ghost" viewBox="0 0 40 40"><path d="M20 4 Q8 4 8 18 V34 L12 30 L16 34 L20 30 L24 34 L28 30 L32 34 V18 Q32 4 20 4 Z" fill="currentColor"/><circle cx="15" cy="18" r="2.5" fill="#05061a"/><circle cx="25" cy="18" r="2.5" fill="#05061a"/></symbol>
+<symbol id="i-tiger" viewBox="0 0 40 40"><ellipse cx="20" cy="22" rx="14" ry="12" fill="currentColor"/><path d="M8 14 L6 4 L14 10 Z" fill="currentColor"/><path d="M32 14 L34 4 L26 10 Z" fill="currentColor"/><circle cx="15" cy="20" r="2" fill="#05061a"/><circle cx="25" cy="20" r="2" fill="#05061a"/></symbol>
+<symbol id="i-eagle" viewBox="0 0 40 40"><path d="M20 6 L4 18 L14 20 L10 32 L20 26 L30 32 L26 20 L36 18 Z" fill="currentColor"/><circle cx="20" cy="18" r="2" fill="#05061a"/></symbol>
+<symbol id="i-samurai" viewBox="0 0 40 40"><circle cx="20" cy="14" r="8" fill="currentColor"/><path d="M12 14 L28 14 L26 22 L14 22 Z" fill="#05061a"/><path d="M14 22 L12 36 L28 36 L26 22 Z" fill="currentColor"/></symbol>
+<symbol id="i-alien" viewBox="0 0 40 40"><ellipse cx="20" cy="16" rx="14" ry="10" fill="currentColor"/><ellipse cx="20" cy="24" rx="10" ry="12" fill="currentColor" opacity="0.85"/><circle cx="14" cy="14" r="2.5" fill="#05061a"/><circle cx="26" cy="14" r="2.5" fill="#05061a"/><circle cx="14" cy="14" r="1" fill="#39ff14"/><circle cx="26" cy="14" r="1" fill="#39ff14"/></symbol>
+<symbol id="i-mecha" viewBox="0 0 40 40"><rect x="6" y="12" width="28" height="18" rx="2" fill="currentColor"/><rect x="10" y="4" width="20" height="10" rx="2" fill="currentColor" opacity=".7"/><circle cx="14" cy="20" r="2" fill="#05061a"/><circle cx="26" cy="20" r="2" fill="#05061a"/></symbol>
+<symbol id="i-wolf" viewBox="0 0 40 40"><path d="M8 14 L6 2 L16 10 L20 6 L24 10 L34 2 L32 14 Q32 30 20 34 Q8 30 8 14 Z" fill="currentColor"/><circle cx="15" cy="18" r="2" fill="#00d2ff"/><circle cx="25" cy="18" r="2" fill="#00d2ff"/></symbol>
+<symbol id="i-bee" viewBox="0 0 40 40"><ellipse cx="20" cy="20" rx="10" ry="14" fill="currentColor"/><rect x="12" y="14" width="16" height="4" fill="#05061a"/><rect x="12" y="24" width="16" height="4" fill="#05061a"/><ellipse cx="8" cy="12" rx="6" ry="4" fill="#ffffff" opacity="0.6"/><ellipse cx="32" cy="12" rx="6" ry="4" fill="#ffffff" opacity="0.6"/></symbol>
+<symbol id="i-kraken" viewBox="0 0 40 40"><ellipse cx="20" cy="14" rx="12" ry="10" fill="currentColor"/><circle cx="14" cy="12" r="3" fill="#05061a"/><circle cx="26" cy="12" r="3" fill="#05061a"/><path d="M10 20 Q6 30 4 36 M16 24 Q14 32 12 38 M24 24 Q26 32 28 38 M30 20 Q34 30 36 36" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="i-titan" viewBox="0 0 40 40"><rect x="10" y="6" width="20" height="20" rx="3" fill="currentColor"/><rect x="6" y="26" width="28" height="12" rx="2" fill="currentColor"/><circle cx="16" cy="16" r="2.5" fill="#05061a"/><circle cx="24" cy="16" r="2.5" fill="#05061a"/></symbol>
+<symbol id="i-angel" viewBox="0 0 40 40"><circle cx="20" cy="14" r="6" fill="currentColor"/><path d="M6 20 Q4 8 16 12 Z" fill="#ffffff" opacity="0.9"/><path d="M34 20 Q36 8 24 12 Z" fill="#ffffff" opacity="0.9"/><path d="M14 22 L12 36 L20 30 L28 36 L26 22 Z" fill="currentColor"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z" fill="currentColor"/></symbol>
+<symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor" opacity=".3"/><circle cx="12" cy="12" r="8" fill="currentColor"/><path d="M12 7 V17 M9.5 9.5 H13 A1.75 1.75 0 0 1 13 13 H9.5 M9.5 13 H14 A1.75 1.75 0 0 1 14 16.5 H9.5" stroke="#05061a" stroke-width="1.5" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="i-snow" viewBox="0 0 24 24"><path d="M12 2 V22 M2 12 H22 M5 5 L19 19 M19 5 L5 19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/><circle cx="12" cy="12" r="2" fill="currentColor"/></symbol>
+<symbol id="i-bomb" viewBox="0 0 24 24"><circle cx="11" cy="14" r="7" fill="currentColor"/><path d="M16 9 L19 6 M19 6 V9 M19 6 H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M6 4 L20 12 L6 20 Z" fill="currentColor"/></symbol>
+<symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4 H16 V10 A4 4 0 0 1 8 10 Z" fill="currentColor"/><path d="M6 4 H4 V8 A4 4 0 0 0 6 12 M18 4 H20 V8 A4 4 0 0 1 18 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/><rect x="10" y="14" width="4" height="4" fill="currentColor"/><rect x="7" y="18" width="10" height="2" rx="1" fill="currentColor"/></symbol>
+<symbol id="i-shop" viewBox="0 0 24 24"><path d="M4 8 H20 L18 20 H6 Z" fill="currentColor"/><path d="M8 8 V6 A4 4 0 0 1 16 6 V8" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="i-mask" viewBox="0 0 24 24"><path d="M4 6 L8 4 L12 7 L16 4 L20 6 L19 14 A8 8 0 0 1 12 21 A8 8 0 0 1 5 14 Z" fill="currentColor"/><circle cx="9" cy="12" r="1.5" fill="#05061a"/><circle cx="15" cy="12" r="1.5" fill="#05061a"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2 L20 6 V12 C20 17 16 21 12 22 C8 21 4 17 4 12 V6 Z" fill="currentColor"/><path d="M9 12 L11 14 L15 10" stroke="#05061a" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 L4 14 H11 L10 22 L20 9 H13 Z" fill="currentColor"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3 V15 M7 10 L12 15 L17 10 M4 20 H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11 L12 3 L21 11 V20 H14 V14 H10 V20 H3 Z" fill="currentColor"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12 A8 8 0 1 1 12 4 M12 4 V8 M12 4 L16 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="currentColor"/><path d="M4 20 C4 15.5 8 13 12 13 C16 13 20 15.5 20 20 Z" fill="currentColor"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5" fill="currentColor"/><path d="M2 20 C2 16 5 14 9 14 C13 14 16 16 16 20 Z" fill="currentColor"/><circle cx="17" cy="9" r="3" fill="currentColor" opacity=".65"/><path d="M13 20 C13 17 15 15.5 17.5 15.5 C20 15.5 22 17 22 20 Z" fill="currentColor" opacity=".65"/></symbol>
+<symbol id="i-wifi" viewBox="0 0 24 24"><path d="M12 20 L15 16.5 M2 8.5 A14 14 0 0 1 22 8.5 M5.5 12 A10 10 0 0 1 18.5 12 M9 15.5 A6 6 0 0 1 15 15.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8 V6 A2 2 0 0 0 14 4 H6 A2 2 0 0 0 4 6 V16 A2 2 0 0 0 6 18 H8" stroke="currentColor" stroke-width="2" fill="none"/></symbol>
+<symbol id="i-exit" viewBox="0 0 24 24"><path d="M15 4 H6 A2 2 0 0 0 4 6 V18 A2 2 0 0 0 6 20 H15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M10 12 H21 M18 9 L21 12 L18 15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-sound-on" viewBox="0 0 24 24"><path d="M4 9 H8 L13 5 V19 L8 15 H4 Z" fill="currentColor"/><path d="M16 8 A5 5 0 0 1 16 16 M19 5 A9 9 0 0 1 19 19" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="i-sound-off" viewBox="0 0 24 24"><path d="M4 9 H8 L13 5 V19 L8 15 H4 Z" fill="currentColor"/><path d="M17 9 L22 14 M22 9 L17 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 2 L23 22 H1 Z" fill="currentColor"/><rect x="11" y="9" width="2" height="8" rx="1" fill="#05061a"/><rect x="11" y="18" width="2" height="2" rx="1" fill="#05061a"/></symbol>
+<symbol id="i-skull" viewBox="0 0 24 24"><path d="M12 2 C6 2 4 6 4 11 V15 L6 18 V21 H10 V19 H14 V21 H18 V18 L20 15 V11 C20 6 18 2 12 2 Z" fill="currentColor"/><circle cx="9" cy="11" r="2" fill="#05061a"/><circle cx="15" cy="11" r="2" fill="#05061a"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2" fill="currentColor"/><path d="M8 10 V7 A4 4 0 0 1 16 7 V10" stroke="currentColor" stroke-width="2" fill="none"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 21 C4 15 2 10 2 7 A5 5 0 0 1 12 5 A5 5 0 0 1 22 7 C22 10 20 15 12 21 Z" fill="currentColor"/></symbol>
+<symbol id="i-chev-left" viewBox="0 0 24 24"><path d="M15 5 L8 12 L15 19" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-chev-right" viewBox="0 0 24 24"><path d="M9 5 L16 12 L9 19" stroke="currentColor" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12 L10 17 L19 8" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="5" y="9" width="2" height="2" fill="currentColor"/><rect x="9" y="9" width="2" height="2" fill="currentColor"/><rect x="13" y="9" width="2" height="2" fill="currentColor"/><rect x="17" y="9" width="2" height="2" fill="currentColor"/><rect x="7" y="15" width="10" height="1.5" fill="currentColor"/></symbol>
+<symbol id="i-coin-multi" viewBox="0 0 24 24"><circle cx="8" cy="10" r="6" fill="currentColor"/><circle cx="16" cy="14" r="6" fill="currentColor" opacity=".6"/></symbol>
+<symbol id="i-life" viewBox="0 0 24 24"><path d="M12 21 C4 15 2 10 2 7 A5 5 0 0 1 12 5 A5 5 0 0 1 22 7 C22 10 20 15 12 21 Z" fill="currentColor"/><path d="M12 9 V15 M9 12 H15" stroke="#05061a" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-combo" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9 V13 L15 15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M9 3 L12 6 L15 3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="i-magnet" viewBox="0 0 24 24"><path d="M5 4 V13 A7 7 0 0 0 19 13 V4 H15 V13 A3 3 0 0 1 9 13 V4 Z" fill="currentColor"/><rect x="4" y="2" width="4" height="3" fill="#05061a"/><rect x="16" y="2" width="4" height="3" fill="#05061a"/></symbol>
+<symbol id="i-crit" viewBox="0 0 24 24"><path d="M12 2 L14 9 L21 9 L15.5 13.5 L17.5 21 L12 16.5 L6.5 21 L8.5 13.5 L3 9 L10 9 Z" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="#05061a"/></symbol>
+<symbol id="i-revive" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7 V12 L15 15" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="i-vega" viewBox="0 0 100 100"><ellipse cx="50" cy="105" rx="38" ry="45" fill="#00d2ff"/><circle cx="50" cy="42" r="28" fill="#ffd8b0"/><path d="M22 40 Q50 -10 78 40 L82 55 Q50 40 18 55 Z" fill="#1e90ff"/></symbol>
+<symbol id="i-aria" viewBox="0 0 100 100"><ellipse cx="50" cy="105" rx="38" ry="45" fill="#a55eea"/><circle cx="50" cy="42" r="28" fill="#f5d0a9"/><path d="M24 32 Q50 8 76 32 Q76 20 50 12 Q24 20 24 32 Z" fill="#4a2c8f"/></symbol>
+<symbol id="i-rival" viewBox="0 0 100 100"><ellipse cx="50" cy="105" rx="40" ry="45" fill="#2f3542"/><circle cx="50" cy="44" r="28" fill="#2a2a3a"/><path d="M28 44 L72 44 L68 60 L32 60 Z" fill="#0a0d24" opacity="0.9"/></symbol>
+<symbol id="i-villain" viewBox="0 0 100 100"><ellipse cx="50" cy="105" rx="42" ry="45" fill="#1a001a"/><circle cx="50" cy="44" r="30" fill="#0a000a"/><circle cx="38" cy="42" r="3" fill="#ff0055"/><circle cx="62" cy="42" r="3" fill="#ff0055"/></symbol>
+<symbol id="i-hero-portrait" viewBox="0 0 100 100"><ellipse cx="50" cy="105" rx="38" ry="45" fill="#00d2ff"/><circle cx="50" cy="44" r="28" fill="#ffd8b0"/><path d="M20 38 Q50 -5 80 38 L80 48 Q50 40 20 48 Z" fill="#1e90ff"/></symbol>
+</defs>
 </svg>
 
-<!-- LOADING -->
 <div id="loading-screen">
   <div class="loader-emblem">
-    <svg viewBox="0 0 100 100" class="loader-ring"><circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="70 30" /></svg>
+    <svg viewBox="0 0 100 100" class="loader-ring"><circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="70 30"/></svg>
     <svg viewBox="0 0 24 24" class="loader-core"><use href="#i-star"/></svg>
   </div>
   <div class="loader-logo">PAHLAWAN BINTANG</div>
@@ -116,7 +111,6 @@
 
 <canvas id="gameCanvas" aria-label="Game Canvas"></canvas>
 
-<!-- ============ MAIN MENU (REDESIGNED) ============ -->
 <div id="screen-main-menu" class="screen">
   <div class="cosmic-bg">
     <div class="galaxy-core"></div>
@@ -129,29 +123,23 @@
     <div class="nebula-cloud cloud-3"></div>
     <div class="star-field"></div>
     <div class="shooting-stars">
-      <div class="shooting-star ss-1"></div>
-      <div class="shooting-star ss-2"></div>
-      <div class="shooting-star ss-3"></div>
-      <div class="shooting-star ss-4"></div>
+      <div class="shooting-star ss-1"></div><div class="shooting-star ss-2"></div>
+      <div class="shooting-star ss-3"></div><div class="shooting-star ss-4"></div>
       <div class="shooting-star ss-5"></div>
     </div>
     <div class="vignette"></div>
   </div>
 
   <div class="menu-container">
-    <!-- Top Bar -->
     <div class="menu-topbar">
       <div class="brand-mini">
         <svg class="brand-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
         <span class="brand-text">PAHLAWAN BINTANG</span>
         <span class="version-chip">v21.0</span>
       </div>
-      <button id="btn-audio" class="btn-audio" title="Suara" type="button">
-        <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
-      </button>
+      <button id="btn-audio" class="btn-audio" title="Suara" type="button"><svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg></button>
     </div>
 
-    <!-- Hero Logo -->
     <div class="hero-logo">
       <div class="logo-aura"></div>
       <div class="logo-ring logo-ring-1"></div>
@@ -163,131 +151,61 @@
       <div class="logo-star-wrap">
         <svg class="logo-star" viewBox="0 0 100 100">
           <defs>
-            <radialGradient id="starCoreGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
-              <stop offset="25%" stop-color="#fff8dc" stop-opacity="0.9"/>
-              <stop offset="55%" stop-color="#ffd700" stop-opacity="0.6"/>
-              <stop offset="100%" stop-color="#ff8a00" stop-opacity="0"/>
-            </radialGradient>
-            <linearGradient id="starCoreBody" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#ffffff"/>
-              <stop offset="40%" stop-color="#ffe680"/>
-              <stop offset="75%" stop-color="#ffd700"/>
-              <stop offset="100%" stop-color="#ff8a00"/>
-            </linearGradient>
+            <radialGradient id="starCoreGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffffff" stop-opacity="1"/><stop offset="25%" stop-color="#fff8dc" stop-opacity="0.9"/><stop offset="55%" stop-color="#ffd700" stop-opacity="0.6"/><stop offset="100%" stop-color="#ff8a00" stop-opacity="0"/></radialGradient>
+            <linearGradient id="starCoreBody" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#ffffff"/><stop offset="40%" stop-color="#ffe680"/><stop offset="75%" stop-color="#ffd700"/><stop offset="100%" stop-color="#ff8a00"/></linearGradient>
           </defs>
           <circle cx="50" cy="50" r="48" fill="url(#starCoreGlow)"/>
           <path d="M50 10 L60.5 39.3 L91 39.3 L66 57.6 L76.5 87 L50 68.7 L23.5 87 L34 57.6 L9 39.3 L39.5 39.3 Z" fill="url(#starCoreBody)" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round"/>
           <circle cx="50" cy="46" r="5" fill="#ffffff" opacity="0.95"/>
           <circle cx="50" cy="46" r="2.5" fill="#fff8dc"/>
         </svg>
-        <div class="sparkle-burst burst-1">✦</div>
-        <div class="sparkle-burst burst-2">✦</div>
-        <div class="sparkle-burst burst-3">✦</div>
-        <div class="sparkle-burst burst-4">✦</div>
+        <div class="sparkle-burst burst-1">✦</div><div class="sparkle-burst burst-2">✦</div>
+        <div class="sparkle-burst burst-3">✦</div><div class="sparkle-burst burst-4">✦</div>
       </div>
     </div>
 
-    <!-- Title -->
     <div class="title-stack">
       <h1 class="title-main">PAHLAWAN</h1>
-      <div class="title-separator">
-        <div class="sep-line"></div>
-        <svg class="sep-star" viewBox="0 0 24 24"><use href="#i-star"/></svg>
-        <div class="sep-line"></div>
-      </div>
+      <div class="title-separator"><div class="sep-line"></div><svg class="sep-star" viewBox="0 0 24 24"><use href="#i-star"/></svg><div class="sep-line"></div></div>
       <h1 class="title-main highlight">BINTANG</h1>
     </div>
 
-    <p class="tagline">
-      <svg class="tagline-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
-      <span>Selamatkan Galaksi dari Invasi Monster</span>
-      <svg class="tagline-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
-    </p>
+    <p class="tagline"><svg class="tagline-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg><span>Selamatkan Galaksi dari Invasi Monster</span><svg class="tagline-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg></p>
 
-    <!-- Name Input -->
     <div class="input-wrap">
       <svg class="input-ico" viewBox="0 0 24 24"><use href="#i-user"/></svg>
-      <input id="player-name-input" type="text" placeholder="Masukkan Nama Pahlawan" maxlength="14" />
+      <input id="player-name-input" type="text" placeholder="Masukkan Nama Pahlawan" maxlength="14"/>
     </div>
 
-    <!-- Primary Buttons -->
     <button id="btn-prepare-play" class="btn-hero" type="button">
-      <div class="btn-hero-content">
-        <svg class="btn-hero-icon" viewBox="0 0 24 24"><use href="#i-play"/></svg>
-        <span class="btn-hero-text">LANJUTKAN MISI</span>
-      </div>
+      <div class="btn-hero-content"><svg class="btn-hero-icon" viewBox="0 0 24 24"><use href="#i-play"/></svg><span class="btn-hero-text">LANJUTKAN MISI</span></div>
     </button>
 
     <button id="btn-multiplayer" class="btn-mp" type="button">
-      <div class="btn-mp-content">
-        <svg class="btn-mp-icon" viewBox="0 0 24 24"><use href="#i-users"/></svg>
-        <span class="btn-mp-text">MAIN BARENG TEMAN</span>
-      </div>
+      <div class="btn-mp-content"><svg class="btn-mp-icon" viewBox="0 0 24 24"><use href="#i-users"/></svg><span class="btn-mp-text">MAIN BARENG TEMAN</span></div>
       <div class="btn-mp-badge">2P</div>
     </button>
 
-    <button id="btn-level-select" type="button" class="hidden">
-      <svg class="ico"><use href="#i-star"/></svg>
-      <span>PILIH LEVEL</span>
-    </button>
+    <button id="btn-level-select" type="button" class="hidden"><svg class="ico"><use href="#i-star"/></svg><span>PILIH LEVEL</span></button>
 
-    <!-- Menu Grid -->
     <div class="menu-grid">
-      <button id="btn-select-actor" class="menu-card" type="button">
-        <div class="menu-card-inner">
-          <div class="menu-card-icon-wrap c-blue"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-mask"/></svg></div>
-          <span class="menu-card-label">HERO</span>
-        </div>
-      </button>
-      <button id="btn-shop" class="menu-card" type="button">
-        <div class="menu-card-inner">
-          <div class="menu-card-icon-wrap c-gold"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-shop"/></svg></div>
-          <span class="menu-card-label">TOKO</span>
-        </div>
-      </button>
-      <button id="btn-leaderboard" class="menu-card" type="button">
-        <div class="menu-card-inner">
-          <div class="menu-card-icon-wrap c-purple"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div>
-          <span class="menu-card-label">PERINGKAT</span>
-        </div>
-      </button>
-      <button id="btn-achievements" class="menu-card" type="button">
-        <div class="menu-card-inner">
-          <div class="menu-card-icon-wrap c-pink"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div>
-          <span class="menu-card-label">MISI</span>
-          <span id="achievement-badge-count" class="menu-card-badge hidden">0</span>
-        </div>
-      </button>
-      <button id="btn-endless" class="menu-card" type="button">
-        <div class="menu-card-inner">
-          <div class="menu-card-icon-wrap c-green"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg></div>
-          <span class="menu-card-label">ENDLESS</span>
-        </div>
-      </button>
-      <button id="btn-daily" class="menu-card" type="button">
-        <div class="menu-card-inner">
-          <div class="menu-card-icon-wrap c-red"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div>
-          <span class="menu-card-label">DAILY</span>
-        </div>
-      </button>
+      <button id="btn-select-actor" class="menu-card" type="button"><div class="menu-card-inner"><div class="menu-card-icon-wrap c-blue"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-mask"/></svg></div><span class="menu-card-label">HERO</span></div></button>
+      <button id="btn-shop" class="menu-card" type="button"><div class="menu-card-inner"><div class="menu-card-icon-wrap c-gold"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-shop"/></svg></div><span class="menu-card-label">TOKO</span></div></button>
+      <button id="btn-leaderboard" class="menu-card" type="button"><div class="menu-card-inner"><div class="menu-card-icon-wrap c-purple"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div><span class="menu-card-label">PERINGKAT</span></div></button>
+      <button id="btn-achievements" class="menu-card" type="button"><div class="menu-card-inner"><div class="menu-card-icon-wrap c-pink"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div><span class="menu-card-label">MISI</span><span id="achievement-badge-count" class="menu-card-badge hidden">0</span></div></button>
+      <button id="btn-endless" class="menu-card" type="button"><div class="menu-card-inner"><div class="menu-card-icon-wrap c-green"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg></div><span class="menu-card-label">ENDLESS</span></div></button>
+      <button id="btn-daily" class="menu-card" type="button"><div class="menu-card-inner"><div class="menu-card-icon-wrap c-red"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div><span class="menu-card-label">DAILY</span></div></button>
     </div>
 
-    <button id="btn-pwa-install" class="btn-install hidden" type="button">
-      <svg class="ico"><use href="#i-download"/></svg>
-      <span>INSTALL APLIKASI</span>
-    </button>
+    <button id="btn-pwa-install" class="btn-install hidden" type="button"><svg class="ico"><use href="#i-download"/></svg><span>INSTALL APLIKASI</span></button>
 
     <div class="menu-footer">
-      <span class="footer-dot"></span>
-      <span>Hero: <strong id="selected-actor-name">Robot Cyber</strong></span>
-      <span class="footer-dot"></span>
-      <span>Progress: <strong id="saved-level-display">Level 1</strong></span>
+      <span class="footer-dot"></span><span>Hero: <strong id="selected-actor-name">Robot Cyber</strong></span>
+      <span class="footer-dot"></span><span>Progress: <strong id="saved-level-display">Level 1</strong></span>
     </div>
   </div>
 </div>
 
-<!-- HUD -->
 <div id="hud-overlay" class="hidden">
   <div class="hud-top">
     <div class="hud-left">
@@ -324,7 +242,6 @@
   </div>
 </div>
 
-<!-- HINTS -->
 <div id="desktop-hints" class="hidden" aria-hidden="true">
   <div class="hint-panel">
     <div class="hint-header">
@@ -374,7 +291,6 @@
 
 <div id="achievement-toast-container"></div>
 
-<!-- PAUSE -->
 <div id="modal-pause" class="modal hidden">
   <div class="modal-box">
     <h2><svg class="ico-lg"><use href="#i-pause"/></svg> GAME PAUSED</h2>
@@ -387,7 +303,6 @@
   </div>
 </div>
 
-<!-- ACTORS (20 HEROES) -->
 <div id="modal-actors" class="modal hidden">
   <div class="modal-box">
     <h2>PILIH HERO</h2>
@@ -418,56 +333,24 @@
   </div>
 </div>
 
-<!-- SHOP with 10 UPGRADES -->
 <div id="modal-shop" class="modal hidden">
   <div class="modal-box">
     <h2>TOKO UPGRADE</h2>
     <p style="margin-bottom:16px">Koin: <strong id="shop-coin-count">0</strong> <svg class="ico-inline gold" viewBox="0 0 24 24"><use href="#i-coin"/></svg></p>
-    <div class="shop-item">
-      <div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-bolt"/></svg><div><strong>Fire Rate</strong><small>Lv <span id="shop-level-firerate">1</span> — Tembakan lebih cepat</small></div></div>
-      <button id="btn-buy-firerate" class="btn-buy" type="button">BELI <span>50</span></button>
-    </div>
-    <div class="shop-item">
-      <div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-shield"/></svg><div><strong>Shield</strong><small>Lv <span id="shop-level-shield">1</span> — Durasi shield lebih lama</small></div></div>
-      <button id="btn-buy-shield" class="btn-buy" type="button">BELI <span>60</span></button>
-    </div>
-    <div class="shop-item">
-      <div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-bomb"/></svg><div><strong>Bomb</strong><small>Lv <span id="shop-level-bomb">2</span> — Bom lebih banyak</small></div></div>
-      <button id="btn-buy-bomb" class="btn-buy" type="button">BELI <span>150</span></button>
-    </div>
-    <div class="shop-item">
-      <div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-snow"/></svg><div><strong>Freeze</strong><small>Lv <span id="shop-level-freeze">2</span> — Bekukan lebih lama</small></div></div>
-      <button id="btn-buy-freeze" class="btn-buy" type="button">BELI <span>150</span></button>
-    </div>
-    <div class="shop-item shop-item-new">
-      <div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-coin-multi"/></svg><div><strong>Coin Multiplier</strong><small>Lv <span id="shop-level-coin">1</span> — Koin ×<span id="shop-coin-mult">1</span></small></div></div>
-      <button id="btn-buy-coin" class="btn-buy" type="button">BELI <span>100</span></button>
-    </div>
-    <div class="shop-item shop-item-new">
-      <div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-life"/></svg><div><strong>Extra Life</strong><small>Lv <span id="shop-level-life">0</span> — +<span id="shop-life-bonus">0</span> nyawa awal</small></div></div>
-      <button id="btn-buy-life" class="btn-buy" type="button">BELI <span>200</span></button>
-    </div>
-    <div class="shop-item shop-item-new">
-      <div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-combo"/></svg><div><strong>Combo Duration</strong><small>Lv <span id="shop-level-combo">1</span> — Combo bertahan lebih lama</small></div></div>
-      <button id="btn-buy-combo" class="btn-buy" type="button">BELI <span>120</span></button>
-    </div>
-    <div class="shop-item shop-item-new">
-      <div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-magnet"/></svg><div><strong>Magnet Range</strong><small>Lv <span id="shop-level-magnet">1</span> — Tarik koin dari jauh</small></div></div>
-      <button id="btn-buy-magnet" class="btn-buy" type="button">BELI <span>140</span></button>
-    </div>
-    <div class="shop-item shop-item-new">
-      <div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-crit"/></svg><div><strong>Critical Hit</strong><small>Lv <span id="shop-level-crit">0</span> — <span id="shop-crit-chance">0</span>% chance ×3 damage</small></div></div>
-      <button id="btn-buy-crit" class="btn-buy" type="button">BELI <span>180</span></button>
-    </div>
-    <div class="shop-item shop-item-new">
-      <div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-revive"/></svg><div><strong>Auto Revive</strong><small>Lv <span id="shop-level-revive">0</span> — +<span id="shop-revive-bonus">0</span> revive/hari</small></div></div>
-      <button id="btn-buy-revive" class="btn-buy" type="button">BELI <span>250</span></button>
-    </div>
+    <div class="shop-item"><div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-bolt"/></svg><div><strong>Fire Rate</strong><small>Lv <span id="shop-level-firerate">1</span> — Tembakan lebih cepat</small></div></div><button id="btn-buy-firerate" class="btn-buy" type="button">BELI <span>50</span></button></div>
+    <div class="shop-item"><div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-shield"/></svg><div><strong>Shield</strong><small>Lv <span id="shop-level-shield">1</span> — Durasi shield lebih lama</small></div></div><button id="btn-buy-shield" class="btn-buy" type="button">BELI <span>60</span></button></div>
+    <div class="shop-item"><div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-bomb"/></svg><div><strong>Bomb</strong><small>Lv <span id="shop-level-bomb">2</span> — Bom lebih banyak</small></div></div><button id="btn-buy-bomb" class="btn-buy" type="button">BELI <span>150</span></button></div>
+    <div class="shop-item"><div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-snow"/></svg><div><strong>Freeze</strong><small>Lv <span id="shop-level-freeze">2</span> — Bekukan lebih lama</small></div></div><button id="btn-buy-freeze" class="btn-buy" type="button">BELI <span>150</span></button></div>
+    <div class="shop-item shop-item-new"><div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-coin-multi"/></svg><div><strong>Coin Multiplier</strong><small>Lv <span id="shop-level-coin">1</span> — Koin ×<span id="shop-coin-mult">1</span></small></div></div><button id="btn-buy-coin" class="btn-buy" type="button">BELI <span>100</span></button></div>
+    <div class="shop-item shop-item-new"><div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-life"/></svg><div><strong>Extra Life</strong><small>Lv <span id="shop-level-life">0</span> — +<span id="shop-life-bonus">0</span> nyawa awal</small></div></div><button id="btn-buy-life" class="btn-buy" type="button">BELI <span>200</span></button></div>
+    <div class="shop-item shop-item-new"><div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-combo"/></svg><div><strong>Combo Duration</strong><small>Lv <span id="shop-level-combo">1</span> — Combo bertahan lebih lama</small></div></div><button id="btn-buy-combo" class="btn-buy" type="button">BELI <span>120</span></button></div>
+    <div class="shop-item shop-item-new"><div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-magnet"/></svg><div><strong>Magnet Range</strong><small>Lv <span id="shop-level-magnet">1</span> — Tarik koin dari jauh</small></div></div><button id="btn-buy-magnet" class="btn-buy" type="button">BELI <span>140</span></button></div>
+    <div class="shop-item shop-item-new"><div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-crit"/></svg><div><strong>Critical Hit</strong><small>Lv <span id="shop-level-crit">0</span> — <span id="shop-crit-chance">0</span>% chance ×3 damage</small></div></div><button id="btn-buy-crit" class="btn-buy" type="button">BELI <span>180</span></button></div>
+    <div class="shop-item shop-item-new"><div class="shop-item-label"><svg class="shop-ico" viewBox="0 0 24 24"><use href="#i-revive"/></svg><div><strong>Auto Revive</strong><small>Lv <span id="shop-level-revive">0</span> — +<span id="shop-revive-bonus">0</span> revive/hari</small></div></div><button id="btn-buy-revive" class="btn-buy" type="button">BELI <span>250</span></button></div>
     <button id="btn-close-shop" class="btn-secondary" type="button">TUTUP</button>
   </div>
 </div>
 
-<!-- LEADERBOARD -->
 <div id="modal-leaderboard" class="modal hidden">
   <div class="modal-box">
     <h2><svg class="ico-lg gold"><use href="#i-trophy"/></svg> PAPAN PERINGKAT</h2>
@@ -477,15 +360,11 @@
       <button class="lb-tab" data-tab="daily" type="button">DAILY</button>
       <button class="lb-tab" data-tab="coop" type="button">CO-OP</button>
     </div>
-    <table class="leaderboard-table">
-      <thead><tr><th>#</th><th>NAMA</th><th>LVL</th><th>SKOR</th></tr></thead>
-      <tbody id="leaderboard-body"><tr><td colspan="4" class="loading-text">Memuat...</td></tr></tbody>
-    </table>
+    <table class="leaderboard-table"><thead><tr><th>#</th><th>NAMA</th><th>LVL</th><th>SKOR</th></tr></thead><tbody id="leaderboard-body"><tr><td colspan="4" class="loading-text">Memuat...</td></tr></tbody></table>
     <button id="btn-close-leaderboard" class="btn-secondary" type="button">TUTUP</button>
   </div>
 </div>
 
-<!-- ACHIEVEMENTS -->
 <div id="modal-achievements" class="modal hidden">
   <div class="modal-box modal-achievements-box">
     <h2><svg class="ico-lg gold"><use href="#i-trophy"/></svg> PENCAPAIAN</h2>
@@ -523,7 +402,6 @@
   </div>
 </div>
 
-<!-- LOADOUT -->
 <div id="modal-loadout" class="modal hidden">
   <div class="modal-box">
     <h2>PILIH 2 SKILL</h2>
@@ -538,7 +416,6 @@
   </div>
 </div>
 
-<!-- RESULT -->
 <div id="modal-result" class="modal hidden">
   <div class="modal-box">
     <div class="result-icon-wrap"><svg id="result-icon" class="result-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div>
@@ -558,7 +435,6 @@
   </div>
 </div>
 
-<!-- REVIVE -->
 <div id="modal-revive" class="modal hidden">
   <div class="modal-box revive-box">
     <div class="revive-icon-wrap"><svg class="revive-icon" viewBox="0 0 24 24"><use href="#i-heart"/></svg></div>
@@ -582,7 +458,6 @@
   </div>
 </div>
 
-<!-- ENDLESS -->
 <div id="modal-endless" class="modal hidden">
   <div class="modal-box">
     <h2><svg class="ico-lg"><use href="#i-star"/></svg> ENDLESS MODE</h2>
@@ -602,7 +477,6 @@
   </div>
 </div>
 
-<!-- DAILY -->
 <div id="modal-daily" class="modal hidden">
   <div class="modal-box">
     <h2><svg class="ico-lg gold"><use href="#i-trophy"/></svg> DAILY CHALLENGE</h2>
@@ -629,7 +503,6 @@
   </div>
 </div>
 
-<!-- MP HUB -->
 <div id="modal-mp-hub" class="modal hidden">
   <div class="modal-box">
     <h2><svg class="ico-lg"><use href="#i-users"/></svg> MAIN BARENG TEMAN</h2>
@@ -638,9 +511,7 @@
     <button id="btn-mp-join" class="btn-secondary mp-btn" type="button"><svg class="ico"><use href="#i-wifi"/></svg><span>MASUK ROOM (GUEST)</span></button>
     <div class="mp-mode-select">
       <div class="mp-mode-label">MODE PERMAINAN:</div>
-      <div class="mp-mode-buttons">
-        <button id="mp-mode-coop" class="mp-mode-btn active" data-mode="coop" type="button">🤝 CO-OP</button>
-      </div>
+      <div class="mp-mode-buttons"><button id="mp-mode-coop" class="mp-mode-btn active" data-mode="coop" type="button">🤝 CO-OP</button></div>
     </div>
     <button id="btn-mp-close-hub" class="btn-secondary" type="button">TUTUP</button>
   </div>
@@ -650,7 +521,7 @@
   <div class="modal-box">
     <h2>MASUK ROOM</h2>
     <p class="mp-subtitle">Masukkan kode 4 huruf dari temanmu</p>
-    <div class="mp-code-input-wrap"><input id="mp-code-input" class="mp-code-input" type="text" maxlength="4" placeholder="ABCD" autocapitalize="characters" autocomplete="off" spellcheck="false" /></div>
+    <div class="mp-code-input-wrap"><input id="mp-code-input" class="mp-code-input" type="text" maxlength="4" placeholder="ABCD" autocapitalize="characters" autocomplete="off" spellcheck="false"/></div>
     <div id="mp-join-status" class="mp-status mp-status-hidden"></div>
     <button id="btn-mp-do-join" class="btn-primary big" type="button"><svg class="ico"><use href="#i-wifi"/></svg><span>GABUNG</span></button>
     <button id="btn-mp-back-from-join" class="btn-secondary" type="button">KEMBALI</button>
@@ -663,7 +534,7 @@
     <div class="mp-room-code-display">
       <div class="mp-room-code-label">KODE ROOM</div>
       <div class="mp-room-code" id="mp-room-code">----</div>
-      <button id="btn-mp-copy-code" class="mp-copy-btn" type="button" title="Salin kode"><svg viewBox="0 0 24 24"><use href="#i-copy"/></svg></button>
+      <button id="btn-mp-copy-code" class="mp-copy-btn" type="button"><svg viewBox="0 0 24 24"><use href="#i-copy"/></svg></button>
     </div>
     <div class="mp-players-list">
       <div class="mp-player-slot" id="mp-slot-host"><div class="mp-slot-avatar">🎮</div><div class="mp-slot-info"><div class="mp-slot-name" id="mp-host-name">Menunggu...</div><div class="mp-slot-role">HOST</div></div><div class="mp-slot-status" id="mp-host-status">—</div></div>
@@ -697,17 +568,12 @@
   <div class="modal-box">
     <h2 id="math-quiz-title"><svg class="ico-lg"><use href="#i-bolt"/></svg> UNLOCK HERO</h2>
     <p class="mp-subtitle" id="math-quiz-hero-name" style="margin-bottom:12px;">Jawab 20 soal untuk membuka hero ini.</p>
-    <div class="math-quiz-header">
-      <div class="math-quiz-progress" id="math-quiz-progress">1/20</div>
-      <div class="math-quiz-timer" id="math-quiz-timer">60s</div>
-    </div>
+    <div class="math-quiz-header"><div class="math-quiz-progress" id="math-quiz-progress">1/20</div><div class="math-quiz-timer" id="math-quiz-timer">60s</div></div>
     <div id="math-quiz-body">
       <div class="math-question" id="math-question">1 + 1 = ?</div>
       <div class="math-options" id="math-options">
-        <button class="math-option" type="button">-</button>
-        <button class="math-option" type="button">-</button>
-        <button class="math-option" type="button">-</button>
-        <button class="math-option" type="button">-</button>
+        <button class="math-option" type="button">-</button><button class="math-option" type="button">-</button>
+        <button class="math-option" type="button">-</button><button class="math-option" type="button">-</button>
       </div>
       <div class="math-quiz-feedback" id="math-quiz-feedback"></div>
     </div>
