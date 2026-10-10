@@ -1,5 +1,5 @@
-const CACHE_NAME = 'pahlawan-bintang-v23.0.0';
-const CACHE_VERSION = '23.0.0';
+const CACHE_NAME = 'pahlawan-bintang-v23.1.0';
+const CACHE_VERSION = '23.1.0';
 const CORE_FILES = [
   './',
   './index.html',
