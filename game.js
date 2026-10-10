@@ -5671,3 +5671,531 @@ window.addEventListener('load', () => {
 // 20 HEROES + 10 UPGRADES + GALAXY MENU + FULL RESPONSIVE
 // =============================================================
 console.log('✅ [game.js] v21.0.0 LOADED — PART 4/4 COMPLETE');
+
+// =============================================================
+// PAHLAWAN BINTANG — game.js v23.0.0 — PART 6/6
+// 30 HEROES + VILLAIN NARRATIVE + DRAMATIC ZONES
+// =============================================================
+
+// =============================================================
+// V1. HERO DATA — TAMBAH 20 HERO BARU (10 villain + 10 minion)
+// =============================================================
+Object.assign(HERO_DATA, {
+  // ============ 10 VILLAIN HEROES (dari bos yang dikalahkan) ============
+  inferno_boss:   { id:'inferno_boss',   name:'Inferno',       desc:'Api abadi dari neraka void — napas 3 arah membara.',   color:'#ff2200', accent:'#ffd700', bulletType:'inferno-meteor',   bulletCount:3, bulletPierce:2, bulletSize:9,  bulletSpeed:13, fireRate:180, sound:'fireWhoosh',  difficulty:'hard',   locked:true, quizTime:0, isVillain:true },
+  void_boss:      { id:'void_boss',      name:'Void Lord',     desc:'Penguasa kekosongan — rift pembelok ruang.',           color:'#c86bff', accent:'#ff77ff', bulletType:'void-rift',        bulletCount:2, bulletPierce:3, bulletSize:10, bulletSpeed:11, fireRate:200, sound:'arcaneOrb',   difficulty:'hard',   locked:true, quizTime:0, isVillain:true },
+  cryo_boss:      { id:'cryo_boss',      name:'Cryo Emperor',  desc:'Raja es abadi — pecahan kristal menembus.',            color:'#4de8ff', accent:'#ffffff', bulletType:'cryo-shatter',     bulletCount:4, bulletPierce:2, bulletSize:6,  bulletSpeed:15, fireRate:170, sound:'laser',       difficulty:'hard',   locked:true, quizTime:0, isVillain:true },
+  titan_boss:     { id:'titan_boss',     name:'Titan Prime',   desc:'Penjaga inti galaksi — hantaman seismik.',             color:'#1abc9c', accent:'#00ffcc', bulletType:'titan-quake',      bulletCount:1, bulletPierce:4, bulletSize:16, bulletSpeed:10, fireRate:260, sound:'cannonBlast', difficulty:'hard',   locked:true, quizTime:0, isVillain:true },
+  solar_boss:     { id:'solar_boss',     name:'Solar Wraith',  desc:'Matahari yang marah — pancaran api super.',            color:'#ffaa00', accent:'#ffd700', bulletType:'solar-flare',      bulletCount:5, bulletPierce:1, bulletSize:7,  bulletSpeed:14, fireRate:190, sound:'fireWhoosh',  difficulty:'hard',   locked:true, quizTime:0, isVillain:true },
+  omega_boss:     { id:'omega_boss',     name:'Omega',         desc:'Akhir dari segalanya — beam penghancur.',              color:'#ff0055', accent:'#ffd700', bulletType:'omega-beam',       bulletCount:3, bulletPierce:5, bulletSize:8,  bulletSpeed:16, fireRate:200, sound:'laser',       difficulty:'hard',   locked:true, quizTime:0, isVillain:true },
+  abyss_boss:     { id:'abyss_boss',     name:'Abyss Sovereign', desc:'Penguasa jurang — tentakel void melingkar.',         color:'#8b00ff', accent:'#ff00ff', bulletType:'abyss-tendril',    bulletCount:6, bulletPierce:1, bulletSize:6,  bulletSpeed:12, fireRate:210, sound:'ghostWail',   difficulty:'hard',   locked:true, quizTime:0, isVillain:true },
+  nemesis_boss:   { id:'nemesis_boss',   name:'Nemesis',       desc:'Bayangan dirimu sendiri — spiral penghancur.',         color:'#ff2200', accent:'#ffd700', bulletType:'nemesis-spiral',   bulletCount:4, bulletPierce:2, bulletSize:9,  bulletSpeed:13, fireRate:180, sound:'dragonRoar',  difficulty:'hard',   locked:true, quizTime:0, isVillain:true },
+  abyss2_boss:    { id:'abyss2_boss',    name:'Abyss²',        desc:'Bentuk terkuat Abyss — void berlapis ganda.',          color:'#8b00ff', accent:'#ffffff', bulletType:'abyss2-void',      bulletCount:5, bulletPierce:3, bulletSize:8,  bulletSpeed:14, fireRate:170, sound:'ghostWail',   difficulty:'hard',   locked:true, quizTime:0, isVillain:true },
+  eternity_boss:  { id:'eternity_boss',  name:'Eternity',      desc:'Awal dan akhir — bintang purba penghancur.',           color:'#ffd700', accent:'#ffffff', bulletType:'eternity-star',    bulletCount:7, bulletPierce:4, bulletSize:9,  bulletSpeed:15, fireRate:160, sound:'magicSpark',  difficulty:'hard',   locked:true, quizTime:0, isVillain:true },
+
+  // ============ 10 MINION HEROES (unlock via MTK) ============
+  jelly_hero:     { id:'jelly_hero',     name:'Jelly Bouncer', desc:'Bola jelly memantul dengan tembakan bergelombang.',   color:'#ff4757', accent:'#ffd700', bulletType:'jelly-bounce',     bulletCount:3, bulletPierce:1, bulletSize:7,  bulletSpeed:12, fireRate:170, sound:'rapid',       difficulty:'easy',   locked:true, quizTime:60 },
+  donut_hero:     { id:'donut_hero',     name:'Donut Roller',  desc:'Donat berputar dengan tembakan spiral.',              color:'#fa8231', accent:'#ff78ae', bulletType:'donut-spiral',     bulletCount:4, bulletPierce:1, bulletSize:6,  bulletSpeed:13, fireRate:160, sound:'rapid',       difficulty:'easy',   locked:true, quizTime:60 },
+  cloud_hero:     { id:'cloud_hero',     name:'Cloud Puff',    desc:'Awan lembut dengan tembakan menyebar pelan.',         color:'#f1f2f6', accent:'#70a1ff', bulletType:'cloud-puff',       bulletCount:3, bulletPierce:1, bulletSize:9,  bulletSpeed:10, fireRate:200, sound:'magicSpark',  difficulty:'easy',   locked:true, quizTime:60 },
+  crystal_hero:   { id:'crystal_hero',   name:'Crystal Shard', desc:'Kristal tajam menembus 2 musuh sekaligus.',           color:'#00d2d3', accent:'#ffffff', bulletType:'crystal-shard',    bulletCount:2, bulletPierce:2, bulletSize:7,  bulletSpeed:14, fireRate:180, sound:'magicSpark',  difficulty:'easy',   locked:true, quizTime:60 },
+  splitter_hero:  { id:'splitter_hero',  name:'Split Bomb',    desc:'Tembakan yang membelah jadi dua.',                    color:'#ff7f50', accent:'#ffd700', bulletType:'split-bullet',     bulletCount:1, bulletPierce:1, bulletSize:10, bulletSpeed:12, fireRate:200, sound:'cannonBlast', difficulty:'medium', locked:true, quizTime:60 },
+  triangle_hero:  { id:'triangle_hero',  name:'Tri Dash',      desc:'Tembakan cepat tiga arah zigzag.',                    color:'#ffa502', accent:'#ffd700', bulletType:'tri-zigzag',       bulletCount:3, bulletPierce:1, bulletSize:6,  bulletSpeed:16, fireRate:140, sound:'rapid',       difficulty:'easy',   locked:true, quizTime:60 },
+  hexagon_hero:   { id:'hexagon_hero',   name:'Hex Tank',      desc:'Tembakan lambat tapi damage besar.',                  color:'#1e90ff', accent:'#ffd700', bulletType:'hex-heavy',        bulletCount:2, bulletPierce:3, bulletSize:11, bulletSpeed:10, fireRate:240, sound:'cannonBlast', difficulty:'medium', locked:true, quizTime:60 },
+  star_enemy_hero:{ id:'star_enemy_hero',name:'Star Shooter',  desc:'Bintang berkilau, tembakan menyilang.',               color:'#ffd700', accent:'#ffffff', bulletType:'star-cross',       bulletCount:4, bulletPierce:1, bulletSize:7,  bulletSpeed:14, fireRate:180, sound:'magicSpark',  difficulty:'easy',   locked:true, quizTime:60 },
+  diamond_hero:   { id:'diamond_hero',   name:'Diamond Blast', desc:'Berlian keras, tembakan memantul.',                   color:'#70a1ff', accent:'#ffffff', bulletType:'diamond-richochet',bulletCount:2, bulletPierce:2, bulletSize:8,  bulletSpeed:13, fireRate:190, sound:'laser',       difficulty:'medium', locked:true, quizTime:60 },
+  worm_hero:      { id:'worm_hero',      name:'Worm Tunnel',   desc:'Cacing void dengan tembakan bertahap.',               color:'#a55eea', accent:'#ff77ff', bulletType:'worm-multi',       bulletCount:3, bulletPierce:2, bulletSize:7,  bulletSpeed:13, fireRate:170, sound:'shuriken',    difficulty:'medium', locked:true, quizTime:60 }
+});
+
+// Refresh ALL_HEROES
+Object.keys(HERO_DATA).forEach(id => { if (!ALL_HEROES.includes(id)) ALL_HEROES.push(id); });
+
+// =============================================================
+// V2. UNLOCK ROUTING — Siapa unlock bagaimana
+// =============================================================
+// Hero awal (10) — unlock via MTK easy
+const STARTER_HEROES = ['robot','cannon','dragon','cat','unicorn','phoenix','ninja','wizard','archer','ghost'];
+
+// Minion heroes — unlock via MTK (bisa easy/medium)
+const MINION_HEROES = ['jelly_hero','donut_hero','cloud_hero','crystal_hero','splitter_hero','triangle_hero','hexagon_hero','star_enemy_hero','diamond_hero','worm_hero'];
+
+// Villain heroes — unlock via defeat boss
+const VILLAIN_HERO_FROM_BOSS = {
+  5:  'inferno_boss',
+  10: 'void_boss',
+  15: 'cryo_boss',
+  20: 'titan_boss',
+  25: 'solar_boss',
+  30: 'omega_boss',
+  35: 'abyss_boss',
+  40: 'nemesis_boss',
+  45: 'abyss2_boss',
+  50: 'eternity_boss'
+};
+
+// Narasi bos berubah jadi baik
+const BOSS_REDEMPTION_NARRATIVES = {
+  inferno_boss: {
+    title: 'INFERNO DIKALAHKAN!',
+    sub: 'Api kemarahan padam, digantikan cahaya',
+    text: '"Aku... terbakar oleh kemarahanku sendiri. Void mengendalikanku. Sekarang aku sadar. Izinkan aku bertarung di sisimu, Pahlawan."'
+  },
+  void_boss: {
+    title: 'VOID LORD DIBEBASKAN!',
+    sub: 'Kekosongan menyingkir, jiwa kembali',
+    text: '"Ribuan tahun dalam kegelapan... dan kau membebaskanku. Aku berutang nyawa padamu. Biar rift ini menembus musuh, bukan teman."'
+  },
+  cryo_boss: {
+    title: 'CRYO EMPEROR LULUH!',
+    sub: 'Es mencair, hati menghangat',
+    text: '"Beku selama ini... membekukan hatiku juga. Terima kasih telah menghangatkanku kembali. Es-ku akan melindungi, bukan melukai."'
+  },
+  titan_boss: {
+    title: 'TITAN PRIME TUNDUK!',
+    sub: 'Raksasa mengenali kekuatan sejati',
+    text: '"Kekuatan tanpa arah hanyalah kehancuran. Kau menunjukkan arah. Aku akan menjadi tameng bagimu, Pahlawan Bintang."'
+  },
+  solar_boss: {
+    title: 'SOLAR WRAITH REDA!',
+    sub: 'Matahari marah kembali bersinar',
+    text: '"Amukan matahari telah reda. Aku... malu. Tapi aku akan menebusnya dengan cahaya yang menerangi jalanmu."'
+  },
+  omega_boss: {
+    title: 'OMEGA DIHANCURKAN!',
+    sub: 'Akhir menjadi awal baru',
+    text: '"Aku adalah akhir... tapi kau menunjukkan awal baru. Panggil aku, dan aku akan jadi senjata pamungkasmu."'
+  },
+  abyss_boss: {
+    title: 'ABYSS SOVEREIGN TERBELAH!',
+    sub: 'Jurang menemukan cahaya',
+    text: '"Di dalam jurang, aku mencari cahaya. Kau... adalah cahaya itu. Tentakel-ku akan melindungi galaksi bersamamu."'
+  },
+  nemesis_boss: {
+    title: 'NEMESIS MENGAKUI!',
+    sub: 'Bayangan menyatu dengan terang',
+    text: '"Aku adalah bayanganmu yang terpisah. Sekarang, terangmu adalah milikku juga. Bersama, kita tak terkalahkan."'
+  },
+  abyss2_boss: {
+    title: 'ABYSS² DIKALAHKAN!',
+    sub: 'Lapisan terdalam telah sembuh',
+    text: '"Bahkan lapisan terdalam pun bisa disembuhkan oleh keberanian. Aku Abyss², dan aku berdiri bersamamu."'
+  },
+  eternity_boss: {
+    title: 'ETERNITY BERTEMU DAMAI!',
+    sub: 'Awal dan akhir menjadi satu',
+    text: '"Aku awal, aku akhir. Tapi kau... adalah teman di antara keduanya. Bintang-bintang purba akan menyertaimu selamanya."'
+  }
+};
+
+// =============================================================
+// V3. MODAL NARASI BOS
+// =============================================================
+function showBossRedemptionNarrative(heroId) {
+  const hero = HERO_DATA[heroId];
+  if (!hero) return;
+  const narrative = BOSS_REDEMPTION_NARRATIVES[heroId] || {
+    title: hero.name.toUpperCase() + ' DIKALAHKAN!',
+    sub: 'Kegelapan sirna',
+    text: '"Aku tersadar. Izinkan aku bergabung."'
+  };
+
+  const $ = id => document.getElementById(id);
+  const titleEl = $('bn-title');
+  const subEl = $('bn-sub');
+  const narrEl = $('bn-narrative-text');
+  const rewardName = $('bn-reward-name');
+  const rewardIcon = $('bn-reward-icon');
+  const villainSvg = $('bn-villain-svg');
+  const heroSvg = $('bn-hero-svg');
+
+  if (titleEl) titleEl.innerText = narrative.title;
+  if (subEl) subEl.innerText = narrative.sub;
+  if (narrEl) narrEl.innerText = narrative.text;
+  if (rewardName) rewardName.innerText = hero.name;
+  if (rewardIcon) {
+    rewardIcon.innerHTML = `<svg viewBox="0 0 40 40"><use href="#i-${heroId}"/></svg>`;
+  }
+  if (villainSvg) villainSvg.innerHTML = `<use href="#i-${heroId}"/>`;
+  if (heroSvg) heroSvg.innerHTML = `<use href="#i-${currentActor || 'robot'}"/>`;
+
+  const modal = $('modal-boss-narrative');
+  if (modal) modal.classList.remove('hidden');
+  try { sounds.playUnlock(); } catch(e) {}
+  try { triggerVibrate([100, 50, 100, 50, 300]); } catch(e) {}
+  triggerScreenFlash(0.7);
+}
+
+// =============================================================
+// V4. HOOK — Level Complete → chain narasi bos → unlock zona
+// =============================================================
+const _origLevelComplete23 = levelComplete;
+levelComplete = async function() {
+  const lvl = (levelsData[currentLevelIndex] || {}).level || 0;
+
+  // Cek villain unlock dari bos
+  const villainId = VILLAIN_HERO_FROM_BOSS[lvl];
+  let villainUnlocked = false;
+  if (villainId && !isHeroUnlocked(villainId)) {
+    await unlockHero(villainId);
+    villainUnlocked = true;
+    console.log('🎉 [Villain Unlock]', villainId);
+  }
+
+  // Cek zona baru
+  let zoneUnlockedId = null;
+  if (lvl > 0 && lvl % 10 === 0 && lvl < 50) {
+    const nextZoneId = Math.floor(lvl / 10) + 1;
+    if (!isZoneUnlocked(nextZoneId)) {
+      unlockedZones.push(nextZoneId);
+      await saveUnlockedZones();
+      zoneUnlockedId = nextZoneId;
+      console.log('🌌 [Zone Unlock]', nextZoneId);
+    }
+  }
+  if (lvl === 50 && !isZoneUnlocked(5)) {
+    unlockedZones.push(5);
+    await saveUnlockedZones();
+    zoneUnlockedId = 5;
+  }
+
+  // Panggil original (tampilkan result + narrative)
+  await _origLevelComplete23.call(this);
+
+  // Setelah result modal & narrative story, tampilkan boss redemption + zone unlock
+  setTimeout(() => {
+    if (villainUnlocked) {
+      // Tutup result modal dulu
+      const resultModal = document.getElementById('modal-result');
+      if (resultModal) resultModal.classList.add('hidden');
+      showBossRedemptionNarrative(villainId);
+      // Chain ke zone setelah boss narrative
+      if (zoneUnlockedId) {
+        const origOk = document.getElementById('btn-boss-narrative-ok');
+        if (origOk) {
+          const origHandler = origOk.onclick;
+          origOk.onclick = () => {
+            if (origHandler) origHandler();
+            setTimeout(() => showZoneUnlockModal(zoneUnlockedId), 400);
+            origOk.onclick = origHandler;
+          };
+        }
+      }
+    } else if (zoneUnlockedId) {
+      setTimeout(() => showZoneUnlockModal(zoneUnlockedId), 300);
+    }
+  }, 800);
+};
+
+// =============================================================
+// V5. HOOK BUTTON — Terima narasi bos
+// =============================================================
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const btnOk = document.getElementById('btn-boss-narrative-ok');
+    if (btnOk) {
+      btnOk.addEventListener('click', () => {
+        const modal = document.getElementById('modal-boss-narrative');
+        if (modal) modal.classList.add('hidden');
+        try { sounds.playPowerup(); } catch(e) {}
+        updateActorGridUI();
+        // Tampilkan result modal kembali
+        const resultModal = document.getElementById('modal-result');
+        if (resultModal && !resultModal.classList.contains('hidden')) {
+          // Sudah tampil, biarkan
+        } else if (resultModal) {
+          resultModal.classList.remove('hidden');
+        }
+      });
+    }
+  }, 1000);
+});
+
+// =============================================================
+// V6. ZONA DRAMATIC — Enhancement ambient effects
+// =============================================================
+// Override initZoneParticles untuk lebih dramatis
+const _origInitZoneParticles = initZoneParticles;
+initZoneParticles = function(zone) {
+  _origInitZoneParticles.call(this, zone);
+  if (!zone || !VIRTUAL_WIDTH) return;
+  const W = VIRTUAL_WIDTH, H = VIRTUAL_HEIGHT;
+
+  // Extra ambient based on zone
+  if (zone.id === 1) {
+    // BUMI — lightning + birds silhoutte
+    for (let i = 0; i < 2; i++) {
+      zoneBackgroundParticles.push({
+        type: 'lightning', x: Math.random() * W, y: 0,
+        life: 0, delay: Math.random() * 6,
+        bolts: []
+      });
+    }
+  } else if (zone.id === 2) {
+    // LUAR ANGKASA — asteroid field
+    for (let i = 0; i < 8; i++) {
+      zoneBackgroundParticles.push({
+        type: 'asteroid',
+        x: Math.random() * W, y: Math.random() * H * 0.7,
+        size: 6 + Math.random() * 14,
+        rot: Math.random() * Math.PI * 2,
+        rotSpd: (Math.random() - 0.5) * 0.03,
+        vx: -0.3 - Math.random() * 0.4,
+        vy: 0.1 + Math.random() * 0.2
+      });
+    }
+  } else if (zone.id === 3) {
+    // GALAKSI — nebula clouds swirling
+    for (let i = 0; i < 3; i++) {
+      zoneBackgroundParticles.push({
+        type: 'nebula_swirl',
+        x: W * (0.2 + i * 0.3), y: H * (0.3 + Math.random() * 0.3),
+        size: 80 + Math.random() * 60,
+        phase: Math.random() * Math.PI * 2,
+        color: ['#c86bff', '#ff2e88', '#7a2bb8'][i]
+      });
+    }
+  } else if (zone.id === 4) {
+    // SELURUH ALAM — dimensional glitch
+    for (let i = 0; i < 5; i++) {
+      zoneBackgroundParticles.push({
+        type: 'glitch',
+        x: Math.random() * W, y: Math.random() * H * 0.7,
+        w: 40 + Math.random() * 60,
+        h: 4 + Math.random() * 8,
+        life: 0, delay: Math.random() * 5
+      });
+    }
+  } else if (zone.id === 5) {
+    // BIMA SAKTI — gravitational lensing rings
+    for (let i = 0; i < 2; i++) {
+      zoneBackgroundParticles.push({
+        type: 'lens_ring',
+        x: W * 0.5, y: H * 0.15,
+        radius: 100 + i * 40,
+        phase: 0, speed: 0.02 + i * 0.01
+      });
+    }
+  }
+};
+
+// Override drawing untuk efek tambahan
+const _origDrawZoneLiving = drawZoneLiving;
+drawZoneLiving = function(ctx, W, H, zone) {
+  _origDrawZoneLiving.call(this, ctx, W, H, zone);
+  const t = zoneAmbientTime;
+
+  // Extra effects
+  zoneBackgroundParticles.forEach(p => {
+    if (p.type === 'lightning') {
+      p.delay -= 0.016;
+      if (p.delay > 0) return;
+      if (!p.bolts || p.bolts.length === 0) {
+        // Generate bolts
+        p.bolts = [];
+        let bx = p.x, by = 0;
+        const targetY = H * 0.7;
+        while (by < targetY) {
+          p.bolts.push({ x: bx, y: by });
+          bx += (Math.random() - 0.5) * 30;
+          by += 20 + Math.random() * 20;
+        }
+        p.bolts.push({ x: bx, y: by });
+      }
+      p.life += 0.05;
+      if (p.life > 1) { p.life = 0; p.bolts = []; p.delay = 5 + Math.random() * 8; return; }
+      ctx.save();
+      ctx.globalAlpha = 1 - p.life;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = '#00d2ff';
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      p.bolts.forEach((pt, i) => { i === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y); });
+      ctx.stroke();
+      ctx.restore();
+    } else if (p.type === 'asteroid') {
+      p.x += p.vx; p.y += p.vy;
+      p.rot += p.rotSpd;
+      if (p.x < -30) p.x = W + 30;
+      if (p.y > H + 30) p.y = -30;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = 'rgba(120,110,100,0.7)';
+      ctx.beginPath();
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * Math.PI * 2;
+        const r = p.size * (0.75 + Math.random() * 0.25);
+        i === 0 ? ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r) : ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    } else if (p.type === 'nebula_swirl') {
+      p.phase += 0.008;
+      ctx.save();
+      ctx.globalAlpha = 0.15 + Math.sin(p.phase) * 0.05;
+      const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+      grad.addColorStop(0, p.color);
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (p.type === 'glitch') {
+      p.delay -= 0.016;
+      if (p.delay > 0) return;
+      p.life += 0.1;
+      if (p.life > 1) { p.life = 0; p.delay = 2 + Math.random() * 4; return; }
+      ctx.save();
+      ctx.globalAlpha = 1 - p.life;
+      ctx.fillStyle = ['#ff00ff', '#00ffff', '#ffffff'][Math.floor(Math.random() * 3)];
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.restore();
+    } else if (p.type === 'lens_ring') {
+      p.phase += p.speed;
+      const scale = 1 + Math.sin(p.phase) * 0.08;
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, p.radius * scale, p.radius * 0.32 * scale, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+
+  // Vignette dramatis
+  const vig = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W, H) * 0.7);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(0.7, 'rgba(0,0,0,0.15)');
+  vig.addColorStop(1, `rgba(0,0,0,${0.4 + Math.sin(t * 0.5) * 0.05})`);
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
+};
+
+// =============================================================
+// V7. ZONA INTRO CINEMATIC
+// =============================================================
+const _origStartCurrentLevel23 = startCurrentLevel;
+startCurrentLevel = async function() {
+  const lvl = (levelsData[currentLevelIndex] || { level: 1 }).level || 1;
+  const prevLvl = lvl - 1;
+
+  // Deteksi jika masuk zona baru (level 1, 11, 21, 31, 41)
+  const isZoneEntry = [1, 11, 21, 31, 41].includes(lvl);
+  if (isZoneEntry) {
+    const zone = getZoneByLevel(lvl);
+    showZoneEntryCinematic(zone);
+    await new Promise(r => setTimeout(r, 2600));
+  }
+
+  await _origStartCurrentLevel23.call(this);
+};
+
+function showZoneEntryCinematic(zone) {
+  const banner = document.getElementById('level-intro');
+  if (!banner) return;
+  const numEl = document.getElementById('level-intro-number');
+  const nameEl = document.getElementById('level-intro-name');
+  const missionEl = document.getElementById('level-intro-mission');
+  if (numEl) numEl.innerText = '✦';
+  if (nameEl) nameEl.innerText = zone.name;
+  if (missionEl) missionEl.innerText = zone.subtitle.toUpperCase() + ' — ' + zone.description.slice(0, 40) + '...';
+  banner.classList.remove('hidden');
+  banner.classList.remove('fade-out');
+  banner.classList.remove('stage-clear');
+  banner.classList.add('boss-approach');
+  void banner.offsetWidth;
+  try { sounds.playBossWarning(); } catch(e) {}
+  try { triggerVibrate([200, 100, 200]); } catch(e) {}
+  triggerScreenFlash(0.8);
+  setTimeout(() => {
+    banner.classList.add('fade-out');
+    banner.classList.remove('boss-approach');
+    setTimeout(() => banner.classList.add('hidden'), 500);
+  }, 2400);
+}
+
+// =============================================================
+// V8. SCARIER BOSS SPRITES — Redesign drawBossUniqueShape
+// =============================================================
+const _origDrawBossUniqueShape = drawBossUniqueShape;
+drawBossUniqueShape = function(ctx, m, S, theme, bossNum) {
+  const size = m.size;
+  const t = m.timeAlive || 0;
+  const coreOpen = m.coreOpen;
+  const rot = m.aura || 0;
+
+  // Menacing aura for all bosses
+  ctx.save();
+  const auraPulse = 0.85 + Math.sin(t * 4) * 0.15;
+  const auraGrad = ctx.createRadialGradient(0, 0, size * 0.7, 0, 0, size * 1.4 * auraPulse);
+  auraGrad.addColorStop(0, 'rgba(255,0,60,0)');
+  auraGrad.addColorStop(0.5, 'rgba(255,0,60,0.15)');
+  auraGrad.addColorStop(1, 'rgba(255,0,60,0)');
+  ctx.fillStyle = auraGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, size * 1.4 * auraPulse, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Angry eyes glow for all bosses
+  ctx.save();
+  ctx.shadowColor = '#ff2200';
+  ctx.shadowBlur = 12 + Math.sin(t * 6) * 4;
+  ctx.fillStyle = '#ff2200';
+  ctx.beginPath();
+  ctx.arc(-size * 0.3, -size * 0.15, size * 0.06, 0, Math.PI * 2);
+  ctx.arc(size * 0.3, -size * 0.15, size * 0.06, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  ctx.restore();
+
+  // Call original for base shape
+  _origDrawBossUniqueShape.call(this, ctx, m, S, theme, bossNum);
+
+  // Add menacing scars/cracks overlay
+  ctx.save();
+  ctx.globalAlpha = 0.4 + Math.sin(t * 3) * 0.15;
+  ctx.strokeStyle = '#ff2200';
+  ctx.lineWidth = 2 * S;
+  ctx.lineCap = 'round';
+  // Jagged crack pattern
+  for (let i = 0; i < 3; i++) {
+    const a = (t * 0.5 + i * 2.1) % (Math.PI * 2);
+    const startR = size * 0.4;
+    const endR = size * 0.95;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * startR, Math.sin(a) * startR);
+    for (let s = 1; s <= 4; s++) {
+      const mid = startR + (endR - startR) * (s / 4);
+      const jitter = (Math.random() - 0.5) * size * 0.15;
+      ctx.lineTo(Math.cos(a) * mid + jitter, Math.sin(a) * mid + jitter);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+};
+
+// =============================================================
+// V9. UPDATE ACTOR GRID — 30 hero dengan bagian terpisah
+// =============================================================
+const _origUpdateActorGridUI = updateActorGridUI;
+updateActorGridUI = function() {
+  _origUpdateActorGridUI.call(this);
+  // Ensure all 30 cards show correct state
+  document.querySelectorAll('.actor-card').forEach(card => {
+    const heroId = card.dataset.actor;
+    if (!heroId) return;
+    const unlocked = isHeroUnlocked(heroId);
+    card.classList.toggle('locked', !unlocked);
+    card.classList.toggle('unlocked', unlocked);
+    // Mark villain heroes
+    if (HERO_DATA[heroId] && HERO_DATA[heroId].isVillain) {
+      card.classList.add('villain-hero');
+    }
+  });
+};
+
+console.log('✅ [game.js] v23.0.0 — IMMERSIVE EDITION LOADED');
