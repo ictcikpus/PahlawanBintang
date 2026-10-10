@@ -1,14 +1,13 @@
 // =============================================================
-// PAHLAWAN BINTANG — game.js v20.9.1
-// "Friendly & Variety Edition + Stage Clear Delay"
+// PAHLAWAN BINTANG — game.js v20.10.0
+// "Fluid Scaling + Boss Minion Phase Edition"
 // ------------------------------------------------------------
-// v20.9.1 NEW:
-//   1. Stage Clear banner + delay 2.5s (normal) / 3.5s (boss)
-//      supaya hero bisa collect koin & bonus sebelum narasi
-//   2. levelClearPending + stageClearTimer state
-//   3. Boss death via bullet/bomb → delay + banner
-//   4. Normal level complete → delay + banner
-//   5. Endless wave clear → delay + banner
+// v20.10.0 NEW:
+//   1. Fluid scaling — arena menyesuaikan ukuran device
+//   2. Boss level: fase minion dulu, baru boss muncul
+//   3. Loading & intro lebih cepat
+//   4. Ground & player Y proporsional viewport
+//   5. Stage clear delay tetap (2.5s normal / 3.5s boss)
 // =============================================================
 
 // =============================================================
@@ -104,7 +103,7 @@ const ALL_HEROES = Object.keys(HERO_DATA);
 const HERO_DEFAULT_UNLOCKED = ['robot'];
 
 // =============================================================
-// 🔥 v20.9 — ENVIRONMENT DETECTION
+// 🔥 ENVIRONMENT DETECTION
 // =============================================================
 const IS_TOUCH_DEVICE = (
   ('ontouchstart' in window) ||
@@ -114,9 +113,6 @@ const IS_TOUCH_DEVICE = (
 const IS_DESKTOP = !IS_TOUCH_DEVICE || window.matchMedia('(pointer: fine)').matches;
 let desktopHintsVisible = false;
 
-// =============================================================
-// 🔥 v20.9 — EXTENDED ENEMY TYPES
-// =============================================================
 const ENEMY_EXTENDED_TYPES = ['triangle', 'hexagon', 'star', 'diamond', 'worm'];
 
 // =============================================================
@@ -326,7 +322,6 @@ async function setSavedLevel(levelNum) {
   const current = await getSavedLevel();
   if (levelNum > current) {
     await DB.set('pahlawan_last_level', String(levelNum));
-    console.log('💾 [Progress] Level tersimpan:', levelNum);
     const el = document.getElementById('saved-level-display');
     if (el) el.innerText = `Level ${levelNum}`;
   }
@@ -337,7 +332,6 @@ async function setSavedLevel(levelNum) {
 }
 async function resetProgress() {
   await DB.set('pahlawan_last_level', '1');
-  console.log('🔄 [Progress] Reset ke level 1');
   const el = document.getElementById('saved-level-display');
   if (el) el.innerText = 'Level 1';
 }
@@ -350,7 +344,6 @@ async function checkGameCompleted() {
   gameCompleted = raw === '1';
   const rawCert = await DB.get('pahlawan_certificate_data');
   try { bestCertificateData = rawCert ? JSON.parse(rawCert) : null; } catch(e) { bestCertificateData = null; }
-  console.log('🏆 [Completed]', gameCompleted, '| Cert:', bestCertificateData ? 'YES' : 'NO');
 }
 async function markGameCompleted(scoreVal) {
   gameCompleted = true;
@@ -411,10 +404,9 @@ let ACHIEVEMENTS_DATA = { categories: [], achievements: [] };
 
 async function loadAchievementsData() {
   try {
-    const res = await fetch('./achievements.json?v=20.7');
+    const res = await fetch('./achievements.json?v=20.10.0');
     if (res.ok) {
       ACHIEVEMENTS_DATA = await res.json();
-      console.log('🏆 [Ach] Loaded', ACHIEVEMENTS_DATA.achievements.length, 'achievements');
     }
   } catch(e) {
     console.warn('⚠️ [Ach] Failed to load achievements.json');
@@ -580,9 +572,7 @@ function renderAchievementGrid(filter) {
     else cls += ' locked';
     return `
       <div class="${cls}" data-ach-id="${a.id}">
-        <div class="ach-card-icon-wrap">
-          <svg class="ach-card-icon" viewBox="0 0 24 24"><use href="#${a.icon}"/></svg>
-        </div>
+        <div class="ach-card-icon-wrap"><svg class="ach-card-icon" viewBox="0 0 24 24"><use href="#${a.icon}"/></svg></div>
         <div class="ach-card-title">${escapeHtml(a.title)}</div>
         <div class="ach-card-desc">${escapeHtml(a.desc)}</div>
         <div class="ach-card-rarity">${a.rarity.toUpperCase()}</div>
@@ -1323,9 +1313,14 @@ let nextBossSpawnTime = 0;
 let levelStartTime = 0;
 let levelDamageTaken = 0;
 
-// 🔥 v20.9.1 — Delay after kill before level/narrative transition
+// 🔥 v20.9.1 — Stage clear delay
 let levelClearPending = false;
 let stageClearTimer = null;
+
+// 🔥 v20.10.0 — Boss phase state machine
+let bossPhase = 'minions';       // 'minions' | 'boss' | 'defeated'
+let bossMinionsTarget = 0;
+let bossMinionsKilled = 0;
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas ? canvas.getContext('2d') : null;
@@ -1512,12 +1507,14 @@ window.addEventListener('load', async () => {
   try { await loadGameData(); } catch (e) { levelsData = generate30Levels(); }
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=20.9.1').catch(err => console.log('SW Fail:', err));
+    navigator.serviceWorker.register('./sw.js?v=20.10.0').catch(err => console.log('SW Fail:', err));
   }
+
+  // 🔥 v20.10.0 — Loading lebih cepat
   setTimeout(() => {
     const loader = document.getElementById('loading-screen');
-    if (loader) { loader.classList.add('fade-out'); setTimeout(() => loader.remove(), 600); }
-  }, 900);
+    if (loader) { loader.classList.add('fade-out'); setTimeout(() => loader.remove(), 350); }
+  }, 400);
 });
 
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -1577,11 +1574,17 @@ function resizeCanvas() {
   }
 }
 
+// 🔥 v20.10.0 — FLUID SCALING: arena menyesuaikan ukuran device
 function updateGameScale() {
-  const baseW = 360, baseH = 640;
-  const scaleW = VIRTUAL_WIDTH / baseW;
-  const scaleH = VIRTUAL_HEIGHT / baseH;
-  GAME_SCALE = Math.min(Math.max(Math.min(scaleW, scaleH), 0.75), 1.8);
+  const diag = Math.sqrt(VIRTUAL_WIDTH * VIRTUAL_WIDTH + VIRTUAL_HEIGHT * VIRTUAL_HEIGHT);
+  const baseDiag = 734; // ~sqrt(360² + 640²)
+  let scale = diag / baseDiag;
+
+  // Clamp safety — jangan terlalu ekstrem
+  scale = Math.max(0.6, Math.min(scale, 3.5));
+
+  GAME_SCALE = scale;
+  console.log('📐 [Scale]', GAME_SCALE.toFixed(2), '| VP:', VIRTUAL_WIDTH, 'x', VIRTUAL_HEIGHT);
 }
 
 let _resizeRaf = null;
@@ -1648,7 +1651,7 @@ function recolorStars() {
 
 async function loadGameData() {
   try {
-    const [rl] = await Promise.all([fetch('./levels.json?v=20.9.1')]);
+    const [rl] = await Promise.all([fetch('./levels.json?v=20.10.0')]);
     if (rl.ok) levelsData = await rl.json();
   } catch (err) { levelsData = generate30Levels(); }
 }
@@ -1747,6 +1750,49 @@ function triggerHitStop(frames) {
   }
 }
 
+// 🔥 v20.10.0 — Boss phase helper functions
+function initBossPhase(levelNum, mode) {
+  bossPhase = 'minions';
+  bossMinionsKilled = 0;
+  if (mode === 'coop') bossMinionsTarget = 15;
+  else if (mode === 'endless') bossMinionsTarget = 8;
+  else if (mode === 'daily') bossMinionsTarget = 8 + (dailyBossIndex || 0) * 3;
+  else {
+    bossMinionsTarget = 8 + Math.floor(levelNum / 5) * 2;
+  }
+  console.log('👾 [BossPhase] Minions target:', bossMinionsTarget, '| Level:', levelNum, '| Mode:', mode);
+}
+
+function transitionToBossPhase() {
+  if (bossPhase !== 'minions') return;
+  bossPhase = 'boss';
+  console.log('👑 [BossPhase] → BOSS phase');
+
+  const banner = document.getElementById('level-intro');
+  if (banner) {
+    document.getElementById('level-intro-number').innerText = '⚠';
+    document.getElementById('level-intro-name').innerText = 'BOSS MUNCUL!';
+    document.getElementById('level-intro-mission').innerText = 'SIAP-SIAP!';
+    banner.classList.remove('hidden');
+    banner.classList.remove('fade-out');
+    banner.classList.remove('stage-clear');
+    banner.classList.add('boss-approach');
+    void banner.offsetWidth;
+    sounds.playBossWarning();
+    try { triggerVibrate([100, 50, 100, 50, 200]); } catch(e) {}
+    triggerScreenFlash(0.6);
+    setTimeout(() => {
+      banner.classList.add('fade-out');
+      banner.classList.remove('boss-approach');
+      setTimeout(() => banner.classList.add('hidden'), 500);
+    }, 1400);
+  }
+
+  setTimeout(() => {
+    if (typeof startSpawnLoop === 'function') startSpawnLoop();
+  }, 2000);
+}
+
 // =============================================================
 // 🔥 SPECTATOR MODE
 // =============================================================
@@ -1778,7 +1824,6 @@ function ensureOverlaysInert() {
 
 function startSelfSpectatorMode(reason) {
   if (mpSpectatorMode) return;
-  console.log('👻 [MP] SELF spectator START:', reason);
   mpSpectatorMode = true;
   mpSpectatorReady = false;
   mpSpectatorTimer = MP_SPECTATOR_WAIT_SECONDS;
@@ -2128,7 +2173,7 @@ function updateActorGridUI() {
 }
 
 // =============================================================
-// 🔥 v20.9 — DESKTOP HINTS SETUP & TOGGLE
+// 🔥 DESKTOP HINTS SETUP
 // =============================================================
 function setupDesktopHints($) {
   const hintsPanel = $('desktop-hints');
@@ -2267,9 +2312,6 @@ function setupJoystick() {
   console.log('✅ [Joystick] Ready');
 }
 
-// =============================================================
-// 🔥 FIRE BUTTON
-// =============================================================
 function setupFireButton() {
   const btn = document.getElementById('btn-fire');
   if (!btn) return;
@@ -2294,7 +2336,6 @@ function setupFireButton() {
   btn.addEventListener('pointercancel', release);
   btn.addEventListener('pointerleave', release);
   btn.addEventListener('lostpointercapture', release);
-
   console.log('✅ [Fire] Button ready');
 }
 
@@ -2422,7 +2463,6 @@ function setupEventListeners() {
   setupJoystick();
   setupFireButton();
 
-  // 🔥 v20.9 — KEYBOARD SHORTCUTS LENGKAP
   window.addEventListener('keydown', (e) => {
     const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
     if (tag === 'input' || tag === 'textarea') return;
@@ -2574,7 +2614,6 @@ function setupEventListeners() {
           monsters.splice(i, 1);
           monsters.forEach(mn => createBurstParticles3D(mn.x, mn.y, mn.color, 20));
           monsters = [];
-          // 🔥 v20.9.1 — Stage clear delay
           stopSpawnLoop();
           if (!levelClearPending) {
             levelClearPending = true;
@@ -2811,7 +2850,6 @@ function updateActorSelectionUI() {
   const ph = document.getElementById('pause-hero-name'); if (ph) ph.innerText = name;
 }
 
-// 🔥 v20.9 — Trigger skill via keyboard
 function triggerSkillByKey(skillType) {
   if (!isGameRunning || isGamePaused) return;
   if (mpSpectatorMode) return;
@@ -2862,11 +2900,16 @@ function goToMainMenu() {
 
   if (typeof window._hideDesktopHints === 'function') window._hideDesktopHints();
 
-  // 🔥 v20.9.1 — clean stage clear state
   if (stageClearTimer) { clearTimeout(stageClearTimer); stageClearTimer = null; }
   levelClearPending = false;
+  bossPhase = 'minions';
+  bossMinionsKilled = 0;
+  bossMinionsTarget = 0;
   const lvlBanner = document.getElementById('level-intro');
-  if (lvlBanner) lvlBanner.classList.remove('stage-clear');
+  if (lvlBanner) {
+    lvlBanner.classList.remove('stage-clear');
+    lvlBanner.classList.remove('boss-approach');
+  }
 
   stopSpawnLoop();
   mpStopHostSyncLoop();
@@ -3104,6 +3147,9 @@ function mpHostSendState() {
     totalKills: levelKills,
     gameRunning: isGameRunning, gamePaused: isGamePaused,
     theme: currentTheme.id,
+    bossPhase: bossPhase,
+    bossMinionsKilled: bossMinionsKilled,
+    bossMinionsTarget: bossMinionsTarget,
     flow: {
       phase: mpFlow.phase, levelIndex: mpFlow.levelIndex,
       phaseStartedAt: mpFlow.phaseStartedAt, introData: mpFlow.introData,
@@ -3163,6 +3209,9 @@ function mpApplyHostState(state) {
     mpGuestLives = state.guestLives;
     if (mpRole === 'guest') { lives = state.guestLives; updateLivesDisplay(); }
   }
+  if (state.bossPhase !== undefined) bossPhase = state.bossPhase;
+  if (state.bossMinionsKilled !== undefined) bossMinionsKilled = state.bossMinionsKilled;
+  if (state.bossMinionsTarget !== undefined) bossMinionsTarget = state.bossMinionsTarget;
   if (state.hostSpectator !== undefined && mpRole === 'guest') applyRemoteHostSpectator(state.hostSpectator);
   if (mpRole === 'guest' && state.guestSpectator !== undefined) {
     const shouldBeSpectator = !!state.guestSpectator;
@@ -3358,6 +3407,9 @@ function mpActuallyStartCoop() {
 
   isGameRunning = true; isGamePaused = false;
 
+  // 🔥 v20.10.0 — init boss phase (co-op mode)
+  initBossPhase(1, 'coop');
+
   mpFlow.phase = 'intro'; mpFlow.levelIndex = 0;
   mpFlow.phaseStartedAt = Date.now();
   mpFlow.introData = { number: 'CO-OP', name: 'TEAM BATTLE', mission: '2 PEMAIN VS GALAKSI' };
@@ -3372,6 +3424,8 @@ function mpActuallyStartCoop() {
       document.getElementById('level-intro-name').innerText = mpFlow.introData.name;
       document.getElementById('level-intro-mission').innerText = mpFlow.introData.mission;
       banner.classList.remove('hidden'); banner.classList.remove('fade-out');
+      banner.classList.remove('stage-clear');
+      banner.classList.remove('boss-approach');
       void banner.offsetWidth;
       sounds.playLevelIntro();
       setTimeout(() => {
@@ -3380,7 +3434,7 @@ function mpActuallyStartCoop() {
         mpFlow.phase = 'playing';
         mpFlow.phaseStartedAt = Date.now();
         startSpawnLoop(); mpStartHostSyncLoop();
-      }, 1800);
+      }, 1200); // 🔥 v20.10.0 — dipercepat
     }
   }
 
@@ -3481,12 +3535,13 @@ function showLevelIntro(levelConfig) {
     ? 'DEFEAT THE BOSS' : `${levelConfig.targetKills} KILLS · TARGET ${levelConfig.targetScore}`;
   banner.classList.remove('hidden'); banner.classList.remove('fade-out');
   banner.classList.remove('stage-clear');
+  banner.classList.remove('boss-approach');
   void banner.offsetWidth;
   sounds.playLevelIntro();
-  setTimeout(() => { banner.classList.add('fade-out'); setTimeout(() => banner.classList.add('hidden'), 500); }, 1800);
+  // 🔥 v20.10.0 — intro dipercepat
+  setTimeout(() => { banner.classList.add('fade-out'); setTimeout(() => banner.classList.add('hidden'), 300); }, 1200);
 }
 
-// 🔥 v20.9.1 — Stage Clear banner (delay sebelum narasi/result)
 function showStageClearBanner() {
   const banner = document.getElementById('level-intro');
   if (!banner) return;
@@ -3495,6 +3550,7 @@ function showStageClearBanner() {
   document.getElementById('level-intro-mission').innerText = 'AMBIL KOIN & BONUS!';
   banner.classList.remove('hidden');
   banner.classList.remove('fade-out');
+  banner.classList.remove('boss-approach');
   banner.classList.add('stage-clear');
   void banner.offsetWidth;
   try { sounds.playWin(); } catch(e) {}
@@ -3552,14 +3608,22 @@ function resetLevelState() {
   comboBoostLastNotified = 0;
   levelDamageTaken = 0;
 
-  // 🔥 v20.9.1 — reset stage clear state
   if (stageClearTimer) {
     clearTimeout(stageClearTimer);
     stageClearTimer = null;
   }
   levelClearPending = false;
+
+  // 🔥 v20.10.0 — reset boss phase
+  bossPhase = 'minions';
+  bossMinionsKilled = 0;
+  bossMinionsTarget = 0;
+
   const banner = document.getElementById('level-intro');
-  if (banner) banner.classList.remove('stage-clear');
+  if (banner) {
+    banner.classList.remove('stage-clear');
+    banner.classList.remove('boss-approach');
+  }
 
   const cb = document.getElementById('combo-boost-indicator');
   if (cb) cb.classList.remove('show');
@@ -3578,6 +3642,16 @@ function actuallyStartLevel(levelConfig) {
   levelStartTime = Date.now();
   levelDamageTaken = 0;
 
+  // 🔥 v20.10.0 — init boss phase kalau level boss
+  if (levelConfig.algorithm && levelConfig.algorithm.startsWith('boss_')) {
+    const lvlNum = parseInt(levelConfig.algorithm.replace('boss_', '')) || 5;
+    initBossPhase(lvlNum, gameMode);
+  } else {
+    bossPhase = 'defeated'; // tidak pakai phase untuk level normal
+    bossMinionsKilled = 0;
+    bossMinionsTarget = 0;
+  }
+
   if (IS_DESKTOP && typeof window._showDesktopHints === 'function') {
     window._showDesktopHints();
   }
@@ -3595,14 +3669,28 @@ function updateHUDValues() {
     const hm = $('hud-mission'); if (hm) hm.innerText = `${endlessKillsThisWave}/${ENDLESS_KILLS_PER_WAVE}`;
   } else if (gameMode === 'daily') {
     const hl = $('hud-level'); if (hl) hl.innerText = 'B' + (dailyBossIndex + 1);
-    const hm = $('hud-mission'); if (hm) hm.innerText = `BOS ${dailyBossIndex + 1}/3`;
+    const hm = $('hud-mission');
+    if (hm) {
+      if (bossPhase === 'minions') hm.innerText = `${bossMinionsKilled}/${bossMinionsTarget} MINION`;
+      else hm.innerText = `BOS ${dailyBossIndex + 1}/3`;
+    }
   } else if (gameMode === 'coop') {
     const hl = $('hud-level'); if (hl) hl.innerText = 'CO-OP';
     const hm = $('hud-mission'); if (hm) hm.innerText = 'TEAM';
   } else {
     const lc = levelsData[currentLevelIndex] || levelsData[0];
     const hl = $('hud-level'); if (hl) hl.innerText = lc.level;
-    const hm = $('hud-mission'); if (hm) hm.innerText = `${levelKills}/${lc.targetKills}`;
+    const hm = $('hud-mission');
+    if (hm) {
+      // 🔥 v20.10.0 — HUD boss phase
+      if (lc.algorithm && lc.algorithm.startsWith('boss_')) {
+        if (bossPhase === 'minions') hm.innerText = `${bossMinionsKilled}/${bossMinionsTarget} MINION`;
+        else if (bossPhase === 'boss') hm.innerText = 'BOSS!';
+        else hm.innerText = 'CLEAR';
+      } else {
+        hm.innerText = `${levelKills}/${lc.targetKills}`;
+      }
+    }
   }
   const hs = $('hud-score'); if (hs) hs.innerText = score;
   const hc = $('hud-coins'); if (hc) hc.innerText = coins;
@@ -3636,7 +3724,8 @@ function triggerBossSiren() {
     sounds.playBossWarning();
     triggerVibrate([100, 50, 100, 50, 200]);
     triggerScreenFlash(0.5);
-    setTimeout(() => overlay.classList.add('hidden'), 2200);
+    // 🔥 v20.10.0 — boss warning lebih cepat
+    setTimeout(() => overlay.classList.add('hidden'), 1400);
   }
 }
 
@@ -3701,7 +3790,7 @@ function spawnMonsterLoop(token) {
       }
     } else if (gameMode === 'daily') {
       if (Date.now() < nextBossSpawnTime) {}
-      else if (monsters.length === 0 && dailyBossIndex < 3 && dailyBossSequence.length === 3) {
+      else if (monsters.length === 0 && dailyBossIndex < 3 && dailyBossSequence.length === 3 && bossPhase === 'boss') {
         const bossNum = dailyBossSequence[dailyBossIndex];
         const baseHp = getBossBaseHp(bossNum);
         const scale = [1, 1.2, 1.5][dailyBossIndex] || 1;
@@ -3734,8 +3823,35 @@ function spawnMonsterLoop(token) {
     if (levelConfig) {
       const algo = levelConfig.algorithm;
       const typeList = levelConfig.types || ['jelly'];
-      if (algo.startsWith('boss_')) {
-        if (monsters.length === 0 && (gameMode !== 'normal' || levelKills < levelConfig.targetKills)) {
+
+      // 🔥 v20.10.0 — Boss level: fase minion dulu
+      const isBossAlgo = algo.startsWith('boss_');
+      if (isBossAlgo && bossPhase === 'minions') {
+        const minionTypes = ['jelly', 'triangle', 'cat', 'cloud'];
+        const type = minionTypes[Math.floor(Math.random() * minionTypes.length)];
+        monsters.push({
+          x: Math.random() * (W - 120 * S) + 60 * S,
+          startX: Math.random() * (W - 120 * S) + 60 * S,
+          y: -60 * S,
+          speed: (1.4 + Math.random() * 0.8) * (levelConfig.speed || 1),
+          size: 28 * S,
+          hp: 1, maxHp: 1,
+          color: currentTheme.monsters[Math.floor(Math.random() * currentTheme.monsters.length)],
+          type, algorithm: 'linear',
+          shootTimer: 0, timeAlive: 0, opacity: 1, hitFlash: 0,
+          aimTimer: 0, aimTargetX: 0, aimTargetY: 0,
+          canShoot: false, shootCooldown: 999,
+          rot: 0, wobble: Math.random() * Math.PI * 2,
+          isMinion: true
+        });
+        const myToken = (token !== undefined) ? token : spawnLoopToken;
+        setTimeout(() => spawnMonsterLoop(myToken), 700);
+        return;
+      }
+
+      if (isBossAlgo) {
+        // 🔥 v20.10.0 — hanya spawn boss kalau phase = 'boss'
+        if (bossPhase === 'boss' && monsters.length === 0 && (gameMode !== 'normal' || levelKills < levelConfig.targetKills)) {
           triggerBossSiren();
           const bossNum = parseInt(algo.replace('boss_','')) || 5;
           let hpVal = levelConfig.bossHp || 150;
@@ -3755,6 +3871,7 @@ function spawnMonsterLoop(token) {
           });
         }
       } else {
+        // Level normal — spawn musuh biasa
         let n = (algo === 'swarm') ? 2 : 1;
         n = Math.ceil(n * spawnMultiplier);
         for (let c = 0; c < n; c++) {
@@ -3907,7 +4024,7 @@ function showKillStreak(title, count) {
 function checkLevelObjectives() {
   if (gameMode === 'coop' && mpActive && mpRole !== 'host') return;
 
-  // 🔥 v20.9.1 — Endless mode dengan delay
+  // Endless mode
   if (gameMode === 'endless') {
     if (endlessKillsThisWave >= ENDLESS_KILLS_PER_WAVE && monsters.length === 0) {
       if (!levelClearPending) {
@@ -3922,6 +4039,10 @@ function checkLevelObjectives() {
           endlessKillsThisWave = 0;
           updateHUDValues();
           spawnFloatingText(VIRTUAL_WIDTH/2, VIRTUAL_HEIGHT/2, `WAVE ${endlessWave}`, '#ffd700');
+          // 🔥 v20.10.0 — init boss phase untuk wave boss berikutnya
+          if (endlessWave % 5 === 0) {
+            initBossPhase(endlessWave, 'endless');
+          }
           startSpawnLoop();
         }, 2500);
       }
@@ -3929,9 +4050,20 @@ function checkLevelObjectives() {
     return;
   }
 
-  if (gameMode === 'daily') return;
+  if (gameMode === 'daily') {
+    // 🔥 v20.10.0 — boss phase handling untuk daily
+    if (bossPhase === 'minions') {
+      bossMinionsKilled = levelKills;
+      const hud = document.getElementById('hud-mission');
+      if (hud) hud.innerText = `${bossMinionsKilled}/${bossMinionsTarget} MINION`;
+      if (bossMinionsKilled >= bossMinionsTarget && monsters.length === 0) {
+        transitionToBossPhase();
+      }
+    }
+    return;
+  }
 
-  // 🔥 v20.9.1 — Co-op dengan delay
+  // Co-op
   if (gameMode === 'coop') {
     const lc = levelsData[currentLevelIndex] || levelsData[0];
     if (levelKills >= lc.targetKills * 1.5 && monsters.length === 0) {
@@ -3950,10 +4082,23 @@ function checkLevelObjectives() {
     return;
   }
 
-  // 🔥 v20.9.1 — Normal mode dengan delay
+  // 🔥 v20.10.0 — Normal mode dengan boss phase
   const lc = levelsData[currentLevelIndex] || levelsData[0];
-  if (lc.algorithm.startsWith('boss_')) return;
+  const isBossLevel = lc.algorithm.startsWith('boss_');
 
+  if (isBossLevel) {
+    if (bossPhase === 'minions') {
+      bossMinionsKilled = levelKills;
+      const hud = document.getElementById('hud-mission');
+      if (hud) hud.innerText = `${bossMinionsKilled}/${bossMinionsTarget} MINION`;
+      if (bossMinionsKilled >= bossMinionsTarget && monsters.length === 0) {
+        transitionToBossPhase();
+      }
+    }
+    return;
+  }
+
+  // Level normal (bukan boss)
   if (levelKills >= lc.targetKills) {
     if (score >= lc.targetScore) {
       if (!levelClearPending) {
@@ -4000,14 +4145,12 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
     ctx.fillStyle = '#ff4757';
     ctx.beginPath(); ctx.moveTo(-10, 18); ctx.lineTo(0, 30 + Math.random()*6); ctx.lineTo(10, 18); ctx.fill();
 
-  // ============ CANNON ============
   } else if (type === 'cannon') {
     ctx.fillStyle = '#ff4757';
     ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(24, 15); ctx.lineTo(-24, 15); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#2f3542'; ctx.fillRect(-16, -18, 5, 20); ctx.fillRect(11, -18, 5, 20);
     ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(0, -2, 6, 0, Math.PI*2); ctx.fill();
 
-  // ============ DRAGON ============
   } else if (type === 'dragon') {
     ctx.fillStyle = '#2ed573';
     ctx.beginPath();
@@ -4016,7 +4159,6 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
     ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#ff4757'; ctx.fillRect(-7, -12, 4, 4); ctx.fillRect(3, -12, 4, 4);
 
-  // ============ CAT ============
   } else if (type === 'cat') {
     ctx.fillStyle = '#ffa502';
     ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI*2); ctx.fill();
@@ -4025,14 +4167,12 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
     ctx.fillStyle = '#2f3542'; ctx.fillRect(-12, -6, 24, 8);
     ctx.fillStyle = '#fff'; ctx.fillRect(-8, -4, 4, 4); ctx.fillRect(4, -4, 4, 4);
 
-  // ============ UNICORN ============
   } else if (type === 'unicorn') {
     ctx.fillStyle = '#a55eea';
     ctx.beginPath(); ctx.arc(0, 2, 18, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = '#ffd700';
     ctx.beginPath(); ctx.moveTo(0, -32); ctx.lineTo(5, -12); ctx.lineTo(-5, -12); ctx.closePath(); ctx.fill();
 
-  // ============ PHOENIX ============
   } else if (type === 'phoenix') {
     ctx.fillStyle = '#ff8c00';
     ctx.beginPath();
@@ -4055,7 +4195,6 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
     ctx.fillStyle = '#ff4500';
     ctx.beginPath(); ctx.moveTo(0, 16); ctx.lineTo(-8, 26); ctx.lineTo(0, 22); ctx.lineTo(8, 26); ctx.closePath(); ctx.fill();
 
-  // ============ NINJA ============
   } else if (type === 'ninja') {
     ctx.fillStyle = 'rgba(165, 94, 234, 0.3)';
     ctx.beginPath(); ctx.arc(0, 0, 24, 0, Math.PI*2); ctx.fill();
@@ -4076,7 +4215,6 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
     ctx.strokeStyle = '#666'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(-14, -8); ctx.lineTo(-22, 12); ctx.stroke();
 
-  // ============ WIZARD ============
   } else if (type === 'wizard') {
     ctx.fillStyle = 'rgba(0, 184, 212, 0.25)';
     ctx.beginPath(); ctx.arc(0, 0, 26 + Math.sin(playerPulse*2)*2, 0, Math.PI*2); ctx.fill();
@@ -4104,7 +4242,6 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
     ctx.fillStyle = '#ffd700';
     ctx.beginPath(); ctx.arc(-14, -14, 5, 0, Math.PI*2); ctx.fill();
 
-  // ============ ARCHER ============
   } else if (type === 'archer') {
     ctx.fillStyle = '#2ed573';
     ctx.beginPath(); ctx.ellipse(0, 4, 14, 18, 0, 0, Math.PI*2); ctx.fill();
@@ -4128,7 +4265,6 @@ function drawHeroVector(ctx, x, y, type, isRemote) {
     ctx.fillStyle = '#ffd700';
     ctx.beginPath(); ctx.moveTo(-32, -2); ctx.lineTo(-38, -5); ctx.lineTo(-38, 1); ctx.closePath(); ctx.fill();
 
-  // ============ GHOST ============
   } else if (type === 'ghost') {
     ctx.fillStyle = `rgba(0, 210, 211, ${0.15 + Math.sin(playerPulse*3)*0.1})`;
     ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI*2); ctx.fill();
@@ -4357,7 +4493,7 @@ function drawBullet(ctx, b, S) {
 }
 
 // =============================================================
-// 18d. EXTENDED ENEMY SHAPE DRAWING (v20.9)
+// 18d. EXTENDED ENEMY SHAPE DRAWING
 // =============================================================
 function drawEnemyShapeExtended(ctx, m, S, theme) {
   const type = m.type;
@@ -4366,7 +4502,6 @@ function drawEnemyShapeExtended(ctx, m, S, theme) {
   const rot = (m.rot = (m.rot || 0) + 0.02);
   const wobble = Math.sin((m.wobble = (m.wobble || 0) + 0.08)) * 0.15 + 1;
 
-  // ---------- TRIANGLE (chevron) ----------
   if (type === 'triangle') {
     ctx.save();
     ctx.rotate(rot * 0.5);
@@ -4392,7 +4527,6 @@ function drawEnemyShapeExtended(ctx, m, S, theme) {
     ctx.fill();
     ctx.restore();
 
-  // ---------- HEXAGON (armored) ----------
   } else if (type === 'hexagon') {
     ctx.save();
     ctx.rotate(rot * 0.3);
@@ -4434,7 +4568,6 @@ function drawEnemyShapeExtended(ctx, m, S, theme) {
     ctx.fill();
     ctx.restore();
 
-  // ---------- STAR (5-point) ----------
   } else if (type === 'star') {
     ctx.save();
     ctx.rotate(rot * 0.4);
@@ -4471,7 +4604,6 @@ function drawEnemyShapeExtended(ctx, m, S, theme) {
     ctx.fill();
     ctx.restore();
 
-  // ---------- DIAMOND (crystal) ----------
   } else if (type === 'diamond') {
     ctx.save();
     ctx.rotate(rot * 0.6);
@@ -4506,7 +4638,6 @@ function drawEnemyShapeExtended(ctx, m, S, theme) {
     ctx.fill();
     ctx.restore();
 
-  // ---------- WORM (segmented) ----------
   } else if (type === 'worm') {
     ctx.save();
     const segCount = 4;
@@ -4544,7 +4675,6 @@ function drawEnemyShapeExtended(ctx, m, S, theme) {
     ctx.restore();
 
   } else {
-    // Fallback (jelly-style)
     const rg = ctx.createRadialGradient(-size*0.3, -size*0.3, size*0.1, 0, 0, size);
     rg.addColorStop(0, '#ffffff'); rg.addColorStop(0.3, m.color); rg.addColorStop(1, '#000000');
     ctx.beginPath(); ctx.arc(0, 0, size * wobble, 0, Math.PI*2);
@@ -4554,7 +4684,7 @@ function drawEnemyShapeExtended(ctx, m, S, theme) {
 }
 
 // =============================================================
-// 18e. UNIQUE BOSS SHAPES (v20.9) — 10 boss, 10 bentuk unik
+// 18e. UNIQUE BOSS SHAPES — 10 boss, 10 bentuk unik
 // =============================================================
 function drawBossUniqueShape(ctx, m, S, theme, bossNum) {
   const size = m.size;
@@ -4562,7 +4692,6 @@ function drawBossUniqueShape(ctx, m, S, theme, bossNum) {
   const coreOpen = m.coreOpen;
   const rot = m.aura || 0;
 
-  // === BOSS 5: INFERNO (triangle furnace) ===
   if (bossNum === 5) {
     ctx.save();
     ctx.rotate(Math.sin(t * 1.5) * 0.1);
@@ -4599,7 +4728,6 @@ function drawBossUniqueShape(ctx, m, S, theme, bossNum) {
     return;
   }
 
-  // === BOSS 10: VOID (dark spiral) ===
   if (bossNum === 10) {
     ctx.save();
     ctx.rotate(rot * 0.5);
@@ -4632,7 +4760,6 @@ function drawBossUniqueShape(ctx, m, S, theme, bossNum) {
     return;
   }
 
-  // === BOSS 15: CRYO (ice crystal) ===
   if (bossNum === 15) {
     ctx.save();
     ctx.rotate(Math.sin(t * 0.5) * 0.08);
@@ -4674,7 +4801,6 @@ function drawBossUniqueShape(ctx, m, S, theme, bossNum) {
     return;
   }
 
-  // === BOSS 20: TITAN (armored hexagon) ===
   if (bossNum === 20) {
     ctx.save();
     ctx.rotate(rot * 0.3);
@@ -4706,7 +4832,6 @@ function drawBossUniqueShape(ctx, m, S, theme, bossNum) {
     return;
   }
 
-  // === BOSS 25: SOLAR (sun with rays) ===
   if (bossNum === 25) {
     ctx.save();
     ctx.rotate(rot * 0.2);
@@ -4747,7 +4872,6 @@ function drawBossUniqueShape(ctx, m, S, theme, bossNum) {
     return;
   }
 
-  // === BOSS 30: OMEGA (layered star) ===
   if (bossNum === 30) {
     ctx.save();
     ctx.rotate(rot * 0.4);
@@ -4781,7 +4905,6 @@ function drawBossUniqueShape(ctx, m, S, theme, bossNum) {
     return;
   }
 
-  // === BOSS 35: ABYSS (octagon + tentacles) ===
   if (bossNum === 35) {
     ctx.save();
     ctx.strokeStyle = 'rgba(139,0,255,0.7)';
@@ -4822,7 +4945,6 @@ function drawBossUniqueShape(ctx, m, S, theme, bossNum) {
     return;
   }
 
-  // === BOSS 40: NEMESIS (skull king) ===
   if (bossNum === 40) {
     ctx.save();
     ctx.fillStyle = '#ff2200';
@@ -4864,7 +4986,6 @@ function drawBossUniqueShape(ctx, m, S, theme, bossNum) {
     return;
   }
 
-  // === BOSS 45: ABYSS² (double spiral) ===
   if (bossNum === 45) {
     ctx.save();
     ctx.rotate(rot * 0.3);
@@ -4907,7 +5028,6 @@ function drawBossUniqueShape(ctx, m, S, theme, bossNum) {
     return;
   }
 
-  // === BOSS 50: ETERNITY (infinity + wings) ===
   if (bossNum === 50) {
     ctx.save();
     ctx.rotate(Math.sin(t * 0.5) * 0.05);
@@ -4947,7 +5067,6 @@ function drawBossUniqueShape(ctx, m, S, theme, bossNum) {
     return;
   }
 
-  // Fallback
   const bg = ctx.createRadialGradient(0, 0, size*0.2, 0, 0, size);
   bg.addColorStop(0, '#ffffff'); bg.addColorStop(0.4, m.color); bg.addColorStop(1, '#000000');
   ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI*2);
@@ -5008,7 +5127,8 @@ function gameLoop() {
   ctx.fillRect(0, 0, W, H);
   drawParallaxStars(ctx, W, H);
 
-  const groundH = 40 * S;
+  // 🔥 v20.10.0 — Ground proporsional viewport
+  const groundH = Math.max(30, VIRTUAL_HEIGHT * 0.06);
   ctx.fillStyle = theme.ground;
   ctx.fillRect(0, H - groundH, W, groundH);
   ctx.fillStyle = theme.groundLine;
@@ -5016,7 +5136,7 @@ function gameLoop() {
   ctx.fillRect(0, H - groundH - 5, W, 5);
   ctx.globalAlpha = 1;
 
-  // LOCAL PLAYER MOVEMENT (VELOCITY-BASED)
+  // LOCAL PLAYER MOVEMENT
   if (localPlayerActive) {
     let moveInput = 0;
     let useJoystick = false;
@@ -5057,7 +5177,8 @@ function gameLoop() {
   if (isFrozen) { freezeFramesRemaining--; if (freezeFramesRemaining <= 0) { isFrozen = false; freezeFramesRemaining = 0; } }
   if (combo > 1) { comboTimer--; if (comboTimer <= 0) { combo = 1; updateHUDValues(); comboBoostActive = { coins: false, firerate: false, magnet: false }; comboBoostLastNotified = 0; } }
 
-  const heroPlayerY = H - 45 * S;
+  // 🔥 v20.10.0 — Player Y proporsional viewport
+  const heroPlayerY = H - Math.max(40, H * 0.07);
 
   // GUEST INPUT HANDLING
   if (mpActive && mpRole === 'host' && !mpRemoteGuestSpectator) {
@@ -5093,7 +5214,7 @@ function gameLoop() {
       const gHero = HERO_DATA[mpRemoteHeroType] || HERO_DATA.robot;
       const gInterval = Math.max(60, (gHero.fireRate - (upgradeFireRate - 1) * 15));
       mpGuestShootCd = Math.round(gInterval / 16);
-      spawnHeroBullets(mpRemoteHeroType, mpGuestX, H - 65 * S, 1, 'guest');
+      spawnHeroBullets(mpRemoteHeroType, mpGuestX, heroPlayerY - 20 * S, 1, 'guest');
     }
 
     if (mpGuestInput.skill1) {
@@ -5131,7 +5252,7 @@ function gameLoop() {
   const now = Date.now();
 
   if (localPlayerActive && fireButtonPressed && now - lastShotTime > fireInterval) {
-    const shotY = H - 65 * S;
+    const shotY = heroPlayerY - 20 * S;
 
     if (isMegaShot) {
       bullets.push({ x: playerX, y: shotY, vx: 0, vy: 15 * S, color: '#ff2e88', heroType: currentActor, size: 16 * S, pierce: 3, owner: 'host' });
@@ -5174,7 +5295,7 @@ function gameLoop() {
     if (t.progress >= t.duration) telegraphs.splice(i, 1);
   }
 
-  // Bullets update + collision
+  // Bullets update
   for (let i = bullets.length - 1; i >= 0; i--) {
     const b = bullets[i];
     b.y -= b.vy; b.x += b.vx;
@@ -5239,7 +5360,6 @@ function gameLoop() {
             dropBossLoot(m.x, m.y, parseInt(m.type.replace('boss','')) || 5);
             monsters.forEach(mn => createBurstParticles3D(mn.x, mn.y, mn.color, 20));
             monsters = [];
-            // 🔥 v20.9.1 — Stage clear delay (3.5s untuk boss)
             stopSpawnLoop();
             if (!levelClearPending) {
               levelClearPending = true;
@@ -5338,13 +5458,13 @@ function gameLoop() {
     const dp = Math.hypot(playerX - p.x, heroPlayerY - p.y);
     if (localPlayerActive && dp < p.size + 25 * S) {
       sounds.playPowerup(); triggerScreenFlash(0.25);
-      if (p.type === 'supershot') { isSuperShot = true; superShotTimer = 450; spawnFloatingText(playerX, H - 70 * S, 'SUPER SHOT', '#2ed573'); }
-      else if (p.type === 'megashot') { isMegaShot = true; megaShotTimer = 540; spawnFloatingText(playerX, H - 70 * S, 'MEGA SHOT!', '#ff2e88'); }
-      else if (p.type === 'shield') { isShieldActive = true; shieldTimer = 450 + (upgradeShield-1)*80; spawnFloatingText(playerX, H - 70 * S, 'SHIELD', '#00d2d3'); }
-      else if (p.type === 'bomb') { if (playerLoadout.includes('bomb')) { bombCharges = Math.min(upgradeBomb, bombCharges+1); updateSkillButtonsUI(); } spawnFloatingText(playerX, H - 70 * S, '+1 BOMB', '#ff4757'); }
-      else if (p.type === 'freeze') { if (playerLoadout.includes('freeze')) { freezeCharges = Math.min(upgradeFreeze, freezeCharges+1); updateSkillButtonsUI(); } spawnFloatingText(playerX, H - 70 * S, '+1 FREEZE', '#1e90ff'); }
-      else if (p.type === 'heart') { lives = Math.min(5, lives+1); playerHitPoints = PLAYER_MAX_HIT_POINTS; updateLivesDisplay(); spawnFloatingText(playerX, H - 70 * S, '+1 LIFE', '#ff78ae'); }
-      else if (p.type === 'magnet') { isMagnetActive = true; magnetTimer = 420; spawnFloatingText(playerX, H - 70 * S, 'MAGNET', '#ffa502'); }
+      if (p.type === 'supershot') { isSuperShot = true; superShotTimer = 450; spawnFloatingText(playerX, heroPlayerY - 30 * S, 'SUPER SHOT', '#2ed573'); }
+      else if (p.type === 'megashot') { isMegaShot = true; megaShotTimer = 540; spawnFloatingText(playerX, heroPlayerY - 30 * S, 'MEGA SHOT!', '#ff2e88'); }
+      else if (p.type === 'shield') { isShieldActive = true; shieldTimer = 450 + (upgradeShield-1)*80; spawnFloatingText(playerX, heroPlayerY - 30 * S, 'SHIELD', '#00d2d3'); }
+      else if (p.type === 'bomb') { if (playerLoadout.includes('bomb')) { bombCharges = Math.min(upgradeBomb, bombCharges+1); updateSkillButtonsUI(); } spawnFloatingText(playerX, heroPlayerY - 30 * S, '+1 BOMB', '#ff4757'); }
+      else if (p.type === 'freeze') { if (playerLoadout.includes('freeze')) { freezeCharges = Math.min(upgradeFreeze, freezeCharges+1); updateSkillButtonsUI(); } spawnFloatingText(playerX, heroPlayerY - 30 * S, '+1 FREEZE', '#1e90ff'); }
+      else if (p.type === 'heart') { lives = Math.min(5, lives+1); playerHitPoints = PLAYER_MAX_HIT_POINTS; updateLivesDisplay(); spawnFloatingText(playerX, heroPlayerY - 30 * S, '+1 LIFE', '#ff78ae'); }
+      else if (p.type === 'magnet') { isMagnetActive = true; magnetTimer = 420; spawnFloatingText(playerX, heroPlayerY - 30 * S, 'MAGNET', '#ffa502'); }
       powerups.splice(i, 1);
       continue;
     }
@@ -5365,7 +5485,7 @@ function gameLoop() {
       const dh = Math.hypot(playerX - bb.x, heroPlayerY - bb.y);
       if (dh < 30 * S) {
         bossBullets.splice(i, 1);
-        if (isShieldActive || isReviveInvuln) spawnFloatingText(playerX, H - 60 * S, 'BLOCKED', '#ffd700');
+        if (isShieldActive || isReviveInvuln) spawnFloatingText(playerX, heroPlayerY - 15 * S, 'BLOCKED', '#ffd700');
         else { handlePlayerHit(); if (!isGameRunning) { ctx.restore(); return; } }
         continue;
       }
@@ -5508,13 +5628,12 @@ function gameLoop() {
     ctx.save();
     ctx.globalAlpha = m.opacity || 1.0;
     ctx.beginPath();
-    ctx.ellipse(m.x, H - 38 * S, m.size * 0.7, m.size * 0.25, 0, 0, Math.PI*2);
+    ctx.ellipse(m.x, H - groundH * 0.95, m.size * 0.7, m.size * 0.25, 0, 0, Math.PI*2);
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.fill();
     ctx.translate(m.x, m.y);
 
     if (m.type.startsWith('boss')) {
-      // Aura ring
       ctx.save();
       ctx.rotate(m.aura || 0);
       ctx.beginPath(); ctx.arc(0, 0, m.size + 15 * S, 0, Math.PI*2);
@@ -5524,8 +5643,6 @@ function gameLoop() {
       ctx.setLineDash([]);
       ctx.restore();
       ctx.globalAlpha = m.opacity || 1.0;
-
-      // 🔥 v20.9 — unique boss shape
       const bossNum = parseInt(m.type.replace('boss','')) || 5;
       drawBossUniqueShape(ctx, m, S, currentTheme, bossNum);
     } else if (m.type === 'donut') {
@@ -5546,7 +5663,6 @@ function gameLoop() {
       ctx.fillStyle = '#00d2d3'; ctx.fill();
       ctx.strokeStyle = '#fff'; ctx.stroke();
     } else if (['triangle','hexagon','star','diamond','worm'].includes(m.type)) {
-      // 🔥 v20.9 — extended enemy shapes
       drawEnemyShapeExtended(ctx, m, S, theme);
     } else {
       const rg = ctx.createRadialGradient(-m.size*0.3, -m.size*0.3, m.size*0.1, 0, 0, m.size);
@@ -5592,10 +5708,10 @@ function gameLoop() {
       ctx.restore();
     }
 
-    if (m.y > H - 55 * S && !m.type.startsWith('boss')) {
+    if (m.y > H - groundH * 0.5 && !m.type.startsWith('boss')) {
       monsters.splice(i, 1);
       if (localPlayerActive) {
-        if (isShieldActive || isReviveInvuln) spawnFloatingText(playerX, H - 60 * S, 'BLOCKED', '#ffd700');
+        if (isShieldActive || isReviveInvuln) spawnFloatingText(playerX, heroPlayerY - 15 * S, 'BLOCKED', '#ffd700');
         else { handlePlayerHit(); if (!isGameRunning) { ctx.restore(); return; } }
       }
     }
@@ -5685,7 +5801,7 @@ function gameLoopGuest() {
   ctx.fillRect(0, 0, W, H);
   drawParallaxStars(ctx, W, H);
 
-  const groundH = 40 * S;
+  const groundH = Math.max(30, VIRTUAL_HEIGHT * 0.06);
   ctx.fillStyle = theme.ground;
   ctx.fillRect(0, H - groundH, W, groundH);
   ctx.fillStyle = theme.groundLine;
@@ -5693,7 +5809,7 @@ function gameLoopGuest() {
   ctx.fillRect(0, H - groundH - 5, W, 5);
   ctx.globalAlpha = 1;
 
-  const heroPlayerY = H - 45 * S;
+  const heroPlayerY = H - Math.max(40, H * 0.07);
 
   if (MP && MP.isConnected) {
     MP.sendInput({
@@ -5717,7 +5833,6 @@ function gameLoopGuest() {
     mpGuestInput.resume = false;
   }
 
-  // Local prediction
   if (localPlayerActive && Math.abs(joystickAxis) > 0.02) {
     playerX += joystickAxis * playerSpeed * JOYSTICK_SPEED_MULT;
     playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
@@ -5796,17 +5911,15 @@ function gameLoopGuest() {
   requestAnimationFrame(gameLoop);
 }
 
-// =============================================================
-// 19c. DRAW REMOTE HELPERS
-// =============================================================
 function drawRemoteMonsters(ctx, W, H, S, heroPlayerY) {
   for (let i = 0; i < mpRemoteMonsters.length; i++) {
     const m = mpRemoteMonsters[i];
     if (!m) continue;
     ctx.save();
     ctx.globalAlpha = m.opacity || 1.0;
+    const gH = Math.max(30, H * 0.06);
     ctx.beginPath();
-    ctx.ellipse(m.x, H - 38 * S, m.size * 0.7, m.size * 0.25, 0, 0, Math.PI*2);
+    ctx.ellipse(m.x, H - gH * 0.95, m.size * 0.7, m.size * 0.25, 0, 0, Math.PI*2);
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.fill();
     ctx.translate(m.x, m.y);
@@ -5820,7 +5933,6 @@ function drawRemoteMonsters(ctx, W, H, S, heroPlayerY) {
       ctx.setLineDash([]);
       ctx.restore();
       ctx.globalAlpha = m.opacity || 1.0;
-
       const bossNum = parseInt(m.type.replace('boss','')) || 5;
       drawBossUniqueShape(ctx, m, S, currentTheme, bossNum);
     } else if (m.type === 'donut') {
@@ -5915,13 +6027,15 @@ function handlePlayerHit() {
   triggerVibrate([60, 30, 60]);
   triggerScreenFlash(0.4);
 
+  const heroPlayerY = VIRTUAL_HEIGHT - Math.max(40, VIRTUAL_HEIGHT * 0.07);
+
   if (playerHitPoints > 0) {
-    spawnFloatingText(playerX, VIRTUAL_HEIGHT - 60 * GAME_SCALE, `HP ${playerHitPoints}/${PLAYER_MAX_HIT_POINTS}`, '#ffa502');
+    spawnFloatingText(playerX, heroPlayerY - 15 * GAME_SCALE, `HP ${playerHitPoints}/${PLAYER_MAX_HIT_POINTS}`, '#ffa502');
   } else {
     if (oneLife) lives = 0;
     else lives--;
     playerHitPoints = PLAYER_MAX_HIT_POINTS;
-    spawnFloatingText(playerX, VIRTUAL_HEIGHT - 60 * GAME_SCALE, '-1 ❤', '#ff4757');
+    spawnFloatingText(playerX, heroPlayerY - 15 * GAME_SCALE, '-1 ❤', '#ff4757');
     screenShake = 18;
   }
   updateLivesDisplay();
@@ -5961,7 +6075,8 @@ async function doRevive() {
   updateLivesDisplay(); updateHUDValues(); updateReviveQuotaUI();
   isGameRunning = true; isGamePaused = false;
   startSpawnLoop(); sounds.startBGM();
-  spawnFloatingText(playerX, VIRTUAL_HEIGHT - 70 * GAME_SCALE, 'REVIVED!', '#39ff14');
+  const heroPlayerY = VIRTUAL_HEIGHT - Math.max(40, VIRTUAL_HEIGHT * 0.07);
+  spawnFloatingText(playerX, heroPlayerY - 25 * GAME_SCALE, 'REVIVED!', '#39ff14');
   requestAnimationFrame(gameLoop);
 }
 
@@ -6109,15 +6224,17 @@ function startEndless() {
       updateSkillButtonsUI();
       isGameRunning = true; isGamePaused = false;
       levelStartTime = Date.now();
+      initBossPhase(1, 'endless');
       document.getElementById('level-intro-number').innerText = '∞';
       document.getElementById('level-intro-name').innerText = 'ENDLESS MODE';
       document.getElementById('level-intro-mission').innerText = 'SURVIVE AS LONG AS YOU CAN';
       const b = document.getElementById('level-intro');
       b.classList.remove('hidden'); b.classList.remove('fade-out');
       b.classList.remove('stage-clear');
+      b.classList.remove('boss-approach');
       void b.offsetWidth;
       sounds.playLevelIntro();
-      setTimeout(() => { b.classList.add('fade-out'); setTimeout(() => b.classList.add('hidden'), 500); }, 1800);
+      setTimeout(() => { b.classList.add('fade-out'); setTimeout(() => b.classList.add('hidden'), 500); }, 1200);
       if (IS_DESKTOP && typeof window._showDesktopHints === 'function') window._showDesktopHints();
       sounds.startBGM(); startSpawnLoop(); gameLoop();
     });
@@ -6227,15 +6344,17 @@ function startDaily() {
       updateSkillButtonsUI();
       isGameRunning = true; isGamePaused = false;
       levelStartTime = Date.now();
+      initBossPhase(fb, 'daily');
       const b = document.getElementById('level-intro');
       document.getElementById('level-intro-number').innerText = 'BOS 1';
       document.getElementById('level-intro-name').innerText = getBossName(fb);
       document.getElementById('level-intro-mission').innerText = 'DAILY 3 BOS · 1/3';
       b.classList.remove('hidden'); b.classList.remove('fade-out');
       b.classList.remove('stage-clear');
+      b.classList.remove('boss-approach');
       void b.offsetWidth;
       sounds.playLevelIntro();
-      setTimeout(() => { b.classList.add('fade-out'); setTimeout(() => b.classList.add('hidden'), 500); }, 1800);
+      setTimeout(() => { b.classList.add('fade-out'); setTimeout(() => b.classList.add('hidden'), 500); }, 1200);
       if (IS_DESKTOP && typeof window._showDesktopHints === 'function') window._showDesktopHints();
       sounds.startBGM(); startSpawnLoop(); gameLoop();
     });
@@ -6249,6 +6368,10 @@ function handleDailyBossDefeated() {
   const s = document.querySelector('.daily-boss-slot[data-slot="' + dIdx + '"]');
   if (s) s.classList.add('completed');
   if (dailyBossIndex >= 3) { finalizeDaily(true); return; }
+  // 🔥 v20.10.0 — reset phase untuk boss berikutnya
+  bossPhase = 'minions';
+  bossMinionsKilled = 0;
+  bossMinionsTarget = 8 + dailyBossIndex * 3;
   const b = document.getElementById('level-intro');
   if (b) {
     const nb = dailyBossSequence[dailyBossIndex];
@@ -6257,6 +6380,7 @@ function handleDailyBossDefeated() {
     document.getElementById('level-intro-mission').innerText = (dailyBossIndex === 2) ? 'FINAL BOSS!' : 'BOSS DEFEATED! NEXT...';
     b.classList.remove('hidden'); b.classList.remove('fade-out');
     b.classList.remove('stage-clear');
+    b.classList.remove('boss-approach');
     void b.offsetWidth;
     sounds.playBossWarning();
     setTimeout(() => { b.classList.add('fade-out'); setTimeout(() => b.classList.add('hidden'), 500); }, 2200);
@@ -6793,5 +6917,5 @@ window.addEventListener('load', () => {
 });
 
 // =============================================================
-// END OF FILE — v20.9.1 (Friendly & Variety Edition + Stage Clear Delay)
+// END OF FILE — v20.10.0 (Fluid Scaling + Boss Minion Phase)
 // =============================================================
