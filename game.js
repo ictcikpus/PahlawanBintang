@@ -1203,11 +1203,75 @@ window.addEventListener('load', async () => {
   }, 400);
 });
 
+// =============================================================
+// PWA INSTALL HANDLER — v21.1 (support iOS + Android + Desktop)
+// =============================================================
+let pwaInstallBar = null;
+let pwaDeferredPrompt = null;
+
+function detectStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches ||
+         window.navigator.standalone === true ||
+         document.referrer.includes('android-app://');
+}
+
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function showPWAInstallBar() {
+  if (!pwaInstallBar) pwaInstallBar = document.getElementById('pwa-install-bar');
+  if (!pwaInstallBar) return;
+  if (detectStandalone()) { pwaInstallBar.classList.add('hidden'); return; }
+  // Cek user sudah pernah dismiss (tapi tetap tampilkan lagi setelah 3 hari)
+  const dismissed = Number(localStorage.getItem('pwa_dismissed') || 0);
+  const now = Date.now();
+  const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
+  if (dismissed && (now - dismissed) < THREE_DAYS) {
+    // Tetap tampilkan di iOS karena tidak ada cara lain
+    if (!isIOS()) { pwaInstallBar.classList.add('hidden'); return; }
+  }
+  pwaInstallBar.classList.remove('hidden');
+}
+
 window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault(); deferredPrompt = e;
-  const btn = document.getElementById('btn-pwa-install');
-  if (btn) btn.classList.remove('hidden');
+  e.preventDefault();
+  pwaDeferredPrompt = e;
+  console.log('✅ [PWA] beforeinstallprompt fired');
+  showPWAInstallBar();
 });
+
+window.addEventListener('appinstalled', () => {
+  console.log('✅ [PWA] App installed');
+  const bar = document.getElementById('pwa-install-bar');
+  if (bar) bar.classList.add('hidden');
+  pwaDeferredPrompt = null;
+});
+
+// PWA install bar click handler
+document.addEventListener('DOMContentLoaded', () => {
+  const bar = document.getElementById('pwa-install-bar');
+  if (!bar) return;
+  bar.addEventListener('click', async () => {
+    if (pwaDeferredPrompt) {
+      pwaDeferredPrompt.prompt();
+      try { await pwaDeferredPrompt.userChoice; } catch(e) {}
+      pwaDeferredPrompt = null;
+      bar.classList.add('hidden');
+    } else if (isIOS()) {
+      // iOS: tampilkan instruksi manual
+      const help = document.getElementById('ios-install-help');
+      if (help) help.classList.remove('hidden');
+    } else {
+      // Desktop/Android tanpa prompt — beri tahu user
+      alert('Buka menu browser → "Install App" atau "Add to Home Screen"');
+    }
+  });
+});
+
+// Auto-show PWA bar setelah 2 detik kalau belum standalone
+setTimeout(() => { showPWAInstallBar(); }, 2000);
 
 // =============================================================
 // 18. LOGIN STREAK & HERO USAGE
@@ -1257,8 +1321,11 @@ function resizeCanvas() {
 }
 function updateGameScale() {
   const minDim = Math.min(VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
-  let scale = minDim / 360;
-  scale = Math.max(0.9, Math.min(scale, 1.2));
+  // Arena lebih luas & proporsional — objek kecil, tidak "kegedean"
+  const baseMin = 420;
+  let scale = minDim / baseMin;
+  // Clamp lebih ketat: 0.55 – 0.85 (biar objek lebih compact & pro)
+  scale = Math.max(0.55, Math.min(scale, 0.85));
   GAME_SCALE = scale;
   console.log('📐 [Scale]', GAME_SCALE.toFixed(2), '| Arena:', VIRTUAL_WIDTH, 'x', VIRTUAL_HEIGHT);
 }
