@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css?v=20.8.2" />
+  <link rel="stylesheet" href="./style.css?v=20.9" />
 </head>
 <body class="no-select">
 
@@ -236,6 +236,18 @@
       <path d="M5 12 L10 17 L19 8" stroke="currentColor" stroke-width="3" fill="none"
             stroke-linecap="round" stroke-linejoin="round"/>
     </symbol>
+    <symbol id="i-keyboard" viewBox="0 0 24 24">
+      <rect x="2" y="6" width="20" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <rect x="5" y="9" width="2" height="2" fill="currentColor"/>
+      <rect x="9" y="9" width="2" height="2" fill="currentColor"/>
+      <rect x="13" y="9" width="2" height="2" fill="currentColor"/>
+      <rect x="17" y="9" width="2" height="2" fill="currentColor"/>
+      <rect x="5" y="13" width="2" height="2" fill="currentColor"/>
+      <rect x="9" y="13" width="2" height="2" fill="currentColor"/>
+      <rect x="13" y="13" width="2" height="2" fill="currentColor"/>
+      <rect x="17" y="13" width="2" height="2" fill="currentColor"/>
+      <rect x="7" y="17" width="10" height="1.5" fill="currentColor"/>
+    </symbol>
     <symbol id="i-vega" viewBox="0 0 100 100">
       <ellipse cx="50" cy="105" rx="38" ry="45" fill="#00d2ff"/>
       <circle cx="50" cy="42" r="28" fill="#ffd8b0"/>
@@ -327,7 +339,7 @@
   <div class="menu-box">
 
     <div class="menu-topbar">
-      <div class="version-badge">v20.8.2</div>
+      <div class="version-badge">v20.9</div>
       <button id="btn-audio" class="btn-audio" title="Suara" type="button">
         <svg class="ico" viewBox="0 0 24 24"><use href="#i-sound-on"/></svg>
       </button>
@@ -525,6 +537,9 @@
 
     <div class="hud-right">
       <div id="hud-lives" class="hud-lives"></div>
+      <button id="btn-hints-toggle" class="btn-hints-toggle hidden" title="Kontrol (H)" type="button">
+        <svg class="ico" viewBox="0 0 24 24"><use href="#i-keyboard"/></svg>
+      </button>
       <button id="btn-pause" class="btn-pause" aria-label="Pause" type="button">
         <svg class="ico" viewBox="0 0 24 24"><use href="#i-pause"/></svg>
       </button>
@@ -553,7 +568,6 @@
       </div>
     </div>
 
-    <!-- 🔥 v20.8.2: FIRE BUTTON (opsional, toggle manual shoot) -->
     <div class="ctrl-cluster ctrl-right fire-cluster">
       <button id="btn-fire" class="btn-fire" aria-label="Tembak" type="button" data-pressed="1">
         <svg class="fire-icon" viewBox="0 0 24 24"><use href="#i-bolt"/></svg>
@@ -574,6 +588,56 @@
         <span id="bomb-count" class="skill-count">0</span>
       </button>
     </div>
+  </div>
+</div>
+
+<!-- ============ 🔥 v20.9 — DESKTOP CONTROL HINTS ============ -->
+<div id="desktop-hints" class="hidden" aria-hidden="true">
+  <div class="hint-panel">
+    <div class="hint-header">
+      <div class="hint-title-wrap">
+        <svg class="hint-title-icon" viewBox="0 0 24 24"><use href="#i-keyboard"/></svg>
+        <span class="hint-title">KONTROL LAPTOP</span>
+      </div>
+      <button id="btn-hints-close" class="hint-close" type="button" aria-label="Tutup">
+        <span>×</span>
+      </button>
+    </div>
+    <div class="hint-grid">
+      <div class="hint-row">
+        <span class="hint-keys"><kbd>←</kbd><kbd>→</kbd></span>
+        <span class="hint-lbl">Gerak Kiri/Kanan</span>
+      </div>
+      <div class="hint-row">
+        <span class="hint-keys"><kbd>A</kbd><kbd>D</kbd></span>
+        <span class="hint-lbl">Gerak (alternatif)</span>
+      </div>
+      <div class="hint-row">
+        <span class="hint-keys"><kbd class="kbd-wide">SPACE</kbd></span>
+        <span class="hint-lbl">Tembak (tahan)</span>
+      </div>
+      <div class="hint-row">
+        <span class="hint-keys"><kbd>Q</kbd></span>
+        <span class="hint-lbl">❄️ Freeze</span>
+      </div>
+      <div class="hint-row">
+        <span class="hint-keys"><kbd>W</kbd></span>
+        <span class="hint-lbl">🛡️ Shield</span>
+      </div>
+      <div class="hint-row">
+        <span class="hint-keys"><kbd>E</kbd></span>
+        <span class="hint-lbl">💣 Bomb</span>
+      </div>
+      <div class="hint-row">
+        <span class="hint-keys"><kbd>ESC</kbd></span>
+        <span class="hint-lbl">Pause / Menu</span>
+      </div>
+      <div class="hint-row">
+        <span class="hint-keys"><kbd>H</kbd></span>
+        <span class="hint-lbl">Sembunyikan ini</span>
+      </div>
+    </div>
+    <div class="hint-footer">Tekan <kbd>H</kbd> untuk toggle panel ini</div>
   </div>
 </div>
 
@@ -1231,9 +1295,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <!-- ============ MULTIPLAYER ENGINE ============ -->
-<script src="./multiplayer.js?v=20.8.2"></script>
+<script src="./multiplayer.js?v=20.9"></script>
 
 <!-- ============ GAME SCRIPT ============ -->
-<script src="./game.js?v=20.8.2"></script>
+<script src="./game.js?v=20.9"></script>
 </body>
 </html>
