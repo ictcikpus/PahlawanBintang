@@ -1,12 +1,9 @@
 /* =============================================================
-   PAHLAWAN BINTANG — style.css v20.9
+   PAHLAWAN BINTANG — style.css v20.9.1
    Complete stylesheet — landscape-first, ringan, defensive
    ------------------------------------------------------------
-   v20.9 NEW (over v20.8.2):
-   - Desktop Control Hints Panel (auto-show di laptop)
-   - Keyboard hint UI + toggle button
-   - Enhanced hover states untuk desktop
-   - Focus states untuk accessibility
+   v20.9.1 NEW:
+   - Stage Clear banner (delay loot collection)
    ============================================================= */
 
 /* ---------------------------------------------------------------
@@ -467,6 +464,9 @@ input:focus { border-color: var(--accent); }
 .logo-star {
   width: 100%;
   height: 100%;
+  max-width: 160px;
+  max-height: 160px;
+  display: block;
   filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.6));
   animation: pulse 2.5s ease-in-out infinite;
 }
@@ -1106,8 +1106,8 @@ body.low-end .analog-joystick.is-active .joystick-knob {
 .fire-icon { width: 55%; height: 55%; fill: currentColor; }
 
 /* =============================================================
-   END OF PART 1 — Sections 1-8
-   Lanjut ke Part 2 (Sections 9-17 + v20.9 additions)
+   END OF PART 1/3 — Sections 1-8
+   Lanjut ke Part 2/3 (Sections 9-17) di response berikutnya
    ============================================================= */
 
 /* ---------------------------------------------------------------
@@ -2847,6 +2847,11 @@ body.low-end .floating-text {
 }
 
 /* =============================================================
+   END OF PART 2/3 — Sections 9-17
+   Lanjut ke Part 3/3 (v20.9 + v20.9.1 additions)
+   ============================================================= */
+
+/* =============================================================
    🔥 v20.9 — DESKTOP CONTROL HINTS PANEL
    ============================================================= */
 #desktop-hints {
@@ -3089,5 +3094,75 @@ input:focus-visible,
 }
 
 /* =============================================================
-   END OF v20.9 STYLE.CSS — COMPLETE
+   🔥 v20.9.1 — STAGE CLEAR BANNER (delay loot collection)
+   ============================================================= */
+#level-intro.stage-clear {
+  background: rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  animation: stageClearPulse 1s ease-in-out infinite;
+}
+
+#level-intro.stage-clear .level-intro-label {
+  color: var(--success);
+  letter-spacing: 0.4em;
+}
+
+#level-intro.stage-clear .level-intro-number {
+  color: var(--success);
+  text-shadow:
+    0 0 20px var(--success),
+    0 0 40px rgba(46, 213, 115, 0.6),
+    0 0 60px rgba(46, 213, 115, 0.3);
+  animation: stageClearBounce 0.6s ease-out;
+}
+
+#level-intro.stage-clear .level-intro-name {
+  color: #ffffff;
+  text-shadow:
+    0 0 12px var(--success),
+    0 0 24px rgba(46, 213, 115, 0.5);
+  animation: stageClearPulse 0.8s ease-in-out infinite alternate;
+}
+
+#level-intro.stage-clear .level-intro-divider {
+  background: linear-gradient(90deg, transparent, var(--success), transparent);
+  box-shadow: 0 0 12px var(--success);
+}
+
+#level-intro.stage-clear .level-intro-mission {
+  color: var(--accent-2);
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+  animation: stageClearBlink 0.7s ease-in-out infinite;
+}
+
+@keyframes stageClearPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+@keyframes stageClearBounce {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes stageClearBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Countdown hint di bawah banner */
+#level-intro.stage-clear .level-intro-inner::after {
+  content: 'Bebas ambil koin & bonus 3 detik...';
+  display: block;
+  margin-top: 12px;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  animation: stageClearPulse 1s ease-in-out infinite;
+}
+
+/* =============================================================
+   END OF v20.9.1 STYLE.CSS — COMPLETE
    ============================================================= */
