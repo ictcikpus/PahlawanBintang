@@ -961,6 +961,79 @@ canvas{display:block}
       <button id="btn-close-skin" class="btn-secondary" type="button">TUTUP</button>
     </div>
   </div>
+  <!-- CO-OP RAID MODAL -->
+<div id="modal-raid" class="modal hidden">
+  <div class="modal-box raid-box">
+    <div class="raid-badge">🔥 CO-OP RAID 🔥</div>
+    <h2>RAID BOSS MEGA</h2>
+    <p class="mp-subtitle">2 pemain vs Mega Boss 3 fase. Butuh kerja sama!</p>
+    <div class="raid-boss-preview">
+      <div class="raid-boss-icon" id="raid-boss-icon">
+        <svg viewBox="0 0 40 40"><use href="#i-omega_boss"/></svg>
+      </div>
+      <div class="raid-boss-info">
+        <strong id="raid-boss-name">OMEGA PRIME</strong>
+        <small>HP: <span id="raid-boss-hp">50.000</span></small>
+      </div>
+    </div>
+    <div class="raid-phases">
+      <div class="raid-phase"><span class="rp-num">1</span><span class="rp-label">Minion Wave</span></div>
+      <div class="raid-phase"><span class="rp-num">2</span><span class="rp-label">Boss Form 1</span></div>
+      <div class="raid-phase"><span class="rp-num">3</span><span class="rp-label">Enraged Form</span></div>
+    </div>
+    <div class="endless-info" style="margin-top:12px">
+      <div>👥 Butuh 2 pemain (co-op)</div>
+      <div>💚 Shared HP: <strong id="raid-shared-hp">10</strong></div>
+      <div>🔄 Shared Revive: <strong>3x</strong></div>
+      <div>🏆 Reward: <strong>25.000 koin + skin eksklusif</strong></div>
+    </div>
+    <button id="btn-start-raid" class="btn-primary big" type="button">
+      <svg class="ico"><use href="#i-users"/></svg>
+      <span>BUAT RAID ROOM</span>
+    </button>
+    <button id="btn-close-raid" class="btn-secondary" type="button">TUTUP</button>
+  </div>
+</div>
+
+<!-- PET SHOP MODAL -->
+<div id="modal-pets" class="modal hidden">
+  <div class="modal-box">
+    <h2><svg class="ico-lg"><use href="#i-users"/></svg> PET SHOP</h2>
+    <p class="mp-subtitle">Pilih hingga 3 pet aktif. Pet membantu dalam pertempuran!</p>
+    <div class="pet-shop-grid" id="pet-shop-grid"></div>
+    <div class="pet-active-bar">
+      <div class="pet-active-label">AKTIF:</div>
+      <div class="pet-active-slots" id="pet-active-slots"></div>
+    </div>
+    <div class="endless-stat" style="margin-top:12px">
+      <div class="endless-stat-label">KOIN KAMU</div>
+      <div class="endless-stat-value" id="pet-coin-count">0</div>
+    </div>
+    <button id="btn-close-pets" class="btn-secondary" type="button">TUTUP</button>
+  </div>
+</div>
+
+<!-- PHOTO MODE OVERLAY -->
+<div id="photo-mode" class="hidden">
+  <div class="photo-top-bar">
+    <span class="photo-title">📸 PHOTO MODE</span>
+    <button id="btn-photo-close" class="photo-btn" type="button">✕</button>
+  </div>
+  <div class="photo-controls">
+    <button class="photo-filter active" data-filter="none" type="button">Normal</button>
+    <button class="photo-filter" data-filter="sepia" type="button">Sepia</button>
+    <button class="photo-filter" data-filter="vivid" type="button">Vivid</button>
+    <button class="photo-filter" data-filter="bw" type="button">B&W</button>
+    <button class="photo-filter" data-filter="cool" type="button">Cool</button>
+    <button class="photo-filter" data-filter="warm" type="button">Warm</button>
+  </div>
+  <div class="photo-bottom-bar">
+    <button id="btn-photo-save" class="btn-primary big" type="button">
+      <svg class="ico"><use href="#i-download"/></svg>
+      <span>SIMPAN FOTO</span>
+    </button>
+  </div>
+</div>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="./multiplayer.js?v=20.9"></script>
