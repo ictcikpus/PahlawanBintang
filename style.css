@@ -1118,3 +1118,516 @@ kbd{display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(255,2
   background:rgba(255,46,68,.15);
   border-color:rgba(255,46,68,.4);
 }
+/* =============================================================
+   v24.0 LEGACY EDITION — Ultimate + Cinematic + Pets + Skins
+   ============================================================= */
+
+/* === ULTIMATE BUTTON (HUD) === */
+.btn-ultimate{
+  position:absolute;
+  right:calc(var(--pad) + var(--safe-right) + clamp(74px, 10vmin, 96px));
+  bottom:calc(var(--pad) + var(--safe-bottom));
+  width:clamp(58px, 8vmin, 76px);
+  height:clamp(58px, 8vmin, 76px);
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.7);
+  background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.3), rgba(0,0,0,.85));
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  opacity:.55;
+  transition:opacity .25s, transform .1s;
+  pointer-events:auto;
+  z-index:3;
+  overflow:hidden;
+}
+.btn-ultimate svg{
+  width:50%;height:50%;
+  fill:currentColor;
+  color:#fff;
+  filter:drop-shadow(0 0 6px currentColor);
+  position:relative;
+  z-index:2;
+}
+.btn-ultimate.ready{
+  opacity:1;
+  animation:ultReady 1.2s ease-in-out infinite;
+  border-color:#ffd700;
+  box-shadow:0 0 20px rgba(255,215,0,.7), 0 0 40px rgba(255,140,0,.4);
+}
+@keyframes ultReady{
+  0%,100%{transform:scale(1); box-shadow:0 0 20px rgba(255,215,0,.7), 0 0 40px rgba(255,140,0,.4)}
+  50%{transform:scale(1.06); box-shadow:0 0 30px rgba(255,215,0,.9), 0 0 50px rgba(255,140,0,.6)}
+}
+.btn-ultimate:active{transform:scale(.9)}
+.btn-ultimate .ult-fill{
+  position:absolute;
+  bottom:0;left:0;right:0;
+  background:linear-gradient(0deg, #ffd700, #ff8a00);
+  height:0%;
+  transition:height .3s ease;
+  z-index:1;
+  opacity:.6;
+}
+.btn-ultimate .ult-label{
+  position:absolute;
+  bottom:-18px;
+  left:50%;
+  transform:translateX(-50%);
+  font-family:'Orbitron',sans-serif;
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:.1em;
+  color:#ffd700;
+  white-space:nowrap;
+  text-shadow:0 0 8px rgba(255,215,0,.8);
+}
+
+/* === BOSS CINEMATIC OVERLAY === */
+#boss-cinematic{
+  position:fixed;
+  inset:0;
+  z-index:96;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:radial-gradient(ellipse at center, rgba(0,0,0,.6) 0%, rgba(0,0,0,.95) 70%);
+  animation:cinematicIn .5s ease;
+  pointer-events:none;
+}
+@keyframes cinematicIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+.boss-cine-content{
+  text-align:center;
+  transform:scale(.7);
+  animation:cineZoom 1.2s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+@keyframes cineZoom{
+  from{transform:scale(.7);opacity:0}
+  to{transform:scale(1);opacity:1}
+}
+.boss-cine-portrait{
+  width:clamp(120px, 22vmin, 200px);
+  height:clamp(120px, 22vmin, 200px);
+  margin:0 auto 20px;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(255,46,68,.5), transparent 70%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  animation:cinePulse 1.5s ease-in-out infinite;
+}
+.boss-cine-portrait::before,
+.boss-cine-portrait::after{
+  content:'';
+  position:absolute;
+  border-radius:50%;
+  border:2px dashed rgba(255,46,68,.5);
+}
+.boss-cine-portrait::before{inset:-15px; animation:spin 8s linear infinite}
+.boss-cine-portrait::after{inset:-30px; border-style:solid; border-color:rgba(255,215,0,.3); animation:spin 14s linear infinite reverse}
+@keyframes cinePulse{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.05)}
+}
+.boss-cine-portrait svg{
+  width:70%;height:70%;
+  fill:currentColor;
+  color:#ff2e44;
+  filter:drop-shadow(0 0 20px currentColor);
+}
+.boss-cine-name{
+  font-family:'Orbitron',sans-serif;
+  font-size:clamp(28px, 6vmin, 48px);
+  font-weight:900;
+  letter-spacing:.15em;
+  color:#fff;
+  text-shadow:
+    0 0 20px #ff2e44,
+    0 0 40px #ff2e44,
+    0 4px 0 rgba(0,0,0,.8);
+  margin:0 0 8px;
+  animation:cineNameGlow 1s ease-in-out infinite alternate;
+}
+@keyframes cineNameGlow{
+  from{text-shadow:0 0 20px #ff2e44, 0 0 40px #ff2e44, 0 4px 0 rgba(0,0,0,.8)}
+  to{text-shadow:0 0 30px #ff2e44, 0 0 60px #ff2e44, 0 4px 0 rgba(0,0,0,.8)}
+}
+.boss-cine-sub{
+  font-family:'Orbitron',sans-serif;
+  font-size:clamp(11px, 1.8vmin, 15px);
+  letter-spacing:.3em;
+  color:#ffd700;
+  margin:0 0 16px;
+  text-transform:uppercase;
+}
+.boss-cine-bar{
+  width:min(80vw, 400px);
+  height:6px;
+  margin:0 auto;
+  border-radius:3px;
+  background:rgba(255,255,255,.1);
+  overflow:hidden;
+  position:relative;
+}
+.boss-cine-bar::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(90deg, transparent, #ff2e44, #ffd700, #ff2e44, transparent);
+  animation:cineBarScan 1.5s linear infinite;
+}
+@keyframes cineBarScan{
+  from{transform:translateX(-100%)}
+  to{transform:translateX(100%)}
+}
+
+/* === STORY CUTSCENE (comic panels) === */
+#story-cutscene{
+  position:fixed;
+  inset:0;
+  z-index:97;
+  background:rgba(0,0,0,.96);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  animation:fadeIn .4s ease;
+}
+.story-panels{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:14px;
+  max-width:min(94vw, 560px);
+  width:100%;
+  max-height:80vh;
+  overflow-y:auto;
+}
+.story-panel{
+  position:relative;
+  aspect-ratio:16/8;
+  border-radius:12px;
+  overflow:hidden;
+  border:2px solid rgba(0,210,255,.5);
+  background:linear-gradient(160deg, #0a0a2e, #1a0a3a);
+  box-shadow:0 10px 30px rgba(0,0,0,.6);
+  animation:panelSlideIn .6s cubic-bezier(.34,1.56,.64,1) forwards;
+  opacity:0;
+  transform:translateY(30px);
+}
+.story-panel:nth-child(1){animation-delay:.1s}
+.story-panel:nth-child(2){animation-delay:.35s}
+.story-panel:nth-child(3){animation-delay:.6s}
+.story-panel:nth-child(4){animation-delay:.85s}
+@keyframes panelSlideIn{
+  to{opacity:1; transform:translateY(0)}
+}
+.story-panel-bg{
+  position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 30%, rgba(255,46,68,.3), transparent 60%);
+}
+.story-panel-sprite{
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:50%;height:70%;
+  display:flex;align-items:center;justify-content:center;
+}
+.story-panel-sprite svg{
+  width:100%;height:100%;
+  fill:currentColor;
+  filter:drop-shadow(0 0 12px currentColor);
+}
+.story-panel-text{
+  position:absolute;
+  bottom:0;left:0;right:0;
+  padding:10px 14px;
+  background:linear-gradient(to top, rgba(0,0,0,.9), transparent);
+  font-family:'Rajdhani',sans-serif;
+  font-size:clamp(11px, 1.7vmin, 14px);
+  line-height:1.4;
+  color:#e6eefc;
+  text-shadow:0 1px 3px rgba(0,0,0,.8);
+}
+.story-panel-label{
+  position:absolute;
+  top:8px;left:10px;
+  font-family:'Orbitron',sans-serif;
+  font-size:9px;
+  letter-spacing:.1em;
+  padding:2px 8px;
+  border-radius:999px;
+  background:rgba(0,0,0,.6);
+  color:#00d2ff;
+  border:1px solid rgba(0,210,255,.4);
+}
+#btn-story-skip{
+  margin-top:16px;
+  padding:8px 20px;
+  border-radius:10px;
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.25);
+  color:#e6eefc;
+  font-family:'Orbitron',sans-serif;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.08em;
+}
+#btn-story-skip:active{transform:scale(.95)}
+
+/* === PET / COMPANION PANEL (HUD) === */
+.pet-strip{
+  position:absolute;
+  left:calc(var(--pad) + var(--safe-left));
+  top:calc(var(--pad) + var(--safe-top) + 42px);
+  display:flex;
+  gap:6px;
+  pointer-events:auto;
+  z-index:3;
+}
+.pet-chip{
+  width:34px;height:34px;
+  border-radius:50%;
+  background:rgba(0,0,0,.55);
+  border:1.5px solid rgba(0,210,255,.5);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  opacity:.6;
+  transition:opacity .3s, transform .3s;
+}
+.pet-chip.active{opacity:1; animation:petPulse 2s ease-in-out infinite}
+@keyframes petPulse{
+  0%,100%{transform:scale(1); box-shadow:0 0 6px rgba(0,210,255,.4)}
+  50%{transform:scale(1.08); box-shadow:0 0 14px rgba(0,210,255,.7)}
+}
+.pet-chip svg{width:20px;height:20px;fill:currentColor;color:#00d2ff}
+.pet-chip.pet-owl svg{color:#ffd700}
+.pet-chip.pet-bat svg{color:#a55eea}
+.pet-chip.pet-fox svg{color:#ff6b00}
+
+/* === BOSS RUSH MODAL === */
+.boss-rush-hero{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px;
+  border-radius:10px;
+  background:linear-gradient(135deg, rgba(255,215,0,.15), rgba(255,140,0,.1));
+  border:1px solid rgba(255,215,0,.4);
+  margin-bottom:12px;
+}
+.boss-rush-hero-icon{
+  width:44px;height:44px;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(255,215,0,.3), transparent 70%);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.boss-rush-hero-icon svg{width:26px;height:26px;fill:#ffd700;color:#ffd700}
+.boss-rush-hero-info strong{
+  display:block;
+  font-family:'Orbitron',sans-serif;
+  font-size:12px;
+  color:#ffd700;
+  letter-spacing:.04em;
+}
+.boss-rush-hero-info small{
+  display:block;
+  font-size:11px;
+  color:#93a5c4;
+  margin-top:2px;
+}
+
+/* === WEEKLY CHALLENGE === */
+.weekly-modifier{
+  padding:12px;
+  border-radius:12px;
+  background:linear-gradient(135deg, rgba(165,94,234,.2), rgba(0,210,255,.15));
+  border:1px solid rgba(165,94,234,.5);
+  margin-bottom:12px;
+  text-align:center;
+}
+.weekly-modifier strong{
+  display:block;
+  font-family:'Orbitron',sans-serif;
+  font-size:14px;
+  color:#c18eff;
+  letter-spacing:.06em;
+  margin-bottom:4px;
+}
+.weekly-modifier small{
+  display:block;
+  font-size:12px;
+  color:#93a5c4;
+}
+.weekly-timer{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  font-family:'Orbitron',sans-serif;
+  font-size:13px;
+  color:#ffd700;
+  margin-top:8px;
+}
+
+/* === DAILY LOGIN CALENDAR === */
+.login-calendar{
+  display:grid;
+  grid-template-columns:repeat(7, 1fr);
+  gap:6px;
+  margin-bottom:14px;
+}
+.login-day{
+  aspect-ratio:1;
+  border-radius:10px;
+  background:rgba(20,30,70,.6);
+  border:1.5px solid rgba(255,255,255,.1);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  padding:4px;
+  position:relative;
+  transition:all .2s;
+}
+.login-day.claimed{
+  background:linear-gradient(135deg, rgba(46,213,115,.25), rgba(20,30,70,.6));
+  border-color:#2ed573;
+}
+.login-day.today{
+  border-color:#ffd700;
+  box-shadow:0 0 14px rgba(255,215,0,.5);
+  animation:loginToday 1.5s ease-in-out infinite;
+}
+@keyframes loginToday{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.06)}
+}
+.login-day-num{
+  font-family:'Orbitron',sans-serif;
+  font-size:9px;
+  font-weight:700;
+  color:#93a5c4;
+}
+.login-day.claimed .login-day-num,
+.login-day.today .login-day-num{color:#fff}
+.login-day-reward{
+  font-size:10px;
+  font-weight:800;
+  color:#ffd700;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+}
+.login-day-reward svg{width:12px;height:12px;fill:currentColor}
+.login-day-check{
+  position:absolute;
+  top:2px;right:2px;
+  width:14px;height:14px;
+  border-radius:50%;
+  background:#2ed573;
+  display:flex;align-items:center;justify-content:center;
+}
+.login-day-check svg{width:9px;height:9px;color:#fff;fill:currentColor}
+
+/* === HERO SKIN SELECTOR === */
+.skin-selector{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:8px;
+  margin:12px 0;
+}
+.skin-card{
+  padding:10px 6px;
+  border-radius:10px;
+  background:rgba(20,30,70,.6);
+  border:2px solid rgba(255,255,255,.1);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  cursor:pointer;
+  transition:all .15s;
+}
+.skin-card:active{transform:scale(.94)}
+.skin-card.selected{border-color:#00d2ff; box-shadow:0 0 12px rgba(0,210,255,.5)}
+.skin-card.locked{opacity:.5}
+.skin-preview{
+  width:44px;height:44px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.skin-preview svg{width:100%;height:100%;fill:currentColor}
+.skin-name{font-family:'Orbitron',sans-serif;font-size:9.5px;font-weight:700;color:#e6eefc;letter-spacing:.04em}
+.skin-price{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:800;color:#ffd700;display:flex;align-items:center;gap:2px}
+.skin-price svg{width:11px;height:11px;fill:currentColor}
+.skin-price.owned{color:#2ed573}
+
+/* === BOSS RUSH OPTION BUTTON === */
+.btn-boss-rush{
+  background:linear-gradient(135deg, #ff2200 0%, #ff6b00 50%, #ffd700 100%);
+  border:none;
+  color:#fff;
+  font-weight:800;
+  box-shadow:0 4px 0 #8b1000, 0 6px 20px rgba(255,34,0,.5);
+  position:relative;
+  overflow:hidden;
+}
+.btn-boss-rush::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
+  transform:translateX(-100%);
+  animation:btnShine 2.5s ease-in-out infinite;
+}
+
+/* === ULTIMATE EFFECT OVERLAYS === */
+.ultimate-flash{
+  position:fixed;
+  inset:0;
+  z-index:88;
+  pointer-events:none;
+  background:radial-gradient(circle at center, rgba(255,215,0,.9) 0%, transparent 60%);
+  animation:ultFlash 0.6s ease-out forwards;
+}
+@keyframes ultFlash{
+  0%{opacity:1; transform:scale(0)}
+  100%{opacity:0; transform:scale(2.5)}
+}
+.ultimate-banner{
+  position:fixed;
+  top:35%;left:50%;
+  transform:translate(-50%,-50%) scale(0);
+  z-index:89;
+  pointer-events:none;
+  font-family:'Orbitron',sans-serif;
+  font-size:clamp(24px, 5vmin, 42px);
+  font-weight:900;
+  letter-spacing:.15em;
+  color:#fff;
+  text-shadow:
+    0 0 20px #ffd700,
+    0 0 40px #ff8a00,
+    0 0 60px #ff2200,
+    0 4px 0 rgba(0,0,0,.8);
+  white-space:nowrap;
+  animation:ultBannerAnim 1.8s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+@keyframes ultBannerAnim{
+  0%{transform:translate(-50%,-50%) scale(0) rotate(-15deg); opacity:0}
+  20%{transform:translate(-50%,-50%) scale(1.15) rotate(0); opacity:1}
+  70%{transform:translate(-50%,-50%) scale(1) rotate(0); opacity:1}
+  100%{transform:translate(-50%,-50%) scale(1.3) rotate(5deg); opacity:0}
+}
