@@ -2237,9 +2237,22 @@ function buyUpgrade(type) {
 }
 function pauseGame() {
   if (!isGameRunning || mpSpectatorMode) return;
-  if (mpActive && mpRole === 'guest') { mpGuestInput.pause = true; mpPauseState = 'paused-local'; return; }
+  if (mpActive && mpRole === 'guest') {
+    mpGuestInput.pause = true;
+    mpPauseState = 'paused-local';
+    // Toast feedback supaya user tahu pause sudah dikirim ke host
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;top:35%;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:12px;background:rgba(0,210,255,.25);border:1.5px solid #00d2ff;color:#fff;font-family:Orbitron,sans-serif;font-size:12px;font-weight:700;letter-spacing:.08em;box-shadow:0 0 24px rgba(0,210,255,.5);z-index:200;pointer-events:none;';
+    t.innerText = '⏸ PAUSE DIMINTA KE HOST...';
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 1500);
+    try { sounds.playPop(); } catch(e) {}
+    try { triggerVibrate([15, 30, 15]); } catch(e) {}
+    return;
+  }
   isGamePaused = true; mpPauseState = 'paused-local'; sounds.stopBGM();
-  const p = document.getElementById('modal-pause'); if (p) { p.style.pointerEvents = 'auto'; p.classList.remove('hidden'); }
+  const p = document.getElementById('modal-pause');
+  if (p) { p.style.pointerEvents = 'auto'; p.classList.remove('hidden'); }
 }
 function resumeGame() {
   if (mpActive && mpRole === 'guest') { mpGuestInput.resume = true; mpPauseState = 'none'; return; }
@@ -3853,10 +3866,11 @@ function gameLoop() {
   // === INTERPOLASI MONSTER ===
   for (const m of mpRemoteMonsters) {
     if (!m) continue;
-    // Lerp posisi display menuju target
-    const lerpFactor = 0.28; // sesuaikan: 0.15 = smooth, 0.4 = responsif
-    m.x = m.x + (m.targetX - m.x) * lerpFactor;
-    m.y = m.y + (m.targetY - m.y) * lerpFactor;
+    // Prediksi: monster bergerak turun (y bertambah)
+    m.y += (m.speedNorm !== undefined ? m.speedNorm * GAME_SCALE * DT * 60 : 0);
+    // Lerp menuju target
+    m.x = m.x + (m.targetX - m.x) * 0.30;
+    m.y = m.y + (m.targetY - m.y) * 0.30;
     m.timeAlive = (m.timeAlive || 0) + 0.05;
     m.rot = (m.rot || 0) + 0.02;
     m.wobble = (m.wobble || 0) + 0.08;
@@ -4482,7 +4496,31 @@ function gameLoopGuest() {
   bgGrad.addColorStop(0, theme.bgTop); bgGrad.addColorStop(1, theme.bgBottom);
   ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, W, H);
   drawParallaxStars(ctx, W, H);
-
+    // ============================================================
+  // v24.0.6 FINAL: INTERPOLASI BULLET & MONSTER DI GUEST
+  // ============================================================
+  const _DT = 1 / 60;
+  for (const b of mpRemoteBullets) {
+    if (!b) continue;
+    if (b.vxNorm !== undefined) b.x -= b.vxNorm * W * _DT * 0.9;
+    if (b.vyNorm !== undefined) b.y -= b.vyNorm * H * _DT * 0.9;
+    b.x += (b.targetX - b.x) * 0.35;
+    b.y += (b.targetY - b.y) * 0.35;
+    if (['ninja','donut_hero','samurai','star_enemy_hero','crystal_hero','diamond_hero','eternity_boss'].includes(b.heroType)) {
+      b.rot = (b.rot || 0) + 0.15;
+    }
+  }
+  for (const m of mpRemoteMonsters) {
+    if (!m) continue;
+    if (m.speedNorm) m.y += m.speedNorm * GAME_SCALE * _DT * 60;
+    m.x += (m.targetX - m.x) * 0.30;
+    m.y += (m.targetY - m.y) * 0.30;
+    m.timeAlive = (m.timeAlive || 0) + 0.05;
+    m.rot = (m.rot || 0) + 0.02;
+    m.wobble = (m.wobble || 0) + 0.08;
+    m.aura = (m.aura || 0) + 0.03;
+    if (m.hitFlash > 0) m.hitFlash--;
+  }
   const groundH = Math.max(30, VIRTUAL_HEIGHT * 0.06);
   ctx.fillStyle = theme.ground; ctx.fillRect(0, H - groundH, W, groundH);
   ctx.fillStyle = theme.groundLine;
@@ -5541,8 +5579,27 @@ function mpHostSendState() {
   else if (comboBoostLastNotified >= 5) comboIndicatorText = '⚡ FIRE RATE +20%';
   else if (comboBoostLastNotified >= 3) comboIndicatorText = '💰 COIN +50%';
   const state = {
-    monsters: monsters.map(m => ({ xNorm: m.x/W, yNorm: m.y/H, hp: m.hp, maxHp: m.maxHp, type: m.type, sizeNorm: m.size/baseSize, color: m.color, opacity: m.opacity||1, hitFlash: m.hitFlash||0, coreOpen: m.coreOpen||false, algorithm: m.algorithm })),
-    bullets: bullets.map(b => ({ xNorm: b.x/W, yNorm: b.y/H, vxNorm: b.vx/W, vyNorm: b.vy/H, color: b.color, sizeNorm: b.size/baseSize, heroType: b.heroType, owner: b.owner })),
+    monsters: monsters.map(m => ({ 
+    xNorm: m.x/W, yNorm: m.y/H, 
+    hp: m.hp, maxHp: m.maxHp, type: m.type, 
+    sizeNorm: m.size/baseSize, 
+    color: m.color, 
+    opacity: m.opacity||1, 
+    hitFlash: m.hitFlash||0, 
+    coreOpen: m.coreOpen||false, 
+    algorithm: m.algorithm,
+    speedNorm: (m.speed||0) / (GAME_SCALE||1)
+  })),
+  bullets: bullets.map(b => ({ 
+    xNorm: b.x/W, yNorm: b.y/H, 
+    vxNorm: b.vx/W, vyNorm: b.vy/H, 
+    color: b.color, 
+    sizeBase: (b.size || 0) / (GAME_SCALE || 1),
+    heroType: b.heroType, 
+    owner: b.owner,
+    rot: b.rot || 0
+  })),
+  
     hostXNorm: playerX/W,
     hostHeroType: currentActor,
     guestXNorm: mpGuestX/W,
@@ -5576,54 +5633,53 @@ function mpApplyHostState(state) {
       currentTheme = matchingTheme; applyThemeToDocument(currentTheme); recolorStars();
       if (mpActive && mpRole === 'guest') { sounds.stopBGM(); sounds.startBGM(); }
     }
-  }
-// === INTERPOLASI: Simpan target + current untuk smooth movement ===
-const newTargets = state.monsters.map(m => ({
-  targetX: m.xNorm * W, targetY: m.yNorm * H,
-  hp: m.hp, maxHp: m.maxHp, type: m.type,
-  size: m.sizeNorm * baseSize, color: m.color, opacity: m.opacity,
-  hitFlash: m.hitFlash, coreOpen: m.coreOpen, algorithm: m.algorithm
-}));
-
-// Match dengan monster lama berdasarkan index + type (best-effort)
-const oldMonsters = mpRemoteMonsters || [];
-mpRemoteMonsters = newTargets.map((t, i) => {
-  const old = oldMonsters[i];
-  // Jika monster ini sama (type match) → interpolasi dari posisi lama
-  if (old && old.type === t.type && old.maxHp === t.maxHp) {
+  // ============================================================
+  // v24.0.6 FINAL: INTERPOLASI MONSTER
+  // ============================================================
+  const oldMonsters = mpRemoteMonsters || [];
+  mpRemoteMonsters = state.monsters.map((m, i) => {
+    const old = oldMonsters[i];
+    const sameMonster = old && old.type === m.type && old.maxHp === m.maxHp;
+    const tx = m.xNorm * W, ty = m.yNorm * H;
     return {
-      ...t,
-      x: old.x, y: old.y,           // current display position
-      prevX: old.x, prevY: old.y,   // untuk interpolasi
-      targetX: t.targetX, targetY: t.targetY,
-      timeAlive: (old.timeAlive || 0) + 0.05,
-      rot: old.rot || 0, wobble: old.wobble || 0, aura: old.aura || 0
+      x: sameMonster ? old.x : tx,
+      y: sameMonster ? old.y : ty,
+      targetX: tx, targetY: ty,
+      hp: m.hp, maxHp: m.maxHp, type: m.type,
+      size: m.sizeNorm * baseSize,
+      color: m.color, opacity: m.opacity,
+      hitFlash: m.hitFlash, coreOpen: m.coreOpen, algorithm: m.algorithm,
+      speedNorm: m.speedNorm || 0,
+      timeAlive: sameMonster ? (old.timeAlive || 0) : 0,
+      rot: sameMonster ? (old.rot || 0) : 0,
+      wobble: sameMonster ? (old.wobble || 0) : 0,
+      aura: sameMonster ? (old.aura || 0) : 0
     };
-  }
-  // Monster baru → langsung ke posisi target
-  return {
-    ...t,
-    x: t.targetX, y: t.targetY,
-    prevX: t.targetX, prevY: t.targetY,
-    timeAlive: 0, rot: 0, wobble: 0, aura: 0
-  };
-});
+  });
 
-// Bullet: tracking juga dengan interpolasi ringan
-const oldBullets = mpRemoteBullets || [];
-mpRemoteBullets = (state.bullets || []).map((b, i) => {
-  const old = oldBullets[i];
-  return {
-    xNorm: b.xNorm, yNorm: b.yNorm,
-    targetX: b.xNorm * W, targetY: b.yNorm * H,
-    x: old ? old.x : b.xNorm * W,
-    y: old ? old.y : b.yNorm * H,
-    vxNorm: b.vxNorm, vyNorm: b.vyNorm,
-    color: b.color, sizeNorm: b.sizeNorm,
-    size: b.sizeNorm * baseSize,
-    heroType: b.heroType, owner: b.owner
-  };
-});
+  // ============================================================
+  // v24.0.6 FINAL: INTERPOLASI BULLET (HANYA SATU oldBullets!)
+  // ============================================================
+  const oldBullets = mpRemoteBullets || [];
+  mpRemoteBullets = (state.bullets || []).map((b, i) => {
+    const oldB = oldBullets[i];
+    const tx = b.xNorm * W;
+    const ty = b.yNorm * H;
+    const sz = (b.sizeBase !== undefined)
+      ? b.sizeBase * GAME_SCALE
+      : (b.sizeNorm || 0.01) * baseSize;
+    return {
+      x: oldB ? oldB.x : tx,
+      y: oldB ? oldB.y : ty,
+      targetX: tx, targetY: ty,
+      vxNorm: b.vxNorm, vyNorm: b.vyNorm,
+      color: b.color,
+      size: sz,
+      heroType: b.heroType,
+      owner: b.owner,
+      rot: oldB ? (oldB.rot || 0) : (b.rot || 0)
+    };
+  });
   if (state.hostXNorm !== undefined) mpRemoteX = state.hostXNorm * W;
   if (state.hostHeroType) mpRemoteHeroType = state.hostHeroType;
   if (state.guestXNorm !== undefined) mpGuestX = state.guestXNorm * W;
