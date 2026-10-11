@@ -2472,48 +2472,21 @@ function updateHUDValues() {
     const hl = $('hud-level'); if (hl) hl.innerText = 'B' + (dailyBossIndex + 1);
     const hm = $('hud-mission');
     if (hm) { if (bossPhase === 'minions') hm.innerText = `${bossMinionsKilled}/${bossMinionsTarget} MINION`; else hm.innerText = `BOS ${dailyBossIndex + 1}/3`; }
-    } else if (gameMode === 'coop') {
-      levelConfig = levelsData[currentLevelIndex] || levelsData[0];
-      levelConfig = Object.assign({}, levelConfig, { speed: (levelConfig.speed || 1) * S });
-      spawnMultiplier = 1.5;
-    } else if (gameMode === 'coop_raid') {
-      // ✅ Solo raid / co-op raid
+  } else if (gameMode === 'coop') {
+    const hl = $('hud-level'); if (hl) hl.innerText = 'CO-OP';
+    const hm = $('hud-mission'); if (hm) hm.innerText = 'TEAM';
+  } else if (gameMode === 'coop_raid') {
+    // ✅ FIX: Handle Solo/Co-op RAID
+    const hl = $('hud-level'); if (hl) hl.innerText = 'RAID';
+    const hm = $('hud-mission');
+    if (hm) {
       if (raidState.phase === 1) {
-        // Fase minion wave
-        levelConfig = {
-          level: 999,
-          targetKills: 30,
-          targetScore: 0,
-          speed: 1.2 * S,
-          spawnRate: 600,
-          algorithm: 'swarm',
-          types: ['jelly','triangle','worm','cloud','crystal']
-        };
+        hm.innerText = `${levelKills}/30 MINION`;
       } else {
-        // Fase boss
-        if (monsters.length === 0 && Date.now() > (nextBossSpawnTime || 0)) {
-          const bossSize = (BOSS_SIZES[30] || 148) * S;
-          const theme = getBossTheme(30);
-          currentTheme = theme; applyThemeToDocument(theme); recolorStars();
-          triggerBossSiren();
-          const hpVal = raidState.bossHp || 50000;
-          monsters.push({
-            x: W/2, startX: W/2, y: -100*S,
-            speed: 1.0*S, size: bossSize, hp: hpVal, maxHp: hpVal,
-            color: theme.accent, type: 'boss30', algorithm: 'boss_30',
-            shootTimer: 0, minionTimer: 0, enrageTimer: 0,
-            timeAlive: 0, opacity: 1, hitFlash: 0, aura: 0,
-            aimTimer: 0, aimTargetX: 0, aimTargetY: 0,
-            coreOpen: false, coreTimer: 0, coreGlow: 0, noWeakPoint: false
-          });
-          updateHUDValues();
-        }
-        // Retry loop untuk cek spawn boss
-        const myToken = (token !== undefined) ? token : spawnLoopToken;
-        setTimeout(() => spawnMonsterLoop(myToken), 500);
-        return;
+        hm.innerText = 'BOSS OMEGA';
       }
-    } else {
+    }
+  } else {
     const lc = levelsData[currentLevelIndex] || levelsData[0];
     const hl = $('hud-level'); if (hl) hl.innerText = lc.level;
     const hm = $('hud-mission');
