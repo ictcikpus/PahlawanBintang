@@ -3864,10 +3864,10 @@ function gameLoop() {
   drawParallaxStars(ctx, W, H);
 
   // === INTERPOLASI MONSTER ===
-  for (const m of mpRemoteMonsters) {
-    if (!m) continue;
-    // Prediksi: monster bergerak turun (y bertambah)
-    m.y += (m.speedNorm !== undefined ? m.speedNorm * GAME_SCALE * DT * 60 : 0);
+    const _DT = 1 / 60;   // ✅ Deklarasi lokal
+    for (const m of mpRemoteMonsters) {
+      if (!m) continue;
+      m.y += (m.speedNorm !== undefined ? m.speedNorm * GAME_SCALE * _DT * 60 : 0);
     // Lerp menuju target
     m.x = m.x + (m.targetX - m.x) * 0.30;
     m.y = m.y + (m.targetY - m.y) * 0.30;
@@ -5632,7 +5632,7 @@ function mpApplyHostState(state) {
     if (matchingTheme && matchingTheme.id !== currentTheme.id) {
       currentTheme = matchingTheme; applyThemeToDocument(currentTheme); recolorStars();
       if (mpActive && mpRole === 'guest') { sounds.stopBGM(); sounds.startBGM(); }
-    }
+    }}
   // ============================================================
   // v24.0.6 FINAL: INTERPOLASI MONSTER
   // ============================================================
@@ -11370,29 +11370,5 @@ console.log('✅ [game.js] v24.0.0 — LEGACY EDITION COMPLETE (10/10 PARTS)');
     setTimeout(bindPause, 500);
     setTimeout(bindPause, 1500);
     setTimeout(bindPause, 3000);
-  });
-})();
-// =============================================================
-// FIX v24.0.6: PAUSE BUTTON FALLBACK LISTENER
-// =============================================================
-(function fixPauseButton() {
-  function bindPause() {
-    const btn = document.getElementById('btn-pause');
-    if (!btn || btn._pauseFixBound) return;
-    btn._pauseFixBound = true;
-    btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      try { if (navigator.vibrate) navigator.vibrate(10); } catch(err) {}
-      try { if (typeof pauseGame === 'function') pauseGame(); }
-      catch (err) { console.error('❌ [PauseBtn] Error:', err); }
-    }, true);
-    console.log('✅ [PauseBtn] Bound');
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindPause);
-  window.addEventListener('load', () => {
-    bindPause();
-    setTimeout(bindPause, 500);
-    setTimeout(bindPause, 1500);
   });
 })();
