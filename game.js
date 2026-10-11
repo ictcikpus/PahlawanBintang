@@ -11372,21 +11372,9 @@ console.log('✅ [game.js] v24.0.0 — LEGACY EDITION COMPLETE (10/10 PARTS)');
   'use strict';
 
   const MENU_HANDLERS = {
-    'btn-boss-rush': {
-      fn: () => (typeof openBossRushModal === 'function') ? openBossRushModal() : showModal('modal-boss-rush'),
-      modal: 'modal-boss-rush'
-    },
-    'btn-weekly': {
-      fn: () => (typeof openWeeklyModal === 'function') ? openWeeklyModal() : showModal('modal-weekly'),
-      modal: 'modal-weekly'
-    },
     'btn-login': {
       fn: () => (typeof openLoginModal === 'function') ? openLoginModal() : showModal('modal-login'),
       modal: 'modal-login'
-    },
-    'btn-raid': {
-      fn: () => (typeof openRaidModal === 'function') ? openRaidModal() : showModal('modal-raid'),
-      modal: 'modal-raid'
     },
     'btn-pets': {
       fn: () => {
