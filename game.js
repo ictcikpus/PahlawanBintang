@@ -5467,16 +5467,53 @@ function mpApplyHostState(state) {
       if (mpActive && mpRole === 'guest') { sounds.stopBGM(); sounds.startBGM(); }
     }
   }
-  mpRemoteMonsters = state.monsters.map(m => ({
-    x: m.xNorm * W, y: m.yNorm * H, hp: m.hp, maxHp: m.maxHp, type: m.type,
-    size: m.sizeNorm * baseSize, color: m.color, opacity: m.opacity,
-    hitFlash: m.hitFlash, coreOpen: m.coreOpen, algorithm: m.algorithm,
-    timeAlive: (Date.now() % 10000) / 1000, rot: 0, wobble: 0, aura: 0
-  }));
-  mpRemoteBullets = (state.bullets || []).map(b => ({
-    x: b.xNorm * W, y: b.yNorm * H, vx: b.vxNorm * W, vy: b.vyNorm * H,
-    color: b.color, size: b.sizeNorm * baseSize, heroType: b.heroType, owner: b.owner
-  }));
+// === INTERPOLASI: Simpan target + current untuk smooth movement ===
+const newTargets = state.monsters.map(m => ({
+  targetX: m.xNorm * W, targetY: m.yNorm * H,
+  hp: m.hp, maxHp: m.maxHp, type: m.type,
+  size: m.sizeNorm * baseSize, color: m.color, opacity: m.opacity,
+  hitFlash: m.hitFlash, coreOpen: m.coreOpen, algorithm: m.algorithm
+}));
+
+// Match dengan monster lama berdasarkan index + type (best-effort)
+const oldMonsters = mpRemoteMonsters || [];
+mpRemoteMonsters = newTargets.map((t, i) => {
+  const old = oldMonsters[i];
+  // Jika monster ini sama (type match) → interpolasi dari posisi lama
+  if (old && old.type === t.type && old.maxHp === t.maxHp) {
+    return {
+      ...t,
+      x: old.x, y: old.y,           // current display position
+      prevX: old.x, prevY: old.y,   // untuk interpolasi
+      targetX: t.targetX, targetY: t.targetY,
+      timeAlive: (old.timeAlive || 0) + 0.05,
+      rot: old.rot || 0, wobble: old.wobble || 0, aura: old.aura || 0
+    };
+  }
+  // Monster baru → langsung ke posisi target
+  return {
+    ...t,
+    x: t.targetX, y: t.targetY,
+    prevX: t.targetX, prevY: t.targetY,
+    timeAlive: 0, rot: 0, wobble: 0, aura: 0
+  };
+});
+
+// Bullet: tracking juga dengan interpolasi ringan
+const oldBullets = mpRemoteBullets || [];
+mpRemoteBullets = (state.bullets || []).map((b, i) => {
+  const old = oldBullets[i];
+  return {
+    xNorm: b.xNorm, yNorm: b.yNorm,
+    targetX: b.xNorm * W, targetY: b.yNorm * H,
+    x: old ? old.x : b.xNorm * W,
+    y: old ? old.y : b.yNorm * H,
+    vxNorm: b.vxNorm, vyNorm: b.vyNorm,
+    color: b.color, sizeNorm: b.sizeNorm,
+    size: b.sizeNorm * baseSize,
+    heroType: b.heroType, owner: b.owner
+  };
+});
   if (state.hostXNorm !== undefined) mpRemoteX = state.hostXNorm * W;
   if (state.hostHeroType) mpRemoteHeroType = state.hostHeroType;
   if (state.guestXNorm !== undefined) mpGuestX = state.guestXNorm * W;
