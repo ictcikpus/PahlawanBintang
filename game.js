@@ -3787,6 +3787,28 @@ function gameLoop() {
   ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, W, H);
   drawParallaxStars(ctx, W, H);
 
+  // === INTERPOLASI MONSTER ===
+  for (const m of mpRemoteMonsters) {
+    if (!m) continue;
+    // Lerp posisi display menuju target
+    const lerpFactor = 0.28; // sesuaikan: 0.15 = smooth, 0.4 = responsif
+    m.x = m.x + (m.targetX - m.x) * lerpFactor;
+    m.y = m.y + (m.targetY - m.y) * lerpFactor;
+    m.timeAlive = (m.timeAlive || 0) + 0.05;
+    m.rot = (m.rot || 0) + 0.02;
+    m.wobble = (m.wobble || 0) + 0.08;
+    m.aura = (m.aura || 0) + 0.03;
+    if (m.hitFlash > 0) m.hitFlash--;
+  }
+  
+  // === INTERPOLASI BULLET (lebih cepat) ===
+  for (const b of mpRemoteBullets) {
+    if (!b) continue;
+    const lerpFactor = 0.5; // bullet lebih responsif
+    b.x = b.x + (b.targetX - b.x) * lerpFactor;
+    b.y = b.y + (b.targetY - b.y) * lerpFactor;
+  }
+  
   const groundH = Math.max(30, VIRTUAL_HEIGHT * 0.06);
   ctx.fillStyle = theme.ground; ctx.fillRect(0, H - groundH, W, groundH);
   ctx.fillStyle = theme.groundLine;
