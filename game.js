@@ -5749,6 +5749,874 @@ window.addEventListener('load', () => {
 // 20 HEROES + 10 UPGRADES + GALAXY MENU + FULL RESPONSIVE
 // =============================================================
 console.log('✅ [game.js] v21.0.0 LOADED — PART 4/4 COMPLETE');
+// =============================================================
+// PAHLAWAN BINTANG — game.js v22.0.0 — PART 5/6
+// UNIVERSE PROGRESSION: 5 Zona + Living Background + Hero Unlock
+// =============================================================
+
+// =============================================================
+// Z1. ZONA SEMESTA — 5 Tingkat Alam Semesta
+// =============================================================
+const ZONES = [
+  {
+    id: 1, name: 'BUMI', subtitle: 'Pertahanan Terakhir',
+    range: [1, 10], icon: 'i-star',
+    description: 'Kamu bertahan di atmosfer Bumi melawan invasi pertama dari Void.',
+    bgType: 'earth',
+    colors: {
+      bgTop: '#0a1a3a', bgBottom: '#2a4a6f',
+      ground: '#3a2a1a', groundLine: '#4da6ff',
+      accent: '#4da6ff', accentSoft: 'rgba(77,166,255,0.4)'
+    },
+    stars: ['#ffffff', '#ffd700', '#4da6ff', '#70a1ff'],
+    monsters: ['#4da6ff', '#ff6b00', '#2ed573', '#ffd700', '#a55eea']
+  },
+  {
+    id: 2, name: 'LUAR ANGKASA', subtitle: 'Batasan Orbit',
+    range: [11, 20], icon: 'i-star',
+    description: 'Melampaui atmosfer. Di antara bintang-bintang dan planet-planet tetangga.',
+    bgType: 'space',
+    colors: {
+      bgTop: '#02030e', bgBottom: '#0a1a4a',
+      ground: '#1a1a2e', groundLine: '#70a1ff',
+      accent: '#70a1ff', accentSoft: 'rgba(112,161,255,0.4)'
+    },
+    stars: ['#ffffff', '#00d2ff', '#ffd700', '#a55eea'],
+    monsters: ['#70a1ff', '#00d2ff', '#a55eea', '#ff2e88', '#ffffff']
+  },
+  {
+    id: 3, name: 'GALAKSI', subtitle: 'Jantung Bimasakti',
+    range: [21, 30], icon: 'i-star',
+    description: 'Masuk ke dalam arm spiral galaksi yang berputar milyaran bintang.',
+    bgType: 'galaxy',
+    colors: {
+      bgTop: '#0a0515', bgBottom: '#2a0a3a',
+      ground: '#2a1040', groundLine: '#c86bff',
+      accent: '#c86bff', accentSoft: 'rgba(200,107,255,0.4)'
+    },
+    stars: ['#c86bff', '#ff2e88', '#ffffff', '#7a2bb8'],
+    monsters: ['#c86bff', '#ff2e88', '#a55eea', '#ff77ff', '#8c46d6']
+  },
+  {
+    id: 4, name: 'SELURUH ALAM', subtitle: 'Dimensi Parallel',
+    range: [31, 40], icon: 'i-star',
+    description: 'Melampaui ruang dan waktu. Menembus antar-dimensi yang tak terbayangkan.',
+    bgType: 'multiverse',
+    colors: {
+      bgTop: '#0a0010', bgBottom: '#2b0033',
+      ground: '#1c0a24', groundLine: '#ff00ff',
+      accent: '#ff00ff', accentSoft: 'rgba(255,0,255,0.4)'
+    },
+    stars: ['#ff00ff', '#00ffff', '#ffffff', '#ff77ff'],
+    monsters: ['#ff00ff', '#00ffff', '#c86bff', '#39ff14', '#ffffff']
+  },
+  {
+    id: 5, name: 'BIMA SAKTI', subtitle: 'Inti Semesta',
+    range: [41, 50], icon: 'i-star',
+    description: 'Inti galaksi. Supermassive black hole dan bintang-bintang purba.',
+    bgType: 'milkyway',
+    colors: {
+      bgTop: '#000000', bgBottom: '#1a1000',
+      ground: '#2a2000', groundLine: '#ffd700',
+      accent: '#ffd700', accentSoft: 'rgba(255,215,0,0.4)'
+    },
+    stars: ['#ffd700', '#ffaa00', '#ffffff', '#ff8a00'],
+    monsters: ['#ffd700', '#ff8a00', '#ff2200', '#ffffff', '#ffd700']
+  }
+];
+
+// Hero unlock dari boss (level 5, 10, 15, ... 50)
+const BOSS_UNLOCK_HERO = {
+  5:  'cannon',
+  10: 'dragon',
+  15: 'cat',
+  20: 'unicorn',
+  25: 'phoenix',
+  30: 'ninja',
+  35: 'wizard',
+  40: 'archer',
+  45: 'ghost',
+  50: 'titan'
+};
+
+// State
+let currentZoneId = 1;
+let unlockedZones = [1];
+let zoneBackgroundParticles = [];
+let zoneAmbientTime = 0;
+let pendingZoneUnlock = null;
+let pendingHeroUnlock = null;
+
+// =============================================================
+// Z2. ZONA HELPERS
+// =============================================================
+function getZoneByLevel(levelNum) {
+  for (const z of ZONES) {
+    if (levelNum >= z.range[0] && levelNum <= z.range[1]) return z;
+  }
+  return ZONES[0];
+}
+function getZoneById(id) { return ZONES.find(z => z.id === id) || ZONES[0]; }
+
+function applyZoneToTheme(zone) {
+  if (!zone) return;
+  currentTheme = {
+    id: 'zone' + zone.id,
+    name: zone.name + ' — ' + zone.subtitle,
+    bgTop: zone.colors.bgTop,
+    bgBottom: zone.colors.bgBottom,
+    accent: zone.colors.accent,
+    accentSoft: zone.colors.accentSoft,
+    stars: zone.stars,
+    ground: zone.colors.ground,
+    groundLine: zone.colors.groundLine,
+    monsters: zone.monsters,
+    _zoneId: zone.id,
+    _bgType: zone.bgType
+  };
+  applyThemeToDocument(currentTheme);
+  recolorStars();
+  initZoneParticles(zone);
+}
+
+// =============================================================
+// Z3. ZONA PERSISTENCE
+// =============================================================
+async function loadUnlockedZones() {
+  const raw = await DB.get('pahlawan_unlocked_zones');
+  try {
+    const arr = JSON.parse(raw || '[1]');
+    if (Array.isArray(arr) && arr.length > 0) unlockedZones = arr.filter(x => x >= 1 && x <= 5);
+    else unlockedZones = [1];
+  } catch(e) { unlockedZones = [1]; }
+  // Auto-derive dari savedLevel
+  const saved = await getSavedLevel();
+  for (const z of ZONES) {
+    if (saved > z.range[1] && !unlockedZones.includes(z.id)) unlockedZones.push(z.id);
+  }
+  if (!unlockedZones.includes(1)) unlockedZones.push(1);
+}
+async function saveUnlockedZones() {
+  await DB.set('pahlawan_unlocked_zones', JSON.stringify(unlockedZones));
+}
+function isZoneUnlocked(id) { return unlockedZones.includes(id); }
+
+// =============================================================
+// Z4. ZONA BACKGROUND — LIVING ANIMATION
+// =============================================================
+function initZoneParticles(zone) {
+  zoneBackgroundParticles = [];
+  if (!zone || !VIRTUAL_WIDTH) return;
+  const W = VIRTUAL_WIDTH, H = VIRTUAL_HEIGHT;
+  switch (zone.bgType) {
+    case 'earth':
+      // Awan bergerak horizontal
+      for (let i = 0; i < 6; i++) {
+        zoneBackgroundParticles.push({
+          type: 'cloud',
+          x: Math.random() * W, y: H * 0.05 + Math.random() * H * 0.5,
+          size: 40 + Math.random() * 80,
+          speed: 0.15 + Math.random() * 0.25,
+          opacity: 0.08 + Math.random() * 0.12
+        });
+      }
+      // Kota / bangunan siluet di horizon
+      for (let i = 0; i < 14; i++) {
+        zoneBackgroundParticles.push({
+          type: 'building',
+          x: (i / 14) * W + Math.random() * 30,
+          h: 20 + Math.random() * 60,
+          w: 14 + Math.random() * 24
+        });
+      }
+      break;
+    case 'space':
+      // Planet di background
+      zoneBackgroundParticles.push({ type: 'planet', x: W * 0.15, y: H * 0.25, size: 60, color: '#ff8a00' });
+      zoneBackgroundParticles.push({ type: 'planet', x: W * 0.85, y: H * 0.4, size: 40, color: '#a55eea' });
+      // Komet jatuh
+      for (let i = 0; i < 3; i++) {
+        zoneBackgroundParticles.push({
+          type: 'comet',
+          x: Math.random() * W, y: Math.random() * H * 0.5,
+          vx: -2 - Math.random() * 2, vy: 1 + Math.random() * 1.5,
+          life: 1, delay: Math.random() * 3
+        });
+      }
+      break;
+    case 'galaxy':
+      // Arm spiral berputar
+      zoneBackgroundParticles.push({ type: 'spiral_arm', rot: 0, speed: 0.0012, radius: Math.min(W, H) * 0.6 });
+      // Bintang supernova
+      for (let i = 0; i < 4; i++) {
+        zoneBackgroundParticles.push({
+          type: 'supernova',
+          x: Math.random() * W, y: Math.random() * H * 0.6,
+          life: 0, delay: Math.random() * 8
+        });
+      }
+      break;
+    case 'multiverse':
+      // Portal rifts
+      for (let i = 0; i < 3; i++) {
+        zoneBackgroundParticles.push({
+          type: 'rift',
+          x: W * 0.2 + i * W * 0.3, y: H * 0.3,
+          w: 30 + Math.random() * 40, h: 120 + Math.random() * 80,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+      // Floating islands (dimensi)
+      for (let i = 0; i < 5; i++) {
+        zoneBackgroundParticles.push({
+          type: 'island',
+          x: Math.random() * W, y: H * 0.1 + Math.random() * H * 0.4,
+          size: 30 + Math.random() * 40,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+      break;
+    case 'milkyway':
+      // Black hole di center atas
+      zoneBackgroundParticles.push({ type: 'black_hole', x: W * 0.5, y: H * 0.15, size: 70 });
+      // Ring accretion
+      zoneBackgroundParticles.push({ type: 'ring', rot: 0, speed: 0.003, radius: 90 });
+      // Star trails
+      for (let i = 0; i < 20; i++) {
+        zoneBackgroundParticles.push({
+          type: 'star_trail',
+          x: Math.random() * W, y: Math.random() * H,
+          len: 20 + Math.random() * 40,
+          angle: Math.random() * Math.PI * 2,
+          opacity: 0.3 + Math.random() * 0.5
+        });
+      }
+      break;
+  }
+}
+
+function drawZoneLiving(ctx, W, H, zone) {
+  if (!zone) return;
+  zoneAmbientTime += 0.016;
+  const t = zoneAmbientTime;
+
+  // Base star layers dari original
+  if (starLayers.length) {
+    starLayers.forEach(layer => {
+      layer.stars.forEach(s => {
+        s.y += s.speed;
+        s.twinkle += s.twinkleSpeed;
+        if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
+        const a = s.opacity * (0.75 + Math.sin(s.twinkle) * 0.25);
+        ctx.fillStyle = s.color;
+        ctx.globalAlpha = a;
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill();
+      });
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  // Zona-specific elements
+  const zoneId = zone.id;
+  if (zoneId === 1) drawEarthBg(ctx, W, H, t);
+  else if (zoneId === 2) drawSpaceBg(ctx, W, H, t);
+  else if (zoneId === 3) drawGalaxyBg(ctx, W, H, t);
+  else if (zoneId === 4) drawMultiverseBg(ctx, W, H, t);
+  else if (zoneId === 5) drawMilkywayBg(ctx, W, H, t);
+}
+
+// -------- Zona 1: BUMI --------
+function drawEarthBg(ctx, W, H, t) {
+  // Aurora glow di horizon
+  const aurora = ctx.createLinearGradient(0, H * 0.5, 0, H * 0.75);
+  aurora.addColorStop(0, 'rgba(0,210,255,0)');
+  aurora.addColorStop(0.5, 'rgba(0,210,255,0.08)');
+  aurora.addColorStop(1, 'rgba(0,210,255,0)');
+  ctx.fillStyle = aurora;
+  ctx.fillRect(0, H * 0.5, W, H * 0.25);
+
+  // Bangunan siluet
+  zoneBackgroundParticles.filter(p => p.type === 'building').forEach(b => {
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(b.x, H * 0.85 - b.h, b.w, b.h);
+    // Jendela bangunan
+    for (let wy = 0; wy < b.h - 6; wy += 10) {
+      for (let wx = 3; wx < b.w - 3; wx += 6) {
+        if (Math.random() > 0.7) {
+          ctx.fillStyle = 'rgba(255,215,0,' + (0.3 + Math.random() * 0.4) + ')';
+          ctx.fillRect(b.x + wx, H * 0.85 - b.h + wy, 2, 3);
+        }
+      }
+    }
+  });
+
+  // Awan bergerak
+  zoneBackgroundParticles.filter(p => p.type === 'cloud').forEach(c => {
+    c.x += c.speed;
+    if (c.x > W + c.size) c.x = -c.size;
+    ctx.save();
+    ctx.globalAlpha = c.opacity;
+    const gradient = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, c.size);
+    gradient.addColorStop(0, 'rgba(255,255,255,0.5)');
+    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y, c.size, c.size * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
+// -------- Zona 2: LUAR ANGKASA --------
+function drawSpaceBg(ctx, W, H, t) {
+  // Planets
+  zoneBackgroundParticles.filter(p => p.type === 'planet').forEach(p => {
+    const grad = ctx.createRadialGradient(p.x - p.size * 0.3, p.y - p.size * 0.3, p.size * 0.1, p.x, p.y, p.size);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.4, p.color);
+    grad.addColorStop(1, 'rgba(0,0,0,0.9)');
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    // Ring glow
+    ctx.strokeStyle = p.color + '40';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size + 8, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+
+  // Comets
+  zoneBackgroundParticles.filter(p => p.type === 'comet').forEach(c => {
+    c.delay = (c.delay || 0) - 0.016;
+    if (c.delay > 0) return;
+    c.x += c.vx;
+    c.y += c.vy;
+    if (c.x < -100 || c.y > H + 100) {
+      c.x = Math.random() * W + 100;
+      c.y = -20;
+      c.vx = -2 - Math.random() * 2;
+      c.vy = 1 + Math.random() * 1.5;
+      c.delay = 3 + Math.random() * 5;
+    }
+    // Tail
+    const tailGrad = ctx.createLinearGradient(c.x, c.y, c.x - c.vx * 20, c.y - c.vy * 20);
+    tailGrad.addColorStop(0, 'rgba(255,255,255,0.9)');
+    tailGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.strokeStyle = tailGrad;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y);
+    ctx.lineTo(c.x - c.vx * 20, c.y - c.vy * 20);
+    ctx.stroke();
+    // Head
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+// -------- Zona 3: GALAKSI --------
+function drawGalaxyBg(ctx, W, H, t) {
+  const cx = W * 0.5, cy = H * 0.6;
+
+  // Spiral arms
+  zoneBackgroundParticles.filter(p => p.type === 'spiral_arm').forEach(arm => {
+    arm.rot += arm.speed;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(arm.rot);
+    for (let a = 0; a < 2; a++) {
+      ctx.save();
+      ctx.rotate(a * Math.PI);
+      const grd = ctx.createLinearGradient(0, 0, arm.radius, 0);
+      grd.addColorStop(0, 'rgba(200,107,255,0.28)');
+      grd.addColorStop(0.5, 'rgba(255,46,136,0.15)');
+      grd.addColorStop(1, 'rgba(200,107,255,0)');
+      ctx.strokeStyle = grd;
+      ctx.lineWidth = 40;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let i = 0; i < 40; i++) {
+        const prog = i / 40;
+        const ang = prog * Math.PI * 0.9;
+        const r = prog * arm.radius;
+        const px = Math.cos(ang) * r;
+        const py = Math.sin(ang) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+  });
+
+  // Supernova flashes
+  zoneBackgroundParticles.filter(p => p.type === 'supernova').forEach(sn => {
+    sn.delay -= 0.016;
+    if (sn.delay > 0) { sn.life = 0; return; }
+    sn.life += 0.03;
+    if (sn.life > 1) { sn.life = 0; sn.delay = 5 + Math.random() * 6; }
+    const r = sn.life * 40;
+    const grad = ctx.createRadialGradient(sn.x, sn.y, 0, sn.x, sn.y, r);
+    grad.addColorStop(0, 'rgba(255,255,255,' + (1 - sn.life) + ')');
+    grad.addColorStop(0.5, 'rgba(255,46,136,' + (0.6 * (1 - sn.life)) + ')');
+    grad.addColorStop(1, 'rgba(200,107,255,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(sn.x, sn.y, r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+// -------- Zona 4: SELURUH ALAM (MULTIVERSE) --------
+function drawMultiverseBg(ctx, W, H, t) {
+  // Rifts (portal antar dimensi)
+  zoneBackgroundParticles.filter(p => p.type === 'rift').forEach(r => {
+    r.phase += 0.03;
+    const pulsate = 1 + Math.sin(r.phase) * 0.12;
+    const grad = ctx.createLinearGradient(r.x, r.y - r.h / 2, r.x, r.y + r.h / 2);
+    grad.addColorStop(0, 'rgba(255,0,255,0)');
+    grad.addColorStop(0.3, 'rgba(255,0,255,0.45)');
+    grad.addColorStop(0.5, 'rgba(0,255,255,0.6)');
+    grad.addColorStop(0.7, 'rgba(255,0,255,0.45)');
+    grad.addColorStop(1, 'rgba(255,0,255,0)');
+    ctx.fillStyle = grad;
+    ctx.save();
+    ctx.translate(r.x, r.y);
+    ctx.scale(pulsate, 1);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r.w / 2, r.h / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // Floating islands
+  zoneBackgroundParticles.filter(p => p.type === 'island').forEach(isl => {
+    isl.phase += 0.02;
+    const dy = Math.sin(isl.phase) * 8;
+    ctx.save();
+    ctx.translate(isl.x, isl.y + dy);
+    ctx.fillStyle = 'rgba(28,10,36,0.8)';
+    ctx.beginPath();
+    ctx.moveTo(-isl.size, 0);
+    ctx.lineTo(isl.size, 0);
+    ctx.lineTo(isl.size * 0.5, isl.size * 0.4);
+    ctx.lineTo(-isl.size * 0.4, isl.size * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    const grad = ctx.createLinearGradient(0, 0, 0, isl.size);
+    grad.addColorStop(0, 'rgba(255,0,255,0.5)');
+    grad.addColorStop(1, 'rgba(255,0,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(-isl.size * 0.5, 0, isl.size, isl.size);
+    ctx.restore();
+  });
+
+  // Energy lines
+  ctx.strokeStyle = 'rgba(0,255,255,0.08)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    const yBase = H * (0.3 + i * 0.15);
+    for (let x = 0; x <= W; x += 20) {
+      const y = yBase + Math.sin(x * 0.02 + t * 0.5 + i) * 15;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+}
+
+// -------- Zona 5: BIMA SAKTI --------
+function drawMilkywayBg(ctx, W, H, t) {
+  // Black hole
+  zoneBackgroundParticles.filter(p => p.type === 'black_hole').forEach(bh => {
+    const glow = ctx.createRadialGradient(bh.x, bh.y, 0, bh.x, bh.y, bh.size * 2.5);
+    glow.addColorStop(0, 'rgba(255,215,0,0.55)');
+    glow.addColorStop(0.4, 'rgba(255,140,0,0.3)');
+    glow.addColorStop(0.7, 'rgba(255,80,0,0.15)');
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(bh.x, bh.y, bh.size * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(bh.x, bh.y, bh.size * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,215,0,0.9)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(bh.x, bh.y, bh.size * 0.62, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+
+  // Accretion ring
+  zoneBackgroundParticles.filter(p => p.type === 'ring').forEach(r => {
+    r.rot += r.speed;
+    const cx = W * 0.5, cy = H * 0.15;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(r.rot);
+    ctx.strokeStyle = 'rgba(255,180,0,0.35)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r.radius, r.radius * 0.32, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,215,0,0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r.radius + 10, (r.radius + 10) * 0.32, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  // Star trails
+  zoneBackgroundParticles.filter(p => p.type === 'star_trail').forEach(s => {
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.rotate(s.angle);
+    const grad = ctx.createLinearGradient(0, 0, s.len, 0);
+    grad.addColorStop(0, 'rgba(255,215,0,0)');
+    grad.addColorStop(1, 'rgba(255,215,0,' + s.opacity + ')');
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(s.len, 0);
+    ctx.stroke();
+    ctx.restore();
+    s.x += Math.cos(s.angle) * 0.5;
+    s.y += Math.sin(s.angle) * 0.5;
+    if (s.x > W + 100) s.x = -50;
+    if (s.x < -100) s.x = W + 50;
+    if (s.y > H + 100) s.y = -50;
+    if (s.y < -100) s.y = H + 50;
+  });
+}
+
+// =============================================================
+// Z5. REDEFINE drawParallaxStars → pakai zona
+// =============================================================
+function drawParallaxStars(ctx, W, H) {
+  const lvl = (currentLevelIndex || 0) + 1;
+  const zone = getZoneByLevel(lvl);
+  if (zone && zone.bgType) {
+    drawZoneLiving(ctx, W, H, zone);
+    return;
+  }
+  // Fallback (jika zona belum ready)
+  if (!starLayers.length) return;
+  starLayers.forEach(layer => {
+    layer.stars.forEach(s => {
+      s.y += s.speed;
+      s.twinkle += s.twinkleSpeed;
+      if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
+      const a = s.opacity * (0.75 + Math.sin(s.twinkle) * 0.25);
+      ctx.fillStyle = s.color;
+      ctx.globalAlpha = a;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill();
+    });
+  });
+  ctx.globalAlpha = 1;
+}
+
+// =============================================================
+// Z6. MODAL ZONA UNLOCK
+// =============================================================
+function showZoneUnlockModal(zoneId) {
+  const zone = getZoneById(zoneId);
+  if (!zone) return;
+  pendingZoneUnlock = zoneId;
+
+  const titleEl = document.getElementById('zone-unlock-title');
+  const subEl = document.getElementById('zone-unlock-sub');
+  const descEl = document.getElementById('zone-unlock-desc');
+  const iconSvg = document.getElementById('zone-unlock-icon');
+  const iconWrap = document.getElementById('zone-unlock-icon-wrap');
+
+  if (titleEl) titleEl.innerText = zone.name;
+  if (subEl) subEl.innerText = zone.subtitle;
+  if (descEl) descEl.innerText = zone.description;
+  if (iconSvg) iconSvg.innerHTML = `<use href="#${zone.icon}"/>`;
+  if (iconWrap) {
+    iconWrap.style.background = `radial-gradient(circle, ${zone.colors.accent}40, transparent 70%)`;
+    if (iconSvg) iconSvg.style.color = zone.colors.accent;
+  }
+
+  renderZonePreview(zone);
+  const modal = document.getElementById('modal-zone-unlock');
+  if (modal) modal.classList.remove('hidden');
+  try { sounds.playUnlock(); } catch(e) {}
+  try { triggerVibrate([80, 40, 80, 40, 200]); } catch(e) {}
+  triggerScreenFlash(0.5);
+}
+function renderZonePreview(zone) {
+  const canvas = document.getElementById('zone-preview-canvas');
+  if (!canvas) return;
+  const pctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const grad = pctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, zone.colors.bgTop);
+  grad.addColorStop(1, zone.colors.bgBottom);
+  pctx.fillStyle = grad;
+  pctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 40; i++) {
+    pctx.fillStyle = zone.stars[Math.floor(Math.random() * zone.stars.length)];
+    pctx.globalAlpha = 0.4 + Math.random() * 0.6;
+    pctx.beginPath();
+    pctx.arc(Math.random() * W, Math.random() * H, 0.6 + Math.random() * 1.4, 0, Math.PI * 2);
+    pctx.fill();
+  }
+  pctx.globalAlpha = 1;
+  pctx.fillStyle = zone.colors.ground;
+  pctx.fillRect(0, H - 20, W, 20);
+  pctx.fillStyle = zone.colors.groundLine;
+  pctx.fillRect(0, H - 22, W, 2);
+  pctx.save();
+  pctx.translate(W / 2, H * 0.5);
+  if (zone.id === 1) {
+    pctx.strokeStyle = zone.colors.accent;
+    pctx.lineWidth = 3;
+    for (let r = 15; r <= 45; r += 15) {
+      pctx.beginPath(); pctx.arc(0, 0, r, 0, Math.PI * 2); pctx.stroke();
+    }
+  } else if (zone.id === 2) {
+    pctx.fillStyle = zone.colors.accent;
+    pctx.beginPath(); pctx.arc(0, 0, 30, 0, Math.PI * 2); pctx.fill();
+    pctx.globalAlpha = 0.4;
+    pctx.beginPath(); pctx.arc(0, 0, 42, 0, Math.PI * 2); pctx.fill();
+  } else if (zone.id === 3) {
+    pctx.strokeStyle = zone.colors.accent;
+    pctx.lineWidth = 3;
+    for (let a = 0; a < 6; a++) {
+      pctx.beginPath();
+      for (let i = 0; i < 20; i++) {
+        const prog = i / 20;
+        const ang = prog * Math.PI * 1.5 + a * Math.PI / 3;
+        const r = prog * 50;
+        if (i === 0) pctx.moveTo(Math.cos(ang) * r, Math.sin(ang) * r);
+        else pctx.lineTo(Math.cos(ang) * r, Math.sin(ang) * r);
+      }
+      pctx.stroke();
+    }
+  } else if (zone.id === 4) {
+    pctx.fillStyle = zone.colors.accent;
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      pctx.beginPath();
+      pctx.arc(Math.cos(a) * 40, Math.sin(a) * 40, 8, 0, Math.PI * 2);
+      pctx.fill();
+    }
+    pctx.strokeStyle = zone.colors.accent;
+    pctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+      const a1 = (i / 5) * Math.PI * 2;
+      const a2 = ((i + 2) / 5) * Math.PI * 2;
+      pctx.beginPath();
+      pctx.moveTo(Math.cos(a1) * 40, Math.sin(a1) * 40);
+      pctx.lineTo(Math.cos(a2) * 40, Math.sin(a2) * 40);
+      pctx.stroke();
+    }
+  } else if (zone.id === 5) {
+    const bhGrad = pctx.createRadialGradient(0, 0, 0, 0, 0, 50);
+    bhGrad.addColorStop(0, 'rgba(255,215,0,0.9)');
+    bhGrad.addColorStop(0.5, 'rgba(255,140,0,0.4)');
+    bhGrad.addColorStop(1, 'rgba(255,80,0,0)');
+    pctx.fillStyle = bhGrad;
+    pctx.beginPath(); pctx.arc(0, 0, 50, 0, Math.PI * 2); pctx.fill();
+    pctx.fillStyle = '#000';
+    pctx.beginPath(); pctx.arc(0, 0, 15, 0, Math.PI * 2); pctx.fill();
+    pctx.strokeStyle = '#ffd700';
+    pctx.lineWidth = 2;
+    pctx.beginPath(); pctx.arc(0, 0, 16, 0, Math.PI * 2); pctx.stroke();
+  }
+  pctx.restore();
+  const vg = pctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W * 0.7);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.6)');
+  pctx.fillStyle = vg;
+  pctx.fillRect(0, 0, W, H);
+}
+function hideZoneUnlockModal() {
+  const modal = document.getElementById('modal-zone-unlock');
+  if (modal) modal.classList.add('hidden');
+  pendingZoneUnlock = null;
+}
+
+// =============================================================
+// Z7. MODAL HERO UNLOCK
+// =============================================================
+function showHeroUnlockModal(heroId) {
+  const hero = HERO_DATA[heroId];
+  if (!hero) return;
+  pendingHeroUnlock = heroId;
+
+  const nameEl = document.getElementById('hero-unlock-name');
+  const descEl = document.getElementById('hero-unlock-desc');
+  const avatar = document.getElementById('hero-unlock-avatar');
+  const avatarWrap = document.getElementById('hero-unlock-avatar-wrap');
+  const origin = document.getElementById('hero-unlock-origin');
+
+  if (nameEl) nameEl.innerText = hero.name;
+  if (descEl) descEl.innerText = hero.desc;
+  if (avatar) avatar.innerHTML = `<use href="#i-${heroId}"/>`;
+  if (avatarWrap) {
+    avatarWrap.style.background = `radial-gradient(circle, ${hero.color}40 0%, transparent 70%)`;
+    if (avatar) avatar.style.color = hero.color;
+  }
+  if (origin) origin.innerText = '⚔ Bergabung setelah dikalahkan ⚔';
+
+  const dmgVal = Math.round(hero.bulletSize / 2 + hero.bulletPierce);
+  const spdVal = Math.round(hero.bulletSpeed / 2);
+  const rateVal = Math.round((300 - hero.fireRate) / 30);
+
+  setStatBar('stat-dmg', 'stat-dmg-val', Math.min(10, dmgVal));
+  setStatBar('stat-spd', 'stat-spd-val', Math.min(10, spdVal));
+  setStatBar('stat-rate', 'stat-rate-val', Math.min(10, rateVal));
+
+  const modal = document.getElementById('modal-hero-unlock');
+  if (modal) modal.classList.remove('hidden');
+  try { sounds.playUnlock(); } catch(e) {}
+  try { triggerVibrate([100, 50, 100, 50, 200]); } catch(e) {}
+  triggerScreenFlash(0.6);
+}
+function setStatBar(fillId, valId, value) {
+  const fill = document.getElementById(fillId);
+  const val = document.getElementById(valId);
+  if (val) val.innerText = value;
+  if (fill) {
+    fill.style.width = '0';
+    setTimeout(() => {
+      fill.style.width = (value * 10) + '%';
+    }, 100);
+  }
+}
+function hideHeroUnlockModal() {
+  const modal = document.getElementById('modal-hero-unlock');
+  if (modal) modal.classList.add('hidden');
+  pendingHeroUnlock = null;
+}
+
+// =============================================================
+// Z8. HOOK — Level Complete → check zona + hero unlock
+// =============================================================
+const _origLevelComplete = levelComplete;
+levelComplete = async function() {
+  await _origLevelComplete.call(this);
+
+  const lvl = (levelsData[currentLevelIndex] || {}).level || 0;
+
+  const heroId = BOSS_UNLOCK_HERO[lvl];
+  if (heroId && !isHeroUnlocked(heroId)) {
+    await unlockHero(heroId);
+    console.log('🎉 [Unlock] Hero dari boss:', heroId);
+    pendingHeroUnlock = heroId;
+  }
+
+  if (lvl > 0 && lvl % 10 === 0 && lvl < 50) {
+    const nextZoneId = Math.floor(lvl / 10) + 1;
+    if (!isZoneUnlocked(nextZoneId)) {
+      unlockedZones.push(nextZoneId);
+      await saveUnlockedZones();
+      console.log('🌌 [Unlock] Zona baru:', nextZoneId);
+      pendingZoneUnlock = nextZoneId;
+    }
+  }
+  if (lvl === 50 && !isZoneUnlocked(5)) {
+    unlockedZones.push(5);
+    await saveUnlockedZones();
+    pendingZoneUnlock = 5;
+  }
+
+  setTimeout(() => {
+    maybeShowUnlockChain();
+  }, 500);
+};
+
+function maybeShowUnlockChain() {
+  if (pendingZoneUnlock && isZoneUnlocked(pendingZoneUnlock)) {
+    const zoneId = pendingZoneUnlock;
+    pendingZoneUnlock = null;
+    showZoneUnlockModal(zoneId);
+    return;
+  }
+  if (pendingHeroUnlock && isHeroUnlocked(pendingHeroUnlock)) {
+    const heroId = pendingHeroUnlock;
+    pendingHeroUnlock = null;
+    showHeroUnlockModal(heroId);
+    return;
+  }
+}
+
+// =============================================================
+// Z9. HOOK — Start Current Level → set zona
+// =============================================================
+const _origStartCurrentLevel = startCurrentLevel;
+startCurrentLevel = async function() {
+  const lvl = (levelsData[currentLevelIndex] || { level: 1 }).level || 1;
+  const zone = getZoneByLevel(lvl);
+  currentZoneId = zone.id;
+  applyZoneToTheme(zone);
+  updateZoneChip();
+  console.log('🌍 [Zona]', zone.name, '| Level:', lvl);
+  await _origStartCurrentLevel.call(this);
+};
+
+function updateZoneChip() {
+  const zone = getZoneById(currentZoneId);
+  const chip = document.getElementById('hud-zone-chip');
+  if (!chip) return;
+  const nameEl = chip.querySelector('.hud-zone-name');
+  if (nameEl) nameEl.innerText = zone.name;
+  const svg = chip.querySelector('svg');
+  if (svg) svg.innerHTML = `<use href="#${zone.icon}"/>`;
+}
+
+// =============================================================
+// Z10. INIT ZONA (di window load)
+// =============================================================
+window.addEventListener('load', () => {
+  setTimeout(async () => {
+    try {
+      await loadUnlockedZones();
+      const savedLvl = await getSavedLevel();
+      const zone = getZoneByLevel(savedLvl);
+      currentZoneId = zone.id;
+      applyZoneToTheme(zone);
+      updateZoneChip();
+      console.log('🌌 [Zona] Init:', zone.name, '| Saved Level:', savedLvl);
+    } catch(e) { console.warn('⚠️ [Zona] Init fail:', e); }
+  }, 900);
+
+  const btnZoneGo = document.getElementById('btn-zone-unlock-go');
+  if (btnZoneGo) {
+    btnZoneGo.onclick = () => {
+      hideZoneUnlockModal();
+      try { sounds.playPowerup(); } catch(e) {}
+      setTimeout(() => maybeShowUnlockChain(), 400);
+    };
+  }
+
+  const btnHeroOk = document.getElementById('btn-hero-unlock-ok');
+  if (btnHeroOk) {
+    btnHeroOk.onclick = () => {
+      hideHeroUnlockModal();
+      try { sounds.playPowerup(); } catch(e) {}
+      updateActorGridUI();
+      setTimeout(() => maybeShowUnlockChain(), 400);
+    };
+  }
+});
+
+// =============================================================
+// END OF PART 5/6 — v22.0.0
+// =============================================================
+console.log('✅ [game.js] v22.0.0 — UNIVERSE PROGRESSION LOADED');
 
 // =============================================================
 // PAHLAWAN BINTANG — game.js v23.0.0 — PART 6/6
