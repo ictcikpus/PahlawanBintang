@@ -5603,6 +5603,9 @@ function mpEndGame(win, reason) {
     savePlayerStats().then(() => checkAchievements());
   }
   mpRole = null;
+  // Pastikan HUD disembunyikan dan menu muncul saat game selesai
+const hudEl = document.getElementById('hud-overlay');
+if (hudEl) hudEl.classList.add('hidden');
 }
 function mpActuallyStartCoop() {
   mpActive = true;
@@ -5633,7 +5636,14 @@ function mpActuallyStartCoop() {
   playerLoadout = ['freeze', 'bomb'];
   freezeCharges = upgradeFreeze; shieldCharges = upgradeShield; bombCharges = upgradeBomb;
   updateSkillButtonsUI();
-  document.getElementById('modal-mp-lobby').classList.add('hidden');
+ // === FIX: Sembunyikan semua menu, tampilkan HUD & arena ===
+  ['modal-mp-lobby','modal-mp-hub','modal-mp-join','modal-result','modal-pause','screen-main-menu']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); });
+  const hudEl = document.getElementById('hud-overlay');
+  if (hudEl) hudEl.classList.remove('hidden');
+  resizeCanvas();
+  updateGameScale();
+  
   currentTheme = getThemeForLevel(1);
   applyThemeToDocument(currentTheme); recolorStars();
   isGameRunning = true; isGamePaused = false;
@@ -9865,15 +9875,14 @@ if (_origMpStartGame) {
 
 // ---- Override: When MP.onStart fires ----
 // Kita modify mpActuallyStartCoop untuk support raid mode
-const _origMpActuallyStartCoop = typeof mpActuallyStartCoop === 'function' ? mpActuallyStartCoop : null;
-if (_origMpActuallyStartCoop) {
-  mpActuallyStartCoop = function() {
-    if (raidModeMP) {
-      mpActuallyStartRaidCoop();
-      return;
-    }
-    return _origMpActuallyStartCoop.call(this);
-  };
+const _origMpActuallyStartCoop = mpActuallyStartCoop;
+mpActuallyStartCoop = function() {
+  if (raidModeMP) {
+    mpActuallyStartRaidCoop();
+    return;
+  }
+  return _origMpActuallyStartCoop.call(this);
+};
 }
 
 // ---- Actual: Start raid in co-op mode ----
@@ -9948,14 +9957,37 @@ function mpActuallyStartRaidCoop() {
   updateHUDValues();
   updateLivesDisplay();
 
-  // Hide lobby
-  const lobby = document.getElementById('modal-mp-lobby');
-  if (lobby) lobby.classList.add('hidden');
+  // === FIX: Sembunyikan SEMUA menu, tampilkan HUD & arena ===
+const lobby = document.getElementById('modal-mp-lobby');
+if (lobby) lobby.classList.add('hidden');
 
-  // Set game running
-  isGameRunning = true;
-  isGamePaused = false;
-  levelStartTime = Date.now();
+const mpHub = document.getElementById('modal-mp-hub');
+if (mpHub) mpHub.classList.add('hidden');
+
+const mpJoin = document.getElementById('modal-mp-join');
+if (mpJoin) mpJoin.classList.add('hidden');
+
+const mainMenu = document.getElementById('screen-main-menu');
+if (mainMenu) mainMenu.classList.add('hidden');
+
+const resultModal = document.getElementById('modal-result');
+if (resultModal) resultModal.classList.add('hidden');
+
+const pauseModal = document.getElementById('modal-pause');
+if (pauseModal) pauseModal.classList.add('hidden');
+
+const hud = document.getElementById('hud-overlay');
+if (hud) hud.classList.remove('hidden');
+
+// Resize canvas agar render pas dengan layar
+resizeCanvas();
+updateGameScale();
+resetLevelState();
+
+// Set game running
+isGameRunning = true;
+isGamePaused = false;
+levelStartTime = Date.now();
 
   // Show intro banner
   const banner = document.getElementById('level-intro');
