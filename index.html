@@ -336,6 +336,66 @@ canvas{display:block}
   <div class="loader-text">MEMUAT GALAKSI</div>
 </div>
 
+  <!-- ============ FIRST TIME NAME MODAL ============ -->
+<div id="modal-first-time" class="modal hidden">
+  <div class="modal-box first-time-box">
+    <!-- Dekorasi bintang -->
+    <div class="ft-stars">
+      <div class="ft-star ft-star-1">✦</div>
+      <div class="ft-star ft-star-2">✦</div>
+      <div class="ft-star ft-star-3">✦</div>
+    </div>
+    
+    <!-- Emblem -->
+    <div class="ft-emblem">
+      <svg viewBox="0 0 100 100">
+        <defs>
+          <radialGradient id="ftStarGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="30%" stop-color="#ffe680"/>
+            <stop offset="70%" stop-color="#ffd700"/>
+            <stop offset="100%" stop-color="#ff8a00"/>
+          </radialGradient>
+        </defs>
+        <path d="M50 10 L60.5 39.3 L91 39.3 L66 57.6 L76.5 87 L50 68.7 L23.5 87 L34 57.6 L9 39.3 L39.5 39.3 Z" 
+              fill="url(#ftStarGlow)" 
+              stroke="#ffffff" 
+              stroke-width="1.5"/>
+      </svg>
+    </div>
+    
+    <!-- Title -->
+    <div class="ft-badge">🌟 SELAMAT DATANG 🌟</div>
+    <h2 class="ft-title">PAHLAWAN BARU</h2>
+    <p class="ft-subtitle">Sebelum memulai petualangan,<br>siapa nama pahlawanmu?</p>
+    
+    <!-- Input -->
+    <div class="ft-input-wrap">
+      <svg class="ft-input-icon" viewBox="0 0 24 24"><use href="#i-user"/></svg>
+      <input 
+        id="first-time-name-input" 
+        type="text" 
+        maxlength="14" 
+        placeholder="Ketik nama pahlawan..." 
+        autocomplete="off"
+        spellcheck="false"
+        autocapitalize="words"
+      />
+    </div>
+    <div class="ft-hint">Maksimal 14 karakter · Bisa diganti nanti</div>
+    
+    <!-- Action -->
+    <button id="btn-first-time-submit" class="btn-primary big" type="button" disabled>
+      <svg class="ico"><use href="#i-play"/></svg>
+      <span>MULAI PETUALANGAN</span>
+    </button>
+    
+    <!-- Footer -->
+    <div class="ft-footer">
+      🚀 Bersiaplah menyelamatkan galaksi!
+    </div>
+  </div>
+</div>
 <canvas id="gameCanvas" aria-label="Game Canvas"></canvas>
 
 <!-- ============ MAIN MENU — REDESIGNED v21.1 ============ -->
