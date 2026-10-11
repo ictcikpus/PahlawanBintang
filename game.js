@@ -21,6 +21,67 @@ try { firebase.initializeApp(firebaseConfig); db = firebase.database(); console.
 catch(e) { console.log("⚠️ Firebase Offline"); }
 
 // =============================================================
+// SAFETY STUBS v24.0.1 — Fix missing PART 5/6
+// Tempel di TOP file agar fungsi zona punya fallback
+// =============================================================
+if (typeof initZoneParticles === 'undefined') {
+  window.initZoneParticles = function(zone) { /* noop */ };
+  var initZoneParticles = window.initZoneParticles;
+}
+if (typeof drawZoneLiving === 'undefined') {
+  window.drawZoneLiving = function(ctx, W, H, zone) { /* noop */ };
+  var drawZoneLiving = window.drawZoneLiving;
+}
+if (typeof applyZoneToTheme === 'undefined') {
+  window.applyZoneToTheme = function(zone) { /* noop */ };
+  var applyZoneToTheme = window.applyZoneToTheme;
+}
+if (typeof getZoneByLevel === 'undefined') {
+  window.getZoneByLevel = function(lvl) { return { id: 1, bgType: 'space', name: 'COSMIC' }; };
+  var getZoneByLevel = window.getZoneByLevel;
+}
+if (typeof getZoneById === 'undefined') {
+  window.getZoneById = function(id) { return { id: 1, bgType: 'space', name: 'COSMIC' }; };
+  var getZoneById = window.getZoneById;
+}
+if (typeof showZoneUnlockModal === 'undefined') {
+  window.showZoneUnlockModal = function(id) { /* noop */ };
+  var showZoneUnlockModal = window.showZoneUnlockModal;
+}
+if (typeof showZoneEntryCinematic === 'undefined') {
+  window.showZoneEntryCinematic = function(zone) { /* noop */ };
+  var showZoneEntryCinematic = window.showZoneEntryCinematic;
+}
+if (typeof loadUnlockedZones === 'undefined') {
+  window.loadUnlockedZones = async function() { /* noop */ };
+  var loadUnlockedZones = window.loadUnlockedZones;
+}
+if (typeof saveUnlockedZones === 'undefined') {
+  window.saveUnlockedZones = async function() { /* noop */ };
+  var saveUnlockedZones = window.saveUnlockedZones;
+}
+if (typeof isZoneUnlocked === 'undefined') {
+  window.isZoneUnlocked = function(id) { return true; };
+  var isZoneUnlocked = window.isZoneUnlocked;
+}
+if (typeof renderZonePreview === 'undefined') {
+  window.renderZonePreview = function(zone) { /* noop */ };
+  var renderZonePreview = window.renderZonePreview;
+}
+if (typeof hideZoneUnlockModal === 'undefined') {
+  window.hideZoneUnlockModal = function() { /* noop */ };
+  var hideZoneUnlockModal = window.hideZoneUnlockModal;
+}
+// Global vars yang dibutuhkan PART 6/6
+if (typeof currentZoneId === 'undefined') var currentZoneId = 1;
+if (typeof unlockedZones === 'undefined') var unlockedZones = [1];
+if (typeof zoneBackgroundParticles === 'undefined') var zoneBackgroundParticles = [];
+if (typeof zoneAmbientTime === 'undefined') var zoneAmbientTime = 0;
+if (typeof pendingZoneUnlock === 'undefined') var pendingZoneUnlock = null;
+if (typeof pendingHeroUnlock === 'undefined') var pendingHeroUnlock = null;
+console.log('✅ [Safety Stubs] Loaded — PART 5/6 fallback active');
+
+// =============================================================
 // 2. HERO DATA — 20 HEROES
 // =============================================================
 const HERO_DATA = {
