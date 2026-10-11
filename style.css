@@ -2802,3 +2802,100 @@ kbd{display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(255,2
   transform: translateY(2px);
   box-shadow: 0 1px 0 #8b1f2a !important;
 }
+
+/* ============================================================
+   v24.0.5 FIX: MULTIPLAYER SPECTATOR — NON-BLOCKING OVERLAY
+   ============================================================ */
+
+/* Overlay jadi floating card di atas, TIDAK menutup arena */
+#mp-spectator-overlay {
+  position: fixed !important;
+  inset: auto !important;
+  top: calc(env(safe-area-inset-top, 0px) + 60px) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 95;
+  background: transparent !important;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0 10px;
+}
+
+#mp-spectator-overlay .spectator-box {
+  pointer-events: auto;
+  max-width: min(85vw, 340px);
+  padding: 12px 16px;
+  background: linear-gradient(160deg, rgba(255,46,68,.2), rgba(15,22,54,.96));
+  border: 2px solid rgba(255,71,87,.65);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.7), 0 0 40px rgba(255,46,68,.35);
+  animation: specEntrance .4s cubic-bezier(.34,1.56,.64,1);
+  text-align: center;
+}
+@keyframes specEntrance {
+  from { transform: translateY(-30px) scale(.85); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+#mp-spectator-overlay .spectator-title { font-size: 15px !important; letter-spacing: .08em; }
+#mp-spectator-overlay .spectator-countdown { font-size: 30px !important; margin: 4px 0 !important; line-height: 1; }
+#mp-spectator-overlay .spectator-subtitle { font-size: 11px !important; margin-bottom: 8px; }
+#mp-spectator-overlay .spectator-progress { height: 5px; }
+
+/* Teks hint berdenyut di bawah card */
+#mp-spectator-overlay::after {
+  content: '👁  Menonton pertandingan berlanjut...';
+  position: absolute;
+  bottom: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9.5px;
+  letter-spacing: .12em;
+  color: rgba(255,255,255,.55);
+  white-space: nowrap;
+  animation: specPulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes specPulse { 0%,100% { opacity: .35 } 50% { opacity: .95 } }
+
+/* ============================================================
+   RE-ENTRY (RESPAWN) TRANSITION
+   ============================================================ */
+.respawn-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  background: radial-gradient(circle at center, rgba(57,255,20,.75) 0%, rgba(0,210,255,.45) 40%, transparent 70%);
+  animation: respawnFlash .8s ease-out forwards;
+}
+@keyframes respawnFlash {
+  0%   { opacity: 0; transform: scale(.3); }
+  30%  { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 0; transform: scale(2.5); }
+}
+
+.respawn-dash {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  z-index: 91;
+  pointer-events: none;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-size: clamp(24px, 5.5vmin, 44px);
+  letter-spacing: .2em;
+  color: #39ff14;
+  text-shadow: 0 0 20px #39ff14, 0 0 40px #00d2ff, 0 4px 0 rgba(0,0,0,.85);
+  animation: respawnDash 1.2s cubic-bezier(.34,1.56,.64,1) forwards;
+  white-space: nowrap;
+}
+@keyframes respawnDash {
+  0%   { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  25%  { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  70%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.3); opacity: 0; }
+}
