@@ -11798,3 +11798,23 @@ console.log('✅ [game.js] v24.0.0 — LEGACY EDITION COMPLETE (10/10 PARTS)');
     reset: () => { localStorage.removeItem(STORAGE_KEY); updateRaidButton(); console.log('🔄 Raid cooldown reset'); }
   };
 })();
+// =============================================================
+// v24.1.0 PWA Install Bar — Auto-hide setelah 30 detik
+// =============================================================
+(function pwaAutoHide() {
+  const btn = document.getElementById('pwa-install-bar');
+  if (!btn) return;
+
+  // Sembunyikan otomatis 30 detik kalau user tidak klik
+  const autoHide = setTimeout(() => {
+    if (btn && !btn.classList.contains('hidden')) {
+      btn.style.transition = 'opacity .5s, transform .5s';
+      btn.style.opacity = '0';
+      btn.style.transform = 'translateY(20px)';
+      setTimeout(() => btn.classList.add('hidden'), 500);
+    }
+  }, 30000);
+
+  // Cancel auto-hide kalau user klik
+  btn.addEventListener('click', () => clearTimeout(autoHide));
+})();
