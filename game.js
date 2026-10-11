@@ -9915,3 +9915,151 @@ console.log('✅ [game.js] v24.0.0 — LEGACY EDITION COMPLETE (10/10 PARTS)');
 // =============================================================
 // END OF FILE — v24.0.0
 // =============================================================
+
+// =============================================================
+// FIX v24.0.1 — Menu Buttons Binding (Robust + Event Delegation)
+// =============================================================
+(function fixMenuButtons() {
+  'use strict';
+
+  const MENU_HANDLERS = {
+    'btn-boss-rush': {
+      fn: () => (typeof openBossRushModal === 'function') ? openBossRushModal() : showModal('modal-boss-rush'),
+      modal: 'modal-boss-rush'
+    },
+    'btn-weekly': {
+      fn: () => (typeof openWeeklyModal === 'function') ? openWeeklyModal() : showModal('modal-weekly'),
+      modal: 'modal-weekly'
+    },
+    'btn-login': {
+      fn: () => (typeof openLoginModal === 'function') ? openLoginModal() : showModal('modal-login'),
+      modal: 'modal-login'
+    },
+    'btn-raid': {
+      fn: () => (typeof openRaidModal === 'function') ? openRaidModal() : showModal('modal-raid'),
+      modal: 'modal-raid'
+    },
+    'btn-pets': {
+      fn: () => {
+        if (typeof renderPetShop === 'function') renderPetShop();
+        showModal('modal-pets');
+      },
+      modal: 'modal-pets'
+    },
+    'btn-perf': {
+      fn: () => {
+        const dev = document.getElementById('perf-device');
+        if (dev) {
+          const cores = navigator.hardwareConcurrency || '?';
+          dev.innerText = `${cores} core`;
+        }
+        showModal('modal-perf');
+      },
+      modal: 'modal-perf'
+    }
+  };
+
+  function showModal(id) {
+    const m = document.getElementById(id);
+    if (m) {
+      m.classList.remove('hidden');
+      console.log('✅ [Fix] Modal opened:', id);
+    } else {
+      console.warn('❌ [Fix] Modal not found:', id);
+    }
+  }
+
+  // === Method 1: Event Delegation (paling robust) ===
+  // Pasang sekali di document, tangkap semua klik
+  document.addEventListener('click', function(e) {
+    // Cari tombol terdekat
+    const btn = e.target.closest('button, .menu-card');
+    if (!btn || !btn.id) return;
+
+    const handler = MENU_HANDLERS[btn.id];
+    if (!handler) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    console.log('🎯 [Fix] Click caught:', btn.id);
+
+    // Feedback visual
+    btn.style.transform = 'scale(0.92)';
+    setTimeout(() => { btn.style.transform = ''; }, 120);
+
+    // Vibrate feedback
+    try { if (navigator.vibrate) navigator.vibrate(10); } catch(err) {}
+
+    // Panggil handler
+    try {
+      handler.fn();
+    } catch(err) {
+      console.error('❌ [Fix] Handler error:', err);
+      // Fallback: buka modal langsung
+      showModal(handler.modal);
+    }
+  }, true); // useCapture = true (lebih awal dari handler lain)
+
+  // === Method 2: Direct binding (backup) ===
+  function bindDirect() {
+    Object.keys(MENU_HANDLERS).forEach(id => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+
+      // Jangan bind jika sudah ada marker
+      if (btn._fixBound) return;
+      btn._fixBound = true;
+
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('🎯 [Fix-Direct] Click:', id);
+
+        btn.style.transform = 'scale(0.92)';
+        setTimeout(() => { btn.style.transform = ''; }, 120);
+
+        try { if (navigator.vibrate) navigator.vibrate(10); } catch(err) {}
+        try {
+          MENU_HANDLERS[id].fn();
+        } catch(err) {
+          console.error('❌ [Fix-Direct] Error:', err);
+          showModal(MENU_HANDLERS[id].modal);
+        }
+      };
+    });
+  }
+
+  // Coba bind di berbagai timing
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindDirect);
+  } else {
+    bindDirect();
+  }
+  window.addEventListener('load', () => {
+    bindDirect();
+    setTimeout(bindDirect, 500);
+    setTimeout(bindDirect, 1500);
+  });
+
+  // === Debug: laporkan status ===
+  setTimeout(() => {
+    const ids = Object.keys(MENU_HANDLERS);
+    const found = ids.filter(id => document.getElementById(id));
+    const missing = ids.filter(id => !document.getElementById(id));
+    console.log('📋 [Fix] Menu buttons found:', found.length, '/', ids.length);
+    if (missing.length > 0) {
+      console.warn('⚠️ [Fix] Missing buttons:', missing);
+    } else {
+      console.log('✅ [Fix] All menu buttons ready');
+    }
+  }, 2500);
+
+  // === Expose global untuk debugging ===
+  window.testMenuBtn = function(id) {
+    const btn = document.getElementById(id);
+    if (!btn) { console.warn('Tombol tidak ada:', id); return; }
+    console.log('Simulating click on:', id);
+    btn.click();
+  };
+})();
