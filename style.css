@@ -2926,3 +2926,91 @@ kbd{display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(255,2
 #btn-hints-toggle svg {
   pointer-events: none !important;
 }
+/* ============================================================
+   v24.0.7 SIMPLIFIED MENU — Mode Grid + Arcade Cards
+   ============================================================ */
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(6px, 1vmin, 10px);
+  width: min(100%, 400px);
+  margin: 0 auto;
+}
+.mode-card {
+  position: relative;
+  padding: clamp(10px, 1.6vmin, 14px) 6px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(22,30,70,.95) 0%, rgba(8,12,32,.98) 100%);
+  border: 2px solid rgba(255,255,255,.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: clamp(90px, 13vmin, 110px);
+  transition: transform .15s cubic-bezier(.34,1.56,.64,1), border-color .2s;
+  cursor: pointer;
+  overflow: hidden;
+}
+.mode-card:active { transform: scale(.94); border-color: rgba(0,210,255,.8); }
+.mode-card-icon {
+  width: clamp(32px, 5vmin, 42px);
+  height: clamp(32px, 5vmin, 42px);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mode-card-icon svg { width: 58%; height: 58%; fill: #fff; }
+.mode-card-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(10px, 1.5vmin, 13px);
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: #e6eefc;
+  text-shadow: 0 1px 2px rgba(0,0,0,.7);
+}
+.mode-card-sub {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: clamp(8px, 1.15vmin, 10px);
+  color: #93a5c4;
+  letter-spacing: .04em;
+}
+
+/* Arcade options */
+.arcade-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 16px 0;
+}
+.arcade-card {
+  padding: 16px 12px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(22,30,70,.9), rgba(8,12,32,.95));
+  border: 2px solid rgba(255,255,255,.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform .15s, border-color .2s;
+  text-align: center;
+}
+.arcade-card:active { transform: scale(.95); border-color: rgba(0,210,255,.7); }
+.arcade-icon {
+  font-size: 40px;
+  line-height: 1;
+  filter: drop-shadow(0 0 12px currentColor);
+}
+.arcade-card strong {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 13px;
+  color: #fff;
+  letter-spacing: .06em;
+}
+.arcade-card small {
+  font-size: 11px;
+  color: #93a5c4;
+  line-height: 1.35;
+}
