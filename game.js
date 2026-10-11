@@ -4431,21 +4431,26 @@ function gameLoopGuest() {
     mpGuestInput.resume = false;
   }
 
+  // === FIX: Guest pakai LOCAL prediction, tidak di-override oleh host ===
+  let isGuestMoving = false;
   if (localPlayerActive && Math.abs(joystickAxis) > 0.02) {
+    isGuestMoving = true;
     playerX += joystickAxis * playerSpeed * JOYSTICK_SPEED_MULT;
     playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
-    mpGuestX = mpGuestX * 0.6 + playerX * 0.4;
+    // Sync mpGuestX untuk dikirim ke host
+    mpGuestX = playerX;
   } else if (localPlayerActive && (isMovingLeft || isMovingRight)) {
+    isGuestMoving = true;
     const kbMove = isMovingLeft ? -1 : 1;
     playerX += kbMove * playerSpeed;
     playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
-    mpGuestX = mpGuestX * 0.6 + playerX * 0.4;
-  } else {
+    mpGuestX = playerX;
+  } else if (!isGuestMoving) {
+    // Hanya lerp ketika IDLE — tarik pelan-pelan ke posisi host-authoritative
     const gdx = mpGuestX - playerX;
-    if (Math.abs(gdx) > 0.5) playerX += gdx * 0.4;
+    if (Math.abs(gdx) > 2) playerX += gdx * 0.15; // lerp kecil
     else playerX = mpGuestX;
   }
-
   if (mpRemoteAlive !== false && !mpRemoteHostSpectator) {
     const hostX = mpRemoteX;
     ctx.save();
