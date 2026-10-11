@@ -1197,10 +1197,17 @@ window.addEventListener('load', async () => {
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=24.0.0').catch(err => console.log('SW Fail:', err));
 
-  setTimeout(() => {
-    const loader = document.getElementById('loading-screen');
-    if (loader) { loader.classList.add('fade-out'); setTimeout(() => loader.remove(), 350); }
-  }, 400);
+setTimeout(() => {
+  // Kalau pemain BARU → biarkan modal first-time yang handle
+  const isNewPlayer = !localStorage.getItem('pahlawan_nama') || localStorage.getItem('pahlawan_nama').trim().length === 0;
+  if (isNewPlayer) {
+    // Jangan hilangkan loading — akan dihilangkan oleh firstTimeNameSystem
+    console.log('⏸️ [Boot] Loading screen ditahan untuk pemain baru');
+    return;
+  }
+  const loader = document.getElementById('loading-screen');
+  if (loader) { loader.classList.add('fade-out'); setTimeout(() => loader.remove(), 350); }
+}, 400);
 });
 
 // =============================================================
