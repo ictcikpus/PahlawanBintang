@@ -966,12 +966,13 @@ canvas{display:block}
       <button id="btn-close-skin" class="btn-secondary" type="button">TUTUP</button>
     </div>
   </div>
-  <!-- CO-OP RAID MODAL -->
+ <!-- CO-OP RAID MODAL -->
 <div id="modal-raid" class="modal hidden">
   <div class="modal-box raid-box">
     <div class="raid-badge">🔥 CO-OP RAID 🔥</div>
     <h2>RAID BOSS MEGA</h2>
-    <p class="mp-subtitle">2 pemain vs Mega Boss 3 fase. Butuh kerja sama!</p>
+    <p class="mp-subtitle">Pilih mode: Solo atau main bareng teman!</p>
+
     <div class="raid-boss-preview">
       <div class="raid-boss-icon" id="raid-boss-icon">
         <svg viewBox="0 0 40 40"><use href="#i-omega_boss"/></svg>
@@ -981,22 +982,60 @@ canvas{display:block}
         <small>HP: <span id="raid-boss-hp">50.000</span></small>
       </div>
     </div>
+
     <div class="raid-phases">
       <div class="raid-phase"><span class="rp-num">1</span><span class="rp-label">Minion Wave</span></div>
       <div class="raid-phase"><span class="rp-num">2</span><span class="rp-label">Boss Form 1</span></div>
       <div class="raid-phase"><span class="rp-num">3</span><span class="rp-label">Enraged Form</span></div>
     </div>
+
     <div class="endless-info" style="margin-top:12px">
-      <div>👥 Butuh 2 pemain (co-op)</div>
+      <div>👥 Solo atau 2 pemain (co-op)</div>
       <div>💚 Shared HP: <strong id="raid-shared-hp">10</strong></div>
       <div>🔄 Shared Revive: <strong>3x</strong></div>
       <div>🏆 Reward: <strong>25.000 koin + skin eksklusif</strong></div>
     </div>
-    <button id="btn-start-raid" class="btn-primary big" type="button">
-      <svg class="ico"><use href="#i-users"/></svg>
-      <span>BUAT RAID ROOM</span>
-    </button>
+
+    <!-- MULTIPLAYER SECTION -->
+    <div class="raid-mp-section">
+      <div class="raid-mp-label">🤝 MAIN BARENG TEMAN</div>
+      <button id="btn-raid-host" class="btn-primary big" type="button">
+        <svg class="ico"><use href="#i-users"/></svg>
+        <span>BUAT RAID ROOM (HOST)</span>
+      </button>
+      <button id="btn-raid-join" class="btn-secondary" type="button">
+        <svg class="ico"><use href="#i-wifi"/></svg>
+        <span>GABUNG RAID (GUEST)</span>
+      </button>
+    </div>
+
+    <!-- SOLO SECTION -->
+    <div class="raid-solo-section">
+      <div class="raid-solo-label">⚔️ MAIN SENDIRI</div>
+      <button id="btn-start-raid" class="btn-primary big btn-solo-raid" type="button">
+        <svg class="ico"><use href="#i-bolt"/></svg>
+        <span>MULAI SOLO RAID</span>
+      </button>
+    </div>
+
     <button id="btn-close-raid" class="btn-secondary" type="button">TUTUP</button>
+  </div>
+</div>
+
+<!-- RAID JOIN ROOM MODAL -->
+<div id="modal-raid-join" class="modal hidden">
+  <div class="modal-box">
+    <h2>GABUNG RAID ROOM</h2>
+    <p class="mp-subtitle">Masukkan kode 4 huruf dari Host</p>
+    <div class="mp-code-input-wrap">
+      <input id="raid-code-input" class="mp-code-input" type="text" maxlength="4" placeholder="ABCD" autocapitalize="characters" autocomplete="off" spellcheck="false"/>
+    </div>
+    <div id="raid-join-status" class="mp-status mp-status-hidden"></div>
+    <button id="btn-raid-do-join" class="btn-primary big" type="button">
+      <svg class="ico"><use href="#i-wifi"/></svg>
+      <span>GABUNG RAID</span>
+    </button>
+    <button id="btn-raid-back-join" class="btn-secondary" type="button">KEMBALI</button>
   </div>
 </div>
 
