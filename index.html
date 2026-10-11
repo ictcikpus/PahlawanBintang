@@ -1176,60 +1176,75 @@ canvas{display:block}
     </div>
   </div>
  <!-- CO-OP RAID MODAL -->
-<div id="modal-raid" class="modal hidden">
-  <div class="modal-box raid-box">
-    <div class="raid-badge">🔥 CO-OP RAID 🔥</div>
-    <h2>RAID BOSS MEGA</h2>
-    <p class="mp-subtitle">Pilih mode: Solo atau main bareng teman!</p>
-
-    <div class="raid-boss-preview">
-      <div class="raid-boss-icon" id="raid-boss-icon">
-        <svg viewBox="0 0 40 40"><use href="#i-omega_boss"/></svg>
+  <div id="modal-raid" class="modal hidden">
+    <div class="modal-box raid-box">
+      <div class="raid-badge">🔥 RAID BOSS — EVENT 🔥</div>
+      <h2 id="raid-modal-title">RAID BOSS MEGA</h2>
+      <p class="mp-subtitle" id="raid-modal-desc">Kalahkan Omega Prime dengan HP 50.000!</p>
+  
+      <!-- Info Boss -->
+      <div class="raid-boss-preview">
+        <div class="raid-boss-icon" id="raid-boss-icon">
+          <svg viewBox="0 0 40 40"><use href="#i-omega_boss"/></svg>
+        </div>
+        <div class="raid-boss-info">
+          <strong id="raid-boss-name">OMEGA PRIME</strong>
+          <small>HP: <span id="raid-boss-hp">50.000</span></small>
+        </div>
       </div>
-      <div class="raid-boss-info">
-        <strong id="raid-boss-name">OMEGA PRIME</strong>
-        <small>HP: <span id="raid-boss-hp">50.000</span></small>
+  
+      <!-- Cooldown Info (otomatis muncul kalau masih cooldown) -->
+      <div id="raid-cooldown-info" class="raid-cooldown-info hidden">
+        <div class="raid-cd-title">⏰ COOLDOWN AKTIF</div>
+        <div class="raid-cd-time" id="raid-cd-time">00:00:00</div>
+        <div class="raid-cd-sub" id="raid-cd-sub">Raid berikutnya tersedia segera</div>
       </div>
+  
+      <!-- Ready Info (muncul kalau bisa main) -->
+      <div id="raid-ready-info" class="raid-cooldown-info hidden" style="background:linear-gradient(135deg, rgba(46,213,115,.15), rgba(20,30,70,.6));border-color:rgba(46,213,115,.5);">
+        <div class="raid-cd-title" style="color:#39ff14;">✅ SIAP DIMAINKAN!</div>
+        <div class="raid-cd-sub" style="font-size:13px;color:#e6eefc;margin-top:6px;">Pilih mode di bawah</div>
+      </div>
+  
+      <!-- Reward Info -->
+      <div class="raid-reward-box">
+        <div>💎 <strong>Reward:</strong> 25.000 koin</div>
+        <div>🎨 <strong>Bonus:</strong> Skin "Raid Master" (eksklusif)</div>
+        <div>⏳ <strong>Cooldown:</strong> 2 jam per percobaan</div>
+      </div>
+  
+      <!-- Phases -->
+      <div class="raid-phases">
+        <div class="raid-phase"><span class="rp-num">1</span><span class="rp-label">Minion Wave</span></div>
+        <div class="raid-phase"><span class="rp-num">2</span><span class="rp-label">Boss Form 1</span></div>
+        <div class="raid-phase"><span class="rp-num">3</span><span class="rp-label">Enraged Form</span></div>
+      </div>
+  
+      <!-- MULTIPLAYER SECTION -->
+      <div class="raid-mp-section">
+        <div class="raid-mp-label">🤝 MAIN BARENG TEMAN</div>
+        <button id="btn-raid-host" class="btn-primary big" type="button">
+          <svg class="ico"><use href="#i-users"/></svg>
+          <span>BUAT RAID ROOM (HOST)</span>
+        </button>
+        <button id="btn-raid-join" class="btn-secondary" type="button">
+          <svg class="ico"><use href="#i-wifi"/></svg>
+          <span>GABUNG RAID (GUEST)</span>
+        </button>
+      </div>
+  
+      <!-- SOLO SECTION -->
+      <div class="raid-solo-section">
+        <div class="raid-solo-label">⚔️ MAIN SENDIRI</div>
+        <button id="btn-start-raid" class="btn-primary big btn-solo-raid" type="button">
+          <svg class="ico"><use href="#i-bolt"/></svg>
+          <span>MULAI SOLO RAID</span>
+        </button>
+      </div>
+  
+      <button id="btn-close-raid" class="btn-secondary" type="button">TUTUP</button>
     </div>
-
-    <div class="raid-phases">
-      <div class="raid-phase"><span class="rp-num">1</span><span class="rp-label">Minion Wave</span></div>
-      <div class="raid-phase"><span class="rp-num">2</span><span class="rp-label">Boss Form 1</span></div>
-      <div class="raid-phase"><span class="rp-num">3</span><span class="rp-label">Enraged Form</span></div>
-    </div>
-
-    <div class="endless-info" style="margin-top:12px">
-      <div>👥 Solo atau 2 pemain (co-op)</div>
-      <div>💚 Shared HP: <strong id="raid-shared-hp">10</strong></div>
-      <div>🔄 Shared Revive: <strong>3x</strong></div>
-      <div>🏆 Reward: <strong>25.000 koin + skin eksklusif</strong></div>
-    </div>
-
-    <!-- MULTIPLAYER SECTION -->
-    <div class="raid-mp-section">
-      <div class="raid-mp-label">🤝 MAIN BARENG TEMAN</div>
-      <button id="btn-raid-host" class="btn-primary big" type="button">
-        <svg class="ico"><use href="#i-users"/></svg>
-        <span>BUAT RAID ROOM (HOST)</span>
-      </button>
-      <button id="btn-raid-join" class="btn-secondary" type="button">
-        <svg class="ico"><use href="#i-wifi"/></svg>
-        <span>GABUNG RAID (GUEST)</span>
-      </button>
-    </div>
-
-    <!-- SOLO SECTION -->
-    <div class="raid-solo-section">
-      <div class="raid-solo-label">⚔️ MAIN SENDIRI</div>
-      <button id="btn-start-raid" class="btn-primary big btn-solo-raid" type="button">
-        <svg class="ico"><use href="#i-bolt"/></svg>
-        <span>MULAI SOLO RAID</span>
-      </button>
-    </div>
-
-    <button id="btn-close-raid" class="btn-secondary" type="button">TUTUP</button>
   </div>
-</div>
 
 <!-- RAID JOIN ROOM MODAL -->
 <div id="modal-raid-join" class="modal hidden">
