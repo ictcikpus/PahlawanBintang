@@ -1127,6 +1127,25 @@ canvas{display:block}
     <button id="btn-close-perf" class="btn-secondary" type="button">TUTUP</button>
   </div>
 </div>
+
+  <div id="modal-zone-unlock" class="modal hidden">
+    <div class="modal-box zone-unlock-box">
+      <div class="zone-unlock-badge">✦ ZONA BARU TERBUKA ✦</div>
+      <div class="zone-preview" id="zone-unlock-preview">
+        <canvas id="zone-preview-canvas" width="400" height="200"></canvas>
+      </div>
+      <div class="zone-unlock-icon-wrap" id="zone-unlock-icon-wrap">
+        <svg class="zone-unlock-icon" id="zone-unlock-icon" viewBox="0 0 24 24"><use href="#i-star"/></svg>
+      </div>
+      <h2 class="zone-unlock-title" id="zone-unlock-title">LUAR ANGKASA</h2>
+      <p class="zone-unlock-sub" id="zone-unlock-sub">Batasan Orbit</p>
+      <p class="zone-unlock-desc" id="zone-unlock-desc">Melampaui atmosfer.</p>
+      <button id="btn-zone-unlock-go" class="btn-primary big" type="button">
+        <svg class="ico"><use href="#i-play"/></svg>
+        <span>JELAJAHI ZONA BARU</span>
+      </button>
+    </div>
+  </div>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="./multiplayer.js?v=24.0"></script>
