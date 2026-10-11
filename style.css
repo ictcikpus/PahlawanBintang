@@ -2388,3 +2388,70 @@ kbd{display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(255,2
   .menu-grid.menu-grid-9 { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 340px; gap: 5px; }
   .menu-grid.menu-grid-9 .menu-card { min-height: 62px; padding: 6px 4px; }
 }
+/* =============================================================
+   ZONA UNLOCK + HERO UNLOCK MODAL — v22.0
+   ============================================================= */
+.zone-unlock-box, .hero-unlock-box{
+  max-width:min(94vw,440px); text-align:center; padding:22px 20px 18px; position:relative;
+  background:radial-gradient(circle at 50% 0%, rgba(0,210,255,.15) 0%, transparent 60%),
+             linear-gradient(160deg, rgba(15,22,54,.98), rgba(6,10,26,.99));
+  border:2px solid rgba(0,210,255,.5);
+  box-shadow:0 30px 80px rgba(0,0,0,.85), 0 0 60px rgba(0,210,255,.25);
+  overflow:hidden;
+}
+.zone-unlock-badge, .hero-unlock-badge{
+  display:inline-block; padding:4px 14px; border-radius:999px;
+  font-family:'Orbitron',sans-serif; font-size:10px; font-weight:800;
+  letter-spacing:.15em; margin-bottom:14px; position:relative; z-index:2;
+}
+.zone-unlock-badge{
+  background:linear-gradient(90deg, rgba(0,210,255,.25), rgba(165,94,234,.25));
+  border:1px solid rgba(0,210,255,.6); color:#00d2ff;
+  box-shadow:0 0 16px rgba(0,210,255,.4);
+}
+.hero-unlock-badge{
+  background:linear-gradient(90deg, rgba(255,215,0,.25), rgba(255,46,136,.25));
+  border:1px solid rgba(255,215,0,.6); color:#ffd700;
+}
+.zone-preview{width:100%; aspect-ratio:2/1; border-radius:12px; overflow:hidden;
+  margin-bottom:14px; border:1.5px solid rgba(0,210,255,.4); background:#000;}
+.zone-preview canvas{width:100% !important; height:100% !important; display:block;}
+.zone-unlock-icon-wrap{width:64px; height:64px; margin:0 auto 10px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;}
+.zone-unlock-icon{width:40px; height:40px; color:#00d2ff; fill:currentColor;}
+.zone-unlock-title{font-family:'Orbitron',sans-serif; font-size:clamp(20px,4vmin,28px) !important;
+  font-weight:900; letter-spacing:.12em; color:#00d2ff !important; margin:0 0 4px !important;}
+.zone-unlock-sub{font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700;
+  letter-spacing:.15em; color:#ffd700; margin:0 0 12px; text-transform:uppercase;}
+.zone-unlock-desc{font-family:'Rajdhani',sans-serif; font-size:13px; color:#93a5c4; margin:0 0 16px;}
+.hero-unlock-avatar-wrap{position:relative; width:110px; height:110px; margin:0 auto 12px;
+  border-radius:50%; display:flex; align-items:center; justify-content:center;}
+.hero-unlock-avatar{width:76px; height:76px; fill:currentColor;}
+.hero-unlock-origin{font-family:'Rajdhani',sans-serif; font-size:11px; letter-spacing:.08em;
+  color:#ffd700; text-transform:uppercase; margin-bottom:6px;}
+.hero-unlock-name{font-family:'Orbitron',sans-serif; font-size:clamp(18px,3.5vmin,24px) !important;
+  font-weight:900; letter-spacing:.1em; color:#ffd700 !important; margin:0 0 8px !important;}
+.hero-unlock-desc{font-family:'Rajdhani',sans-serif; font-size:13px; color:#93a5c4; margin:0 0 16px;}
+.hero-unlock-stats{padding:12px 10px; border-radius:10px; background:rgba(0,0,0,.35);
+  border:1px solid rgba(255,215,0,.2); margin-bottom:16px;}
+.hero-stat-row{display:grid; grid-template-columns:60px 1fr 28px; align-items:center;
+  gap:10px; margin-bottom:8px;}
+.hero-stat-row:last-child{margin-bottom:0}
+.stat-label{font-family:'Orbitron',sans-serif; font-size:9px; font-weight:700;
+  letter-spacing:.08em; color:#93a5c4; text-align:left;}
+.stat-bar{height:7px; border-radius:4px; background:rgba(255,255,255,.08); overflow:hidden;}
+.stat-fill{height:100%; width:0; border-radius:4px;
+  background:linear-gradient(90deg, #00d2ff, #ffd700); transition:width .8s;}
+.stat-val{font-family:'Orbitron',sans-serif; font-size:11px; font-weight:800;
+  color:#ffd700; text-align:right;}
+
+/* Zone chip HUD */
+.hud-zone-chip{
+  display:inline-flex; align-items:center; gap:5px; padding:3px 10px;
+  border-radius:999px; background:rgba(0,0,0,.55);
+  border:1.5px solid rgba(255,215,0,.5);
+  font-family:'Orbitron',sans-serif; font-size:9px; font-weight:700;
+  letter-spacing:.08em; color:#ffd700; text-transform:uppercase;
+  white-space:nowrap; box-shadow:0 0 12px rgba(255,215,0,.25);
+}
+.hud-zone-chip svg{width:11px; height:11px; fill:currentColor;}
