@@ -1107,7 +1107,7 @@ let mpRemotePaused = false;
 let mpLocalPauseRequested = false;
 let mpPauseState = 'none';
 
-const MP_SPECTATOR_WAIT_SECONDS = 60;
+const MP_SPECTATOR_WAIT_SECONDS = 5;
 
 // ============ END OF PART 1/4 ============
 console.log('📦 [game.js] PART 1/4 loaded');
@@ -1498,12 +1498,32 @@ function startSelfSpectatorMode(reason) {
       updateSpectatorUI();
     } else { clearInterval(mpSpectatorTickInterval); mpSpectatorTickInterval = null; }
   }, 1000);
-  if (mpRole === 'host') checkBothDead();
+
+  // ✅ FIX: Host monitor kalau dua-duanya mati
+  if (mpRole === 'host') {
+    if (window._bothDeadMonitorInt) clearInterval(window._bothDeadMonitorInt);
+    window._bothDeadMonitorInt = setInterval(() => {
+      if (!mpSpectatorMode) {
+        clearInterval(window._bothDeadMonitorInt);
+        window._bothDeadMonitorInt = null;
+        window._mpBothDeadSince = undefined;
+        return;
+      }
+      checkBothDead();
+    }, 1000);
+  }
 }
+
 function endSelfSpectatorMode() {
   if (!mpSpectatorMode) return;
   mpSpectatorMode = false; mpSpectatorReady = false; mpSpectatorTimer = 0;
   if (mpSpectatorTickInterval) { clearInterval(mpSpectatorTickInterval); mpSpectatorTickInterval = null; }
+  // ✅ Reset both-dead tracker karena salah satu sudah hidup
+  window._mpBothDeadSince = undefined;
+  if (window._bothDeadMonitorInt) {
+    clearInterval(window._bothDeadMonitorInt);
+    window._bothDeadMonitorInt = null;
+  }
   setSpectatorOverlayVisible(false); updateSpectatorUI();
 }
 function applyRemoteHostSpectator(bool) { if (mpRemoteHostSpectator === !!bool) return; mpRemoteHostSpectator = !!bool; }
@@ -1522,16 +1542,59 @@ function respawnFromSpectator() {
   if (!mpSpectatorMode || !mpSpectatorReady) return;
   endSelfSpectatorMode();
   lives = 1; playerHitPoints = PLAYER_MAX_HIT_POINTS; playerHitFlash = 0;
-  isReviveInvuln = true; reviveInvulnTimer = 120;
+  isReviveInvuln = true; reviveInvulnTimer = 180; // lebih lama untuk transisi masuk
   updateLivesDisplay(); try { sounds.playRespawn(); } catch(e) {}
-  if (mpRole === 'guest') mpGuestInput.respawn = true;
-  else { playerX = VIRTUAL_WIDTH * 0.25; playerTargetX = playerX; spawnFloatingText(playerX, VIRTUAL_HEIGHT - 70 * GAME_SCALE, 'REVIVED!', '#39ff14'); triggerScreenFlash(0.5); }
+
+  // ✅ FIX: animasi re-entry
+  showRespawnTransition();
+  window._mpBothDeadSince = undefined; // reset timer both-dead
+
+  if (mpRole === 'guest') {
+    mpGuestInput.respawn = true;
+  } else {
+    // Host: posisikan ulang di kiri, sedikit gerakan masuk
+    playerX = VIRTUAL_WIDTH * 0.15; playerTargetX = VIRTUAL_WIDTH * 0.25;
+    spawnFloatingText(VIRTUAL_WIDTH * 0.25, VIRTUAL_HEIGHT - 70 * GAME_SCALE, 'REVIVED!', '#39ff14');
+  }
+}
+
+// ✅ FUNGSI BARU: Transisi re-entry cinematic
+function showRespawnTransition() {
+  // Flash hijau-biru
+  const flash = document.createElement('div');
+  flash.className = 'respawn-flash';
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 900);
+
+  // Teks besar
+  const text = document.createElement('div');
+  text.className = 'respawn-dash';
+  text.innerText = '⚡ RE-ENTRY ⚡';
+  document.body.appendChild(text);
+  setTimeout(() => text.remove(), 1300);
+
+  try { sounds.playBossWarning(); } catch(e) {}
+  try { triggerVibrate([50, 30, 50, 30, 100, 30, 150]); } catch(e) {}
+  try { triggerScreenFlash(0.7); } catch(e) {}
 }
 function checkBothDead() {
-  if (!mpActive || gameMode !== 'coop') return;
-  if (mpRole !== 'host') return;
-  if (mpSpectatorMode && mpRemoteGuestSpectator) setTimeout(() => mpEndGame(false, 'KEDUA PEMAIN MATI'), 500);
-}
+    if (!mpActive) return;
+    if (mpRole !== 'host') return;
+    // ✅ FIX: sertakan coop_raid
+    if (gameMode !== 'coop' && gameMode !== 'coop_raid') return;
+  
+    if (mpSpectatorMode && mpRemoteGuestSpectator) {
+      // ✅ FIX: grace period 4 detik supaya pemain bisa respawn dulu
+      if (window._mpBothDeadSince === undefined) window._mpBothDeadSince = Date.now();
+      if (Date.now() - window._mpBothDeadSince > 4000) {
+        window._mpBothDeadSince = undefined;
+        mpEndGame(false, 'KEDUA PEMAIN MATI');
+      }
+    } else {
+      // Salah satu hidup kembali → reset timer
+      window._mpBothDeadSince = undefined;
+    }
+  }
 
 // =============================================================
 // 23. MATH QUIZ SYSTEM
@@ -4323,13 +4386,33 @@ function gameLoop() {
       ctx.restore();
     }
 
-    if (m.y > H - groundH * 0.5 && !m.type.startsWith('boss')) {
-      monsters.splice(i, 1);
-      if (localPlayerActive) {
-        if (isShieldActive || isReviveInvuln) spawnFloatingText(playerX, heroPlayerY - 15 * S, 'BLOCKED', '#ffd700');
-        else { handlePlayerHit(); if (!isGameRunning) { ctx.restore(); return; } }
+   if (m.y > H - groundH * 0.5 && !m.type.startsWith('boss')) {
+    monsters.splice(i, 1);
+    // Cek host player
+    if (localPlayerActive && Math.abs(m.x - playerX) < 50 * S) {
+      if (isShieldActive || isReviveInvuln) {
+        spawnFloatingText(playerX, heroPlayerY - 15 * S, 'BLOCKED', '#ffd700');
+      } else {
+        handlePlayerHit();
+        if (!isGameRunning) { ctx.restore(); return; }
       }
     }
+    // ✅ FIX: Cek guest player
+    if (mpActive && mpRole === 'host' && mpGuestAlive && !mpRemoteGuestSpectator) {
+      if (Math.abs(m.x - mpGuestX) < 50 * S) {
+        if (isShieldActive || isReviveInvuln) {
+          spawnFloatingText(mpGuestX, heroPlayerY - 15 * S, 'BLOCKED', '#ffd700');
+        } else {
+          mpGuestHP--;
+          if (mpGuestHP <= 0) {
+            mpHandleGuestDeath();
+          } else {
+            spawnFloatingText(mpGuestX, heroPlayerY - 15 * S, `HP ${mpGuestHP}/3`, '#ffa502');
+          }
+        }
+      }
+    }
+  }
   }
 
   // === PARTICLES ===
@@ -5555,8 +5638,15 @@ mpRemoteBullets = (state.bullets || []).map((b, i) => {
   if (state.hostSpectator !== undefined && mpRole === 'guest') applyRemoteHostSpectator(state.hostSpectator);
   if (mpRole === 'guest' && state.guestSpectator !== undefined) {
     const shouldBeSpectator = !!state.guestSpectator;
-    if (shouldBeSpectator && !mpSpectatorMode) startSelfSpectatorMode('host-command');
-    else if (!shouldBeSpectator && mpSpectatorMode) endSelfSpectatorMode();
+    if (shouldBeSpectator && !mpSpectatorMode) {
+      startSelfSpectatorMode('host-command');
+    } else if (!shouldBeSpectator && mpSpectatorMode) {
+      endSelfSpectatorMode();
+      // ✅ Re-entry animation jika baru bangkit (HP full)
+      if (state.guestHP === PLAYER_MAX_HIT_POINTS) {
+        showRespawnTransition();
+      }
+    }
   }
   if (mpRole === 'guest' && state.gamePaused !== undefined) {
     const hostPaused = !!state.gamePaused && state.gameRunning !== false;
