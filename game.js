@@ -2468,10 +2468,48 @@ function updateHUDValues() {
     const hl = $('hud-level'); if (hl) hl.innerText = 'B' + (dailyBossIndex + 1);
     const hm = $('hud-mission');
     if (hm) { if (bossPhase === 'minions') hm.innerText = `${bossMinionsKilled}/${bossMinionsTarget} MINION`; else hm.innerText = `BOS ${dailyBossIndex + 1}/3`; }
-  } else if (gameMode === 'coop') {
-    const hl = $('hud-level'); if (hl) hl.innerText = 'CO-OP';
-    const hm = $('hud-mission'); if (hm) hm.innerText = 'TEAM';
-  } else {
+    } else if (gameMode === 'coop') {
+      levelConfig = levelsData[currentLevelIndex] || levelsData[0];
+      levelConfig = Object.assign({}, levelConfig, { speed: (levelConfig.speed || 1) * S });
+      spawnMultiplier = 1.5;
+    } else if (gameMode === 'coop_raid') {
+      // ✅ Solo raid / co-op raid
+      if (raidState.phase === 1) {
+        // Fase minion wave
+        levelConfig = {
+          level: 999,
+          targetKills: 30,
+          targetScore: 0,
+          speed: 1.2 * S,
+          spawnRate: 600,
+          algorithm: 'swarm',
+          types: ['jelly','triangle','worm','cloud','crystal']
+        };
+      } else {
+        // Fase boss
+        if (monsters.length === 0 && Date.now() > (nextBossSpawnTime || 0)) {
+          const bossSize = (BOSS_SIZES[30] || 148) * S;
+          const theme = getBossTheme(30);
+          currentTheme = theme; applyThemeToDocument(theme); recolorStars();
+          triggerBossSiren();
+          const hpVal = raidState.bossHp || 50000;
+          monsters.push({
+            x: W/2, startX: W/2, y: -100*S,
+            speed: 1.0*S, size: bossSize, hp: hpVal, maxHp: hpVal,
+            color: theme.accent, type: 'boss30', algorithm: 'boss_30',
+            shootTimer: 0, minionTimer: 0, enrageTimer: 0,
+            timeAlive: 0, opacity: 1, hitFlash: 0, aura: 0,
+            aimTimer: 0, aimTargetX: 0, aimTargetY: 0,
+            coreOpen: false, coreTimer: 0, coreGlow: 0, noWeakPoint: false
+          });
+          updateHUDValues();
+        }
+        // Retry loop untuk cek spawn boss
+        const myToken = (token !== undefined) ? token : spawnLoopToken;
+        setTimeout(() => spawnMonsterLoop(myToken), 500);
+        return;
+      }
+    } else {
     const lc = levelsData[currentLevelIndex] || levelsData[0];
     const hl = $('hud-level'); if (hl) hl.innerText = lc.level;
     const hm = $('hud-mission');
@@ -9921,6 +9959,133 @@ function finishRaid(win) {
   raidModeMP = false;
   mpActive = false;
   mpRole = null;
+}
+// =============================================================
+// FIX v24.0.6: RAID SOLO MODE (FUNGSI YANG HILANG)
+// =============================================================
+
+// ---- Buka modal RAID dari menu utama ----
+function openRaidModal() {
+  const modal = document.getElementById('modal-raid');
+  if (!modal) {
+    console.warn('⚠️ [Raid] Modal raid tidak ditemukan di HTML');
+    return;
+  }
+  // Update preview info
+  const bossName = document.getElementById('raid-boss-name');
+  const bossHp = document.getElementById('raid-boss-hp');
+  const sharedHp = document.getElementById('raid-shared-hp');
+  if (bossName) bossName.innerText = 'OMEGA PRIME';
+  if (bossHp) bossHp.innerText = '50.000';
+  if (sharedHp) sharedHp.innerText = '10';
+  modal.classList.remove('hidden');
+  console.log('✅ [Raid] Modal dibuka');
+}
+
+// ---- Mulai RAID SOLO (single player, tanpa MP) ----
+function startRaid() {
+  sounds.init();
+  console.log('🔥 [Raid Solo] Starting single-player raid...');
+
+  // Pastikan tidak dalam multiplayer
+  raidModeMP = false;
+  mpActive = false;
+  mpRole = null;
+
+  // Setup state raid
+  raidState.active = true;
+  raidState.phase = 1;
+  raidState.sharedHp = 10;
+  raidState.sharedRevives = 3;
+  raidState.minionKilled = 0;
+  raidState.startTime = Date.now();
+  raidState.bossNum = 30;
+  raidState.bossMaxHp = 50000;
+  raidState.bossHp = 50000;
+
+  // Mode game = coop_raid supaya spawn loop pakai logika raid
+  gameMode = 'coop_raid';
+
+  // Reset game state
+  const inp = document.getElementById('player-name-input');
+  playerName = (inp && inp.value.trim()) || playerName || 'Pahlawan';
+  try { DB.set('pahlawan_nama', playerName); } catch(e) {}
+  const pn = document.getElementById('player-name-display');
+  if (pn) pn.innerText = playerName;
+
+  score = 0;
+  lives = 10; // Shared HP untuk solo
+  playerHitPoints = PLAYER_MAX_HIT_POINTS;
+  playerHitFlash = 0;
+  reviveUsedThisRun = false;
+  levelKills = 0;
+  levelCoinsEarned = 0;
+  currentLevelIndex = 29;
+
+  // Set theme ke boss Omega (boss level 30)
+  currentTheme = getBossTheme(30);
+  applyThemeToDocument(currentTheme);
+  try { recolorStars(); } catch(e) {}
+
+  resetLevelState();
+  playerX = VIRTUAL_WIDTH * 0.5;
+  playerTargetX = playerX;
+
+  // Loadout untuk raid
+  playerLoadout = ['freeze', 'bomb'];
+  freezeCharges = 5;
+  shieldCharges = 0;
+  bombCharges = 5;
+  updateSkillButtonsUI();
+  updateHUDValues();
+  updateLivesDisplay();
+
+  // Sembunyikan semua menu, tampilkan HUD
+  ['modal-raid','modal-raid-join','modal-mp-lobby','modal-mp-hub','modal-mp-join',
+   'modal-result','modal-pause','screen-main-menu'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+  const hudEl = document.getElementById('hud-overlay');
+  if (hudEl) hudEl.classList.remove('hidden');
+
+  // Resize canvas & reset
+  resizeCanvas();
+  updateGameScale();
+  resetLevelState();
+
+  // Set running
+  isGameRunning = true;
+  isGamePaused = false;
+  levelStartTime = Date.now();
+
+  // Show intro banner
+  const banner = document.getElementById('level-intro');
+  if (banner) {
+    document.getElementById('level-intro-number').innerText = '🔥';
+    document.getElementById('level-intro-name').innerText = 'SOLO RAID';
+    document.getElementById('level-intro-mission').innerText = 'FASE 1: MINION WAVE — BERTAHAN!';
+    banner.classList.remove('hidden', 'fade-out', 'stage-clear', 'boss-approach');
+    void banner.offsetWidth;
+    try { sounds.playBossWarning(); } catch(e) {}
+    try { triggerVibrate([200, 100, 200, 100, 300]); } catch(e) {}
+    triggerScreenFlash(0.7);
+    setTimeout(() => {
+      banner.classList.add('fade-out');
+      setTimeout(() => banner.classList.add('hidden'), 500);
+      // Mulai spawn loop setelah banner hilang
+      startSpawnLoop();
+    }, 1800);
+  } else {
+    // Fallback kalau banner tidak ada
+    startSpawnLoop();
+  }
+
+  // Start music & game loop
+  sounds.startBGM();
+  gameLoop();
+
+  console.log('🔥 [Raid Solo] Started | Level:', currentLevelIndex + 1);
 }
 
 // ---- Host: buat raid room ----
