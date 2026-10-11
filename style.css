@@ -2370,3 +2370,21 @@ kbd{display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(255,2
   flex-shrink: 0;
   pointer-events: auto;
 }
+
+.menu-grid.menu-grid-9 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 380px;
+}
+.menu-grid.menu-grid-9 .menu-card {
+  min-height: clamp(66px, 10.5vmin, 92px);
+}
+.menu-grid.menu-grid-9 .card-sub {
+  font-size: clamp(7.5px, 1.1vmin, 9.5px);
+  color: #93a5c4;
+  display: block;
+  margin-top: 1px;
+}
+@media (max-width: 500px) {
+  .menu-grid.menu-grid-9 { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 340px; gap: 5px; }
+  .menu-grid.menu-grid-9 .menu-card { min-height: 62px; padding: 6px 4px; }
+}
