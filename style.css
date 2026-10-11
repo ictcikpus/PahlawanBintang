@@ -2308,3 +2308,65 @@ kbd{display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(255,2
   display:none;
 }
 #fps-counter.visible{display:block}
+
+/* =============================================================
+   FIX v24.0.1 — Menu Card Clickable Fix
+   ============================================================= */
+
+/* Pastikan menu-grid & child bisa diklik */
+.menu-grid,
+.menu-grid * {
+  pointer-events: auto !important;
+}
+
+.menu-card {
+  position: relative;
+  z-index: 10;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0, 210, 255, 0.3);
+  user-select: none;
+}
+
+.menu-card:active {
+  transform: scale(0.94) !important;
+  opacity: 0.9;
+}
+
+/* Sub label (card-sub) */
+.card-sub {
+  display: block;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: clamp(8px, 1.2vmin, 10px);
+  color: #93a5c4;
+  letter-spacing: 0.04em;
+  margin-top: 1px;
+  pointer-events: none;
+}
+
+/* Pastikan inner content tidak block click */
+.menu-card-inner,
+.menu-card-inner * {
+  pointer-events: none;
+}
+
+/* Fix: jika menu-container pakai overflow, pastikan tidak block */
+.menu-container {
+  pointer-events: auto;
+}
+
+/* Fix: hapus isolation yang mungkin block klik */
+.menu-card {
+  isolation: auto;
+}
+
+/* Grid 9 tombol — 3x3 layout */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(6px, 1vmin, 10px);
+  width: min(100%, 380px);
+  margin: 0;
+  flex-shrink: 0;
+  pointer-events: auto;
+}
