@@ -2089,6 +2089,10 @@ function setupEventListeners() {
               if (gameMode === 'endless') { endlessWave++; endlessKillsThisWave = 0; updateHUDValues(); startSpawnLoop(); }
               else if (gameMode === 'daily') handleDailyBossDefeated();
               else if (gameMode === 'coop') mpHostLevelComplete();
+              else if (gameMode === 'coop_raid') {
+                // ✅ Solo raid: selesai
+                finishRaid(true);
+              }
               else onLevelCleared();
             }, 3500);
           }
@@ -2805,6 +2809,33 @@ function checkLevelObjectives() {
       const hud = document.getElementById('hud-mission');
       if (hud) hud.innerText = `${bossMinionsKilled}/${bossMinionsTarget} MINION`;
       if (bossMinionsKilled >= bossMinionsTarget && monsters.length === 0) transitionToBossPhase();
+    }
+    return;
+  }
+    if (gameMode === 'coop_raid') {
+    // Solo/Co-op Raid: hitung minion dulu, lalu boss
+    if (raidState.phase === 1) {
+      if (levelKills >= 30 && monsters.length === 0) {
+        raidState.phase = 2;
+        nextBossSpawnTime = Date.now() + 2000;
+        // Banner boss muncul
+        const b = document.getElementById('level-intro');
+        if (b) {
+          document.getElementById('level-intro-number').innerText = '⚠';
+          document.getElementById('level-intro-name').innerText = 'OMEGA PRIME';
+          document.getElementById('level-intro-mission').innerText = 'BOSS MUNCUL!';
+          b.classList.remove('hidden', 'fade-out', 'stage-clear');
+          b.classList.add('boss-approach');
+          void b.offsetWidth;
+          try { sounds.playBossWarning(); } catch(e) {}
+          setTimeout(() => {
+            b.classList.add('fade-out');
+            b.classList.remove('boss-approach');
+            setTimeout(() => b.classList.add('hidden'), 500);
+          }, 1800);
+        }
+        levelKills = 0;
+      }
     }
     return;
   }
@@ -4118,6 +4149,10 @@ function gameLoop() {
                 if (gameMode === 'endless') { endlessWave++; endlessKillsThisWave = 0; updateHUDValues(); startSpawnLoop(); }
                 else if (gameMode === 'daily') handleDailyBossDefeated();
                 else if (gameMode === 'coop') mpHostLevelComplete();
+                else if (gameMode === 'coop_raid') {
+                  // ✅ Solo raid: selesai
+                  finishRaid(true);
+                }
                 else onLevelCleared();
               }, 3500);
             }
