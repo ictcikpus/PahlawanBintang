@@ -1146,6 +1146,29 @@ canvas{display:block}
       </button>
     </div>
   </div>
+
+  <div id="modal-hero-unlock" class="modal hidden">
+    <div class="modal-box hero-unlock-box">
+      <div class="hero-unlock-badge">⚔ PAHLAWAN BARU ⚔</div>
+      <div class="hero-unlock-glow"></div>
+      <div class="hero-unlock-avatar-wrap" id="hero-unlock-avatar-wrap">
+        <svg class="hero-unlock-avatar" id="hero-unlock-avatar" viewBox="0 0 40 40"><use href="#i-robot"/></svg>
+      </div>
+      <div class="hero-unlock-origin" id="hero-unlock-origin">Bergabung setelah dikalahkan</div>
+      <h2 class="hero-unlock-name" id="hero-unlock-name">Meriam Bintang</h2>
+      <p class="hero-unlock-desc" id="hero-unlock-desc">Hero baru telah bergabung.</p>
+      <div class="hero-unlock-stats" id="hero-unlock-stats">
+        <div class="hero-stat-row"><span class="stat-label">DAMAGE</span><div class="stat-bar"><div class="stat-fill" id="stat-dmg"></div></div><span class="stat-val" id="stat-dmg-val">7</span></div>
+        <div class="hero-stat-row"><span class="stat-label">SPEED</span><div class="stat-bar"><div class="stat-fill" id="stat-spd"></div></div><span class="stat-val" id="stat-spd-val">7</span></div>
+        <div class="hero-stat-row"><span class="stat-label">FIRE RATE</span><div class="stat-bar"><div class="stat-fill" id="stat-rate"></div></div><span class="stat-val" id="stat-rate-val">7</span></div>
+      </div>
+      <button id="btn-hero-unlock-ok" class="btn-primary big" type="button">
+        <svg class="ico"><use href="#i-check"/></svg>
+        <span>TAMBAHKAN KE TIM</span>
+      </button>
+    </div>
+  </div>
+  
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="./multiplayer.js?v=24.0"></script>
