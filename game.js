@@ -11818,3 +11818,244 @@ console.log('✅ [game.js] v24.0.0 — LEGACY EDITION COMPLETE (10/10 PARTS)');
   // Cancel auto-hide kalau user klik
   btn.addEventListener('click', () => clearTimeout(autoHide));
 })();
+// =============================================================
+// v24.1.1 FIRST-TIME NAME — Welcome Modal
+// =============================================================
+(function firstTimeNameSystem() {
+  'use strict';
+
+  const NAME_KEY = 'pahlawan_nama';
+
+  function hasPlayedBefore() {
+    const name = localStorage.getItem(NAME_KEY);
+    return name && name.trim().length > 0;
+  }
+
+  function showFirstTimeModal() {
+    const modal = document.getElementById('modal-first-time');
+    if (!modal) {
+      console.warn('⚠️ [FirstTime] Modal tidak ditemukan');
+      return;
+    }
+
+    // Sembunyikan loading screen
+    const loader = document.getElementById('loading-screen');
+    if (loader) {
+      loader.classList.add('fade-out');
+      setTimeout(() => loader.remove(), 350);
+    }
+
+    // Tampilkan modal
+    modal.classList.remove('hidden');
+
+    // Focus ke input setelah animasi masuk
+    setTimeout(() => {
+      const input = document.getElementById('first-time-name-input');
+      if (input) {
+        input.focus();
+        // Coba buka keyboard di mobile
+        setTimeout(() => input.focus(), 200);
+      }
+    }, 400);
+
+    console.log('👋 [FirstTime] Modal ditampilkan — pemain baru');
+  }
+
+  function hideFirstTimeModal() {
+    const modal = document.getElementById('modal-first-time');
+    if (!modal) return;
+    modal.style.transition = 'opacity .3s ease, transform .3s ease';
+    modal.style.opacity = '0';
+    modal.style.transform = 'scale(.95)';
+    setTimeout(() => {
+      modal.classList.add('hidden');
+      modal.style.opacity = '';
+      modal.style.transform = '';
+      modal.style.transition = '';
+    }, 300);
+  }
+
+  function submitName() {
+    const input = document.getElementById('first-time-name-input');
+    if (!input) return;
+
+    const rawName = input.value.trim();
+    const name = rawName.length >= 2 ? rawName : 'Pahlawan';
+    const btn = document.getElementById('btn-first-time-submit');
+
+    // Efek visual tombol
+    if (btn) {
+      btn.style.transform = 'scale(.95)';
+      setTimeout(() => { btn.style.transform = ''; }, 150);
+    }
+
+    // Simpan nama
+    try {
+      localStorage.setItem(NAME_KEY, name);
+      // Sinkronkan dengan variabel global & input lama
+      if (typeof window.playerName !== 'undefined') window.playerName = name;
+      window.playerName = name;
+      if (typeof playerName !== 'undefined') {
+        try { playerName = name; } catch(e) {}
+      }
+      // Update semua input nama (kalau ada di HTML)
+      const oldInput = document.getElementById('player-name-input');
+      if (oldInput) oldInput.value = name;
+      const displayEl = document.getElementById('player-name-display');
+      if (displayEl) displayEl.innerText = name;
+      // Simpan ke DB juga kalau ada
+      if (typeof DB !== 'undefined' && DB.set) {
+        try { DB.set('pahlawan_nama', name); } catch(e) {}
+      }
+      console.log('✅ [FirstTime] Nama disimpan:', name);
+    } catch(e) {
+      console.error('❌ [FirstTime] Gagal simpan nama:', e);
+    }
+
+    // Sound & vibrate
+    try { if (typeof sounds !== 'undefined') sounds.playUnlock(); } catch(e) {}
+    try { if (navigator.vibrate) navigator.vibrate([50, 30, 100]); } catch(e) {}
+
+    // Animasi transisi keluar
+    hideFirstTimeModal();
+
+    // Welcome greeting
+    setTimeout(() => {
+      showWelcomeToast(name);
+    }, 400);
+  }
+
+  function showWelcomeToast(name) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%) scale(0);
+      z-index: 10000;
+      padding: 14px 24px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(0,210,255,.25), rgba(120,80,255,.25));
+      border: 2px solid rgba(0,210,255,.6);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow:
+        0 12px 32px rgba(0,0,0,.6),
+        0 0 40px rgba(0,210,255,.4),
+        inset 0 1px 0 rgba(255,255,255,.15);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      color: #ffffff;
+      text-align: center;
+      pointer-events: none;
+      animation: welcomeToastIn .6s cubic-bezier(.34,1.56,.64,1) forwards;
+      text-shadow: 0 0 8px rgba(0,210,255,.8);
+      white-space: nowrap;
+    `;
+    toast.innerHTML = `🎉 Selamat datang,<br><span style="color:#ffd700;font-size:16px;letter-spacing:.12em;">${escapeHtmlHelper(name)}</span>`;
+
+    // Keyframes
+    const style = document.createElement('style');
+    if (!document.getElementById('welcome-toast-style')) {
+      style.id = 'welcome-toast-style';
+      style.textContent = `
+        @keyframes welcomeToastIn {
+          0%   { transform: translateX(-50%) scale(0) rotate(-10deg); opacity: 0; }
+          60%  { transform: translateX(-50%) scale(1.1) rotate(0); opacity: 1; }
+          100% { transform: translateX(-50%) scale(1) rotate(0); opacity: 1; }
+        }
+        @keyframes welcomeToastOut {
+          0%   { transform: translateX(-50%) scale(1) translateY(0); opacity: 1; }
+          100% { transform: translateX(-50%) scale(.9) translateY(-20px); opacity: 0; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    document.body.appendChild(toast);
+
+    // Hilang setelah 2.5 detik
+    setTimeout(() => {
+      toast.style.animation = 'welcomeToastOut .5s ease forwards';
+      setTimeout(() => toast.remove(), 500);
+    }, 2500);
+  }
+
+  // Helper escape sederhana
+  function escapeHtmlHelper(str) {
+    return String(str).replace(/[&<>"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+    }[m]));
+  }
+
+  function bindEvents() {
+    const input = document.getElementById('first-time-name-input');
+    const btn = document.getElementById('btn-first-time-submit');
+    if (!input || !btn) return;
+    if (input._ftBound) return;
+    input._ftBound = true;
+    btn._ftBound = true;
+
+    // Enable/disable submit button
+    const updateBtnState = () => {
+      const val = input.value.trim();
+      btn.disabled = val.length < 2;
+    };
+
+    input.addEventListener('input', updateBtnState);
+    updateBtnState();
+
+    // Enter untuk submit
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !btn.disabled) {
+        e.preventDefault();
+        submitName();
+      }
+    });
+
+    // Klik tombol submit
+    btn.addEventListener('click', submitName);
+
+    // Klik di luar kotak = tidak boleh close (wajib isi nama)
+    // Uncomment baris bawah kalau mau bisa di-close dengan klik overlay
+    // const modal = document.getElementById('modal-first-time');
+    // modal?.addEventListener('click', (e) => {
+    //   if (e.target === modal) submitName();
+    // });
+
+    console.log('✅ [FirstTime] Events bound');
+  }
+
+  // ============ INIT ============
+  function init() {
+    // Tunggu sebentar supaya loading screen selesai
+    setTimeout(() => {
+      if (!hasPlayedBefore()) {
+        showFirstTimeModal();
+      } else {
+        console.log('👤 [FirstTime] Pemain lama — skip modal nama');
+      }
+      bindEvents();
+    }, 800);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  // Expose untuk debugging
+  window.firstTime = {
+    show: showFirstTimeModal,
+    hide: hideFirstTimeModal,
+    reset: () => {
+      localStorage.removeItem(NAME_KEY);
+      console.log('🔄 First-time modal di-reset');
+    },
+    hasPlayed: hasPlayedBefore
+  };
+
+  console.log('✅ [FirstTime] System ready');
+})();
