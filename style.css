@@ -2755,3 +2755,50 @@ kbd{display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(255,2
     display: none;
   }
 }
+
+/* =============================================================
+   RAID MULTIPLAYER — v24.0.4
+   ============================================================= */
+.raid-mp-section {
+  margin: 14px 0 12px;
+  padding: 14px 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0,210,255,.12), rgba(165,94,234,.12));
+  border: 1.5px solid rgba(0,210,255,.4);
+}
+.raid-mp-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  color: #00d2ff;
+  text-align: center;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+.raid-solo-section {
+  margin: 8px 0 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255,71,87,.08);
+  border: 1px solid rgba(255,71,87,.3);
+}
+.raid-solo-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: #ff6b78;
+  text-align: center;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.btn-solo-raid {
+  background: linear-gradient(180deg, #ff4757 0%, #c02a38 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 0 #8b1f2a, 0 4px 12px rgba(255,71,87,.35) !important;
+}
+.btn-solo-raid:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #8b1f2a !important;
+}
