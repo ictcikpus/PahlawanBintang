@@ -11545,3 +11545,111 @@ console.log('✅ [game.js] v24.0.0 — LEGACY EDITION COMPLETE (10/10 PARTS)');
     setTimeout(bindPause, 3000);
   });
 })();
+// =============================================================
+// v24.0.7 SIMPLIFIED MENU — Arcade & Challenge Handlers
+// =============================================================
+(function simplifyMenu() {
+  'use strict';
+
+  function bindHandlers() {
+    // ============ ARCADE BUTTON ============
+    const btnArcade = document.getElementById('btn-arcade');
+    if (btnArcade && !btnArcade._simplified) {
+      btnArcade._simplified = true;
+      btnArcade.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const modal = document.getElementById('modal-arcade');
+        if (modal) modal.classList.remove('hidden');
+        try { sounds.playPop(); } catch(err) {}
+        try { if (navigator.vibrate) navigator.vibrate(10); } catch(err) {}
+      };
+      console.log('✅ [Simplify] btn-arcade bound');
+    }
+
+    // ============ ARCADE: SURVIVAL ============
+    const btnSurvival = document.getElementById('btn-arcade-survival');
+    if (btnSurvival && !btnSurvival._simplified) {
+      btnSurvival._simplified = true;
+      btnSurvival.onclick = () => {
+        document.getElementById('modal-arcade').classList.add('hidden');
+        try { requestFullscreenAndLandscape(); } catch(e) {}
+        if (typeof startEndless === 'function') startEndless();
+      };
+    }
+
+    // ============ ARCADE: TIME ATTACK ============
+    const btnTime = document.getElementById('btn-arcade-timeattack');
+    if (btnTime && !btnTime._simplified) {
+      btnTime._simplified = true;
+      btnTime.onclick = () => {
+        document.getElementById('modal-arcade').classList.add('hidden');
+        try { requestFullscreenAndLandscape(); } catch(e) {}
+        if (typeof startBossRush === 'function') startBossRush();
+      };
+    }
+
+    // ============ CLOSE ARCADE ============
+    const btnCloseArcade = document.getElementById('btn-close-arcade');
+    if (btnCloseArcade && !btnCloseArcade._simplified) {
+      btnCloseArcade._simplified = true;
+      btnCloseArcade.onclick = () => {
+        document.getElementById('modal-arcade').classList.add('hidden');
+      };
+    }
+
+    // ============ CHALLENGE BUTTON (auto Daily/Weekly) ============
+    const btnChallenge = document.getElementById('btn-challenge');
+    if (btnChallenge && !btnChallenge._simplified) {
+      btnChallenge._simplified = true;
+      btnChallenge.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const day = new Date().getDay(); // 0=Sun, 1=Mon, ...
+        if (day === 1) {
+          // Monday → Weekly
+          if (typeof openWeeklyModal === 'function') openWeeklyModal();
+        } else {
+          // Other days → Daily
+          if (typeof openDailyModal === 'function') openDailyModal();
+        }
+        try { sounds.playPop(); } catch(err) {}
+        try { if (navigator.vibrate) navigator.vibrate(10); } catch(err) {}
+      };
+      console.log('✅ [Simplify] btn-challenge bound');
+    }
+
+    // ============ UPDATE CHALLENGE LABEL ============
+    const day = new Date().getDay();
+    const sub = document.getElementById('challenge-sub');
+    if (sub) sub.innerText = (day === 1) ? 'Mingguan' : 'Harian';
+
+    // ============ RAID BUTTON (open modal raid) ============
+    const btnRaid = document.getElementById('btn-raid');
+    if (btnRaid && !btnRaid._simplified) {
+      btnRaid._simplified = true;
+      btnRaid.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof openRaidModal === 'function') {
+          openRaidModal();
+        } else {
+          const m = document.getElementById('modal-raid');
+          if (m) m.classList.remove('hidden');
+        }
+        try { sounds.playPop(); } catch(err) {}
+      };
+      console.log('✅ [Simplify] btn-raid bound');
+    }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindHandlers);
+  window.addEventListener('load', () => {
+    bindHandlers();
+    setTimeout(bindHandlers, 500);
+    setTimeout(bindHandlers, 1500);
+    setTimeout(bindHandlers, 3000);
+  });
+
+  console.log('✅ [Simplify] Menu sederhana siap');
+})();
