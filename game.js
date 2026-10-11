@@ -9621,6 +9621,87 @@ console.log('✅ [game.js] v24.0.0 — LEGACY EDITION PART 8/8 LOADED');
 // =============================================================
 
 let raidModeMP = false; // flag: raid multiplayer aktif
+// =============================================================
+// TAMBAHAN: DEKLARASI RAID STATE & FINISH RAID
+// =============================================================
+
+let raidState = {
+  active: false,
+  phase: 1,
+  sharedHp: 10,
+  sharedRevives: 3,
+  minionKilled: 0,
+  startTime: 0,
+  bossNum: 30,
+  bossMaxHp: 50000,
+  bossHp: 50000
+};
+
+// Fungsi mengakhiri Raid (Solo & Multiplayer)
+function finishRaid(win) {
+  isGameRunning = false;
+  isGamePaused = false;
+  stopSpawnLoop();
+  try { stopReplayBuffer(); } catch(e) {}
+  sounds.stopBGM();
+
+  const elapsed = raidState.startTime ? Math.floor((Date.now() - raidState.startTime) / 1000) : 0;
+
+  if (win) {
+    try { sounds.playWin(); } catch(e) {}
+    const bonusCoins = 25000;
+    coins += bonusCoins;
+    levelCoinsEarned += bonusCoins;
+    try { DB.set('pahlawan_coins', coins); } catch(e) {}
+    if (typeof saveScoreToGlobalLeaderboard === 'function') {
+      saveScoreToGlobalLeaderboard(playerName, score, 30);
+    }
+    // Unlock skin eksklusif raid
+    try {
+      if (!ownedSkins['robot']) ownedSkins['robot'] = ['default'];
+      if (!ownedSkins['robot'].includes('raidmaster')) {
+        ownedSkins['robot'].push('raidmaster');
+        if (SKINS['robot'] && !SKINS['robot'].find(s => s.id === 'raidmaster')) {
+          SKINS['robot'].push({ id:'raidmaster', name:'Raid Master', color:'#ff2e44', price:0 });
+        }
+        saveSkins();
+      }
+    } catch(e) {}
+  }
+
+  const $ = id => document.getElementById(id);
+  const rt = $('result-title');
+  if (rt) rt.innerText = win ? '🔥 RAID SELESAI!' : 'RAID GAGAL';
+
+  const rpn = $('result-player-name'); if (rpn) rpn.innerText = playerName;
+  const rs  = $('result-score');       if (rs)  rs.innerText = score;
+  const rc  = $('result-coins');       if (rc)  rc.innerText = `+${levelCoinsEarned}`;
+  const rl  = $('result-level');       if (rl)  rl.innerText = 'Raid Boss Mega';
+  const rk  = $('result-kills');       if (rk)  rk.innerText = win ? `⏱ ${elapsed}s` : `${levelKills} Kills`;
+
+  const sc = $('result-stars');
+  if (sc) {
+    sc.innerHTML = win
+      ? '<span style="color:#ffd700;font-size:12px;">🏆 RAID MASTER</span>'
+      : '<span style="color:#566a8c;font-size:12px;">—</span>';
+  }
+  const icon = $('result-icon');
+  if (icon) {
+    icon.innerHTML = win ? '<use href="#i-trophy"/>' : '<use href="#i-skull"/>';
+    icon.classList.toggle('fail', !win);
+  }
+  const nb = $('btn-next-level');       if (nb) nb.classList.add('hidden');
+  const rb = $('btn-retry-level');      if (rb) rb.classList.remove('hidden');
+  const certBtn = $('btn-view-certificate'); if (certBtn) certBtn.classList.add('hidden');
+
+  const modal = $('modal-result'); if (modal) modal.classList.remove('hidden');
+
+  // Reset state raid
+  raidState.active = false;
+  raidModeMP = false;
+  mpActive = false;
+  mpRole = null;
+}
 
 // ---- Host: buat raid room ----
 async function raidCreateRoom() {
@@ -11017,355 +11098,3 @@ console.log('✅ [game.js] v24.0.0 — LEGACY EDITION COMPLETE (10/10 PARTS)');
     btn.click();
   };
 })();
-
-// =============================================================
-// RAID MULTIPLAYER — v24.0.4
-// Main bareng teman di mode Raid Boss Mega
-// =============================================================
-
-let raidModeMP = false; // flag: raid multiplayer aktif
-
-// ---- Host: buat raid room ----
-async function raidCreateRoom() {
-  if (typeof MP === 'undefined') {
-    alert('Multiplayer belum siap. Refresh halaman.');
-    return;
-  }
-  try {
-    const input = document.getElementById('player-name-input');
-    const name = (input && input.value.trim()) || playerName || 'Host';
-    playerName = name;
-
-    // Buat room dengan mode 'raid'
-    const res = await MP.createRoom('raid', name);
-    raidModeMP = true;
-
-    // Tutup modal raid
-    const raidModal = document.getElementById('modal-raid');
-    if (raidModal) raidModal.classList.add('hidden');
-
-    // Tampilkan lobby multiplayer (reuse lobby yang sudah ada)
-    const lobby = document.getElementById('modal-mp-lobby');
-    if (lobby) lobby.classList.remove('hidden');
-
-    const title = document.getElementById('mp-lobby-title');
-    if (title) title.innerText = 'RAID ROOM DIBUAT';
-
-    const codeEl = document.getElementById('mp-room-code');
-    if (codeEl) codeEl.innerText = res.roomCode;
-
-    const modeEl = document.getElementById('mp-lobby-mode');
-    if (modeEl) modeEl.innerText = 'CO-OP RAID';
-
-    const hostNameEl = document.getElementById('mp-host-name');
-    if (hostNameEl) hostNameEl.innerText = playerName + ' (Kamu)';
-    const hostStatusEl = document.getElementById('mp-host-status');
-    if (hostStatusEl) { hostStatusEl.innerText = 'ONLINE'; hostStatusEl.className = 'mp-slot-status online'; }
-
-    const slotHost = document.getElementById('mp-slot-host');
-    if (slotHost) slotHost.classList.add('occupied', 'ready');
-
-    const guestNameEl = document.getElementById('mp-guest-name');
-    if (guestNameEl) guestNameEl.innerText = 'Menunggu...';
-    const guestStatusEl = document.getElementById('mp-guest-status');
-    if (guestStatusEl) { guestStatusEl.innerText = '—'; guestStatusEl.className = 'mp-slot-status'; }
-    const slotGuest = document.getElementById('mp-slot-guest');
-    if (slotGuest) slotGuest.classList.remove('occupied');
-
-    const startBtn = document.getElementById('btn-mp-start-game');
-    if (startBtn) startBtn.disabled = true;
-
-    mpSetStatus('mp-connect-status', 'Menunggu pemain lain join...', 'info');
-  } catch(e) {
-    alert('Gagal buat raid room: ' + (e.message || e));
-    console.error(e);
-  }
-}
-
-// ---- Guest: join raid room ----
-function raidShowJoinModal() {
-  const raidModal = document.getElementById('modal-raid');
-  if (raidModal) raidModal.classList.add('hidden');
-  const joinModal = document.getElementById('modal-raid-join');
-  if (joinModal) joinModal.classList.remove('hidden');
-  const inp = document.getElementById('raid-code-input');
-  if (inp) { inp.value = ''; inp.focus(); }
-  raidSetStatus('raid-join-status', '', 'hidden');
-}
-
-async function raidJoinRoom() {
-  if (typeof MP === 'undefined') {
-    alert('Multiplayer belum siap. Refresh halaman.');
-    return;
-  }
-  const input = document.getElementById('raid-code-input');
-  const code = (input && input.value.trim().toUpperCase()) || '';
-  if (code.length !== 4) {
-    raidSetStatus('raid-join-status', 'Kode harus 4 huruf', 'error');
-    return;
-  }
-  raidSetStatus('raid-join-status', 'Menghubungkan...', 'info');
-
-  try {
-    const nameInput = document.getElementById('player-name-input');
-    const name = (nameInput && nameInput.value.trim()) || playerName || 'Guest';
-    playerName = name;
-
-    const res = await MP.joinRoom(code, name);
-    raidModeMP = true;
-
-    // Tutup modal join
-    const joinModal = document.getElementById('modal-raid-join');
-    if (joinModal) joinModal.classList.add('hidden');
-
-    // Tampilkan lobby
-    const lobby = document.getElementById('modal-mp-lobby');
-    if (lobby) lobby.classList.remove('hidden');
-
-    const title = document.getElementById('mp-lobby-title');
-    if (title) title.innerText = 'RAID ROOM — GUEST';
-
-    const codeEl = document.getElementById('mp-room-code');
-    if (codeEl) codeEl.innerText = code;
-
-    const modeEl = document.getElementById('mp-lobby-mode');
-    if (modeEl) modeEl.innerText = 'CO-OP RAID';
-
-    const hostNameEl = document.getElementById('mp-host-name');
-    if (hostNameEl) hostNameEl.innerText = res.hostName || 'Host';
-    const hostStatusEl = document.getElementById('mp-host-status');
-    if (hostStatusEl) { hostStatusEl.innerText = 'ONLINE'; hostStatusEl.className = 'mp-slot-status online'; }
-
-    const guestNameEl = document.getElementById('mp-guest-name');
-    if (guestNameEl) guestNameEl.innerText = playerName + ' (Kamu)';
-    const guestStatusEl = document.getElementById('mp-guest-status');
-    if (guestStatusEl) { guestStatusEl.innerText = 'ONLINE'; guestStatusEl.className = 'mp-slot-status online'; }
-
-    const slotHost = document.getElementById('mp-slot-host');
-    if (slotHost) slotHost.classList.add('occupied');
-    const slotGuest = document.getElementById('mp-slot-guest');
-    if (slotGuest) slotGuest.classList.add('occupied', 'ready');
-
-    const startBtn = document.getElementById('btn-mp-start-game');
-    if (startBtn) startBtn.disabled = true;
-
-    mpSetStatus('mp-connect-status', 'Menunggu koneksi P2P...', 'info');
-  } catch(e) {
-    raidSetStatus('raid-join-status', e.message || 'Gagal join raid', 'error');
-    console.error(e);
-  }
-}
-
-function raidSetStatus(id, text, type) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (!text || type === 'hidden') {
-    el.classList.add('mp-status-hidden');
-    el.innerText = '';
-    return;
-  }
-  el.classList.remove('mp-status-hidden');
-  el.className = 'mp-status mp-status-' + (type || 'info');
-  el.innerText = text;
-}
-
-// ---- Override: When host start game in raid mode ----
-const _origMpStartGame = typeof mpStartGame === 'function' ? mpStartGame : null;
-if (_origMpStartGame) {
-  mpStartGame = async function() {
-    if (raidModeMP && MP && MP.isHost) {
-      // Broadcast start + langsung mulai raid multiplayer
-      try {
-        await MP.setReady(true);
-        await MP.startGame();
-      } catch(e) { console.error(e); }
-      return;
-    }
-    return _origMpStartGame.call(this);
-  };
-}
-
-// ---- Override: When MP.onStart fires ----
-// Kita modify mpActuallyStartCoop untuk support raid mode
-const _origMpActuallyStartCoop = typeof mpActuallyStartCoop === 'function' ? mpActuallyStartCoop : null;
-if (_origMpActuallyStartCoop) {
-  mpActuallyStartCoop = function() {
-    if (raidModeMP) {
-      mpActuallyStartRaidCoop();
-      return;
-    }
-    return _origMpActuallyStartCoop.call(this);
-  };
-}
-
-// ---- Actual: Start raid in co-op mode ----
-function mpActuallyStartRaidCoop() {
-  mpActive = true;
-  mpRole = MP.isHost ? 'host' : 'guest';
-  gameMode = 'coop_raid'; // reuse mode raid, tapi main berdua
-
-  // Setup raid state
-  raidState.active = true;
-  raidState.phase = 1;
-  raidState.sharedHp = 10;
-  raidState.sharedRevives = 3;
-  raidState.minionKilled = 0;
-  raidState.startTime = Date.now();
-  raidState.bossNum = 30;
-  raidState.bossMaxHp = 50000;
-  raidState.bossHp = 50000;
-
-  // Reset game state
-  score = 0;
-  lives = 1;
-  playerHitPoints = 1;
-  reviveUsedThisRun = true;
-  levelKills = 0;
-  levelCoinsEarned = 0;
-  currentLevelIndex = 29;
-  currentTheme = getBossTheme(30);
-  applyThemeToDocument(currentTheme);
-  recolorStars();
-  resetLevelState();
-
-  // Setup player
-  if (mpRole === 'host') {
-    playerX = VIRTUAL_WIDTH * 0.25;
-    playerTargetX = playerX;
-  } else {
-    playerX = VIRTUAL_WIDTH * 0.75;
-    playerTargetX = playerX;
-  }
-
-  // Setup guest state
-  mpGuestInput = { left:false, right:false, moveX:0, shoot:false, skill1:false, skill2:false, skill3:false, heroType:'robot', respawn:false, pause:false, resume:false };
-  mpGuestX = VIRTUAL_WIDTH * 0.75;
-  mpGuestTargetX = mpGuestX;
-  mpGuestHP = 10;
-  mpGuestScore = 0;
-  mpGuestCombo = 1;
-  mpGuestAlive = true;
-  mpRemoteX = VIRTUAL_WIDTH * 0.25;
-  mpRemoteName = MP.remotePeerName || 'Teman';
-  mpRemoteHeroType = 'robot';
-  mpEffectQueue = [];
-
-  // Reset spectator
-  endSelfSpectatorMode();
-  mpRemoteHostSpectator = false;
-  mpRemoteGuestSpectator = false;
-  mpGuestLives = 3;
-  setSpectatorOverlayVisible(false);
-  mpRemotePaused = false;
-  mpLocalPauseRequested = false;
-  mpPauseState = 'none';
-  hideRemotePauseOverlay();
-
-  // Loadout
-  playerLoadout = ['freeze', 'bomb'];
-  freezeCharges = 5;
-  shieldCharges = 0;
-  bombCharges = 5;
-  updateSkillButtonsUI();
-  updateHUDValues();
-  updateLivesDisplay();
-
-  // Hide lobby
-  const lobby = document.getElementById('modal-mp-lobby');
-  if (lobby) lobby.classList.add('hidden');
-
-  // Set game running
-  isGameRunning = true;
-  isGamePaused = false;
-  levelStartTime = Date.now();
-
-  // Show intro banner
-  const banner = document.getElementById('level-intro');
-  if (banner) {
-    document.getElementById('level-intro-number').innerText = '🔥';
-    document.getElementById('level-intro-name').innerText = 'CO-OP RAID';
-    document.getElementById('level-intro-mission').innerText = 'FASE 1: MINION WAVE — KUMPULKAN TIM!';
-    banner.classList.remove('hidden');
-    banner.classList.remove('fade-out');
-    banner.classList.remove('stage-clear');
-    banner.classList.remove('boss-approach');
-    void banner.offsetWidth;
-    sounds.playBossWarning();
-    triggerVibrate([200, 100, 200, 100, 300]);
-    triggerScreenFlash(0.7);
-    setTimeout(() => {
-      banner.classList.add('fade-out');
-      setTimeout(() => banner.classList.add('hidden'), 500);
-      if (mpRole === 'host') {
-        startSpawnLoop();
-        mpStartHostSyncLoop();
-      }
-    }, 2000);
-  }
-
-  // Start music & game loop
-  sounds.startBGM();
-  gameLoop();
-
-  console.log('🔥 [RAID] Co-op raid started | Role:', mpRole);
-}
-
-// ---- Override: finish raid to support MP ----
-const _origFinishRaid = typeof finishRaid === 'function' ? finishRaid : null;
-if (_origFinishRaid) {
-  finishRaid = function(win) {
-    // Reset raid mode MP flag
-    const wasMP = raidModeMP;
-    raidModeMP = false;
-
-    if (wasMP && mpActive) {
-      // Handle multiplayer finish
-      mpEndGame(win, win ? 'RAID SELESAI!' : 'RAID GAGAL');
-      // Kembalikan ke single player raid
-      return;
-    }
-    return _origFinishRaid.call(this, win);
-  };
-}
-
-// ---- Cleanup flag saat leave room ----
-const _origMpLeaveRoom = typeof mpLeaveRoom === 'function' ? mpLeaveRoom : null;
-if (_origMpLeaveRoom) {
-  mpLeaveRoom = async function() {
-    raidModeMP = false;
-    return _origMpLeaveRoom.call(this);
-  };
-}
-
-// ---- Event bindings ----
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    const $ = id => document.getElementById(id);
-
-    // Override RAID modal buttons
-    const btnHost = $('btn-raid-host');
-    if (btnHost) btnHost.onclick = () => raidCreateRoom();
-
-    const btnJoin = $('btn-raid-join');
-    if (btnJoin) btnJoin.onclick = () => raidShowJoinModal();
-
-    const btnDoJoin = $('btn-raid-do-join');
-    if (btnDoJoin) btnDoJoin.onclick = () => raidJoinRoom();
-
-    const btnBackJoin = $('btn-raid-back-join');
-    if (btnBackJoin) btnBackJoin.onclick = () => {
-      $('modal-raid-join').classList.add('hidden');
-      $('modal-raid').classList.remove('hidden');
-    };
-
-    // Auto uppercase code input
-    const raidCode = $('raid-code-input');
-    if (raidCode) {
-      raidCode.addEventListener('input', (e) => {
-        e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
-      });
-    }
-
-    console.log('✅ [Raid MP] Bindings ready');
-  }, 2500);
-});
