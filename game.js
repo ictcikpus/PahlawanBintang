@@ -11641,3 +11641,160 @@ console.log('✅ [game.js] v24.0.0 — LEGACY EDITION COMPLETE (10/10 PARTS)');
 
   console.log('✅ [Simplify] Menu sederhana siap');
 })();
+// =============================================================
+// v24.0.9 RAID EVENT — Cooldown Logic
+// =============================================================
+(function raidCooldownSystem() {
+  'use strict';
+
+  const RAID_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 jam
+  const STORAGE_KEY = 'pahlawan_raid_last_play';
+  let cooldownInterval = null;
+
+  // --- Cek apakah RAID bisa dimainkan ---
+  function isRaidReady() {
+    const lastPlay = Number(localStorage.getItem(STORAGE_KEY) || 0);
+    return (Date.now() - lastPlay) >= RAID_COOLDOWN_MS;
+  }
+
+  // --- Hitung sisa cooldown dalam ms ---
+  function getRemainingMs() {
+    const lastPlay = Number(localStorage.getItem(STORAGE_KEY) || 0);
+    const elapsed = Date.now() - lastPlay;
+    return Math.max(0, RAID_COOLDOWN_MS - elapsed);
+  }
+
+  // --- Format ms ke HH:MM:SS ---
+  function formatCooldown(ms) {
+    const totalSec = Math.floor(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  // --- Update tampilan tombol RAID di menu ---
+  function updateRaidButton() {
+    const btn = document.getElementById('btn-raid');
+    const badge = document.getElementById('raid-cooldown-badge');
+    const label = document.getElementById('raid-status-label');
+    if (!btn) return;
+
+    if (isRaidReady()) {
+      btn.classList.remove('locked');
+      btn.classList.add('ready');
+      if (badge) badge.classList.add('hidden');
+      if (label) label.innerText = 'Event · Ready';
+    } else {
+      btn.classList.add('locked');
+      btn.classList.remove('ready');
+      if (badge) {
+        badge.classList.remove('hidden');
+        badge.innerText = formatCooldown(getRemainingMs());
+      }
+      if (label) label.innerText = 'Cooldown';
+    }
+  }
+
+  // --- Update UI di dalam modal RAID ---
+  function updateRaidModal() {
+    const cooldownInfo = document.getElementById('raid-cooldown-info');
+    const readyInfo = document.getElementById('raid-ready-info');
+    const cdTime = document.getElementById('raid-cd-time');
+    const cdSub = document.getElementById('raid-cd-sub');
+    const btnHost = document.getElementById('btn-raid-host');
+    const btnJoin = document.getElementById('btn-raid-join');
+    const btnSolo = document.getElementById('btn-start-raid');
+
+    const ready = isRaidReady();
+
+    if (ready) {
+      if (cooldownInfo) cooldownInfo.classList.add('hidden');
+      if (readyInfo) readyInfo.classList.remove('hidden');
+      [btnHost, btnJoin, btnSolo].forEach(b => {
+        if (b) { b.classList.remove('btn-disabled'); b.disabled = false; }
+      });
+    } else {
+      if (cooldownInfo) cooldownInfo.classList.remove('hidden');
+      if (readyInfo) readyInfo.classList.add('hidden');
+      const remainMs = getRemainingMs();
+      if (cdTime) cdTime.innerText = formatCooldown(remainMs);
+      if (cdSub) {
+        const lastPlay = Number(localStorage.getItem(STORAGE_KEY) || 0);
+        const d = new Date(lastPlay);
+        const hh = String(d.getHours()).padStart(2,'0');
+        const mm = String(d.getMinutes()).padStart(2,'0');
+        cdSub.innerText = `Terakhir main: ${hh}:${mm}`;
+      }
+      [btnHost, btnJoin, btnSolo].forEach(b => {
+        if (b) { b.classList.add('btn-disabled'); b.disabled = true; }
+      });
+    }
+  }
+
+  // --- Mulai cooldown setelah RAID selesai ---
+  function startCooldown() {
+    localStorage.setItem(STORAGE_KEY, String(Date.now()));
+    console.log('⏳ [Raid CD] Cooldown dimulai (2 jam)');
+    updateRaidButton();
+  }
+
+  // --- Init: jalankan timer update tiap 1 detik ---
+  function init() {
+    updateRaidButton();
+
+    if (cooldownInterval) clearInterval(cooldownInterval);
+    cooldownInterval = setInterval(() => {
+      updateRaidButton();
+      // Update modal kalau terbuka
+      const modal = document.getElementById('modal-raid');
+      if (modal && !modal.classList.contains('hidden')) {
+        updateRaidModal();
+      }
+    }, 1000);
+
+    // Override openRaidModal untuk update UI
+    const _origOpenRaidModal = window.openRaidModal || function(){};
+    window.openRaidModal = function() {
+      updateRaidModal();
+      if (typeof _origOpenRaidModal === 'function') {
+        _origOpenRaidModal();
+      } else {
+        const m = document.getElementById('modal-raid');
+        if (m) m.classList.remove('hidden');
+      }
+    };
+
+    // Override startRaid & finishRaid untuk set cooldown
+    const _origStartRaid = window.startRaid;
+    window.startRaid = function() {
+      if (!isRaidReady()) {
+        alert('⏰ RAID masih cooldown. Tunggu ' + formatCooldown(getRemainingMs()) + ' lagi.');
+        return;
+      }
+      // Set cooldown saat MULAI (biar tidak bisa spam meskipun kalah)
+      startCooldown();
+      if (typeof _origStartRaid === 'function') return _origStartRaid.apply(this, arguments);
+    };
+
+    console.log('✅ [Raid CD] Cooldown system ready (2 jam)');
+  }
+
+  // Init di berbagai timing
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  window.addEventListener('load', () => {
+    init();
+    setTimeout(init, 1500);
+  });
+
+  // Expose helper untuk debugging
+  window.raidCooldown = {
+    isReady: isRaidReady,
+    getRemaining: getRemainingMs,
+    reset: () => { localStorage.removeItem(STORAGE_KEY); updateRaidButton(); console.log('🔄 Raid cooldown reset'); }
+  };
+})();
