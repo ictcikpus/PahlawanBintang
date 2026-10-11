@@ -2622,3 +2622,136 @@ kbd{display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(255,2
     gap: 6px;
   }
 }
+/* =============================================================
+   FIX LOGO & TITLE TERPOTONG (v24.0.3)
+   ============================================================= */
+
+/* Ganti centering pakai margin:auto agar tidak terpotong saat overflow */
+.menu-container {
+  justify-content: flex-start !important;
+  align-items: center;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 16px) !important;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 90px) !important;
+  gap: clamp(8px, 1.3vmin, 14px);
+}
+
+/* Beri spacer atas-bawah supaya saat konten pendek tetap center */
+.menu-container::before,
+.menu-container::after {
+  content: '';
+  display: block;
+  flex: 0 0 auto;
+  height: 0;
+}
+
+/* Pastikan logo selalu terlihat */
+.menu-container > .menu-header {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
+.menu-container > .hero-logo,
+.menu-container > .emblem-wrap {
+  margin-top: clamp(8px, 1.5vmin, 16px);
+  flex-shrink: 0;
+}
+
+.menu-container > .title-block {
+  margin-top: clamp(4px, 1vmin, 10px);
+  flex-shrink: 0;
+}
+
+/* Emblem (logo bintang) — pastikan selalu terlihat */
+.hero-logo,
+.emblem-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: clamp(80px, 15vmin, 130px);
+  width: clamp(80px, 15vmin, 130px);
+  margin: 0 auto;
+  flex-shrink: 0;
+  z-index: 5;
+}
+
+.emblem-core,
+.logo-star-wrap {
+  position: relative;
+  z-index: 6;
+}
+
+.emblem-star,
+.logo-star {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 0 14px rgba(255,215,0,.7));
+}
+
+/* Title — pastikan selalu terlihat */
+.title-block {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.title-line {
+  display: block;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Header brand mark */
+.menu-header {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.brand-mark {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Kalau viewport sangat pendek — compress spacing */
+@media (max-height: 700px) {
+  .menu-container {
+    gap: 6px;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 10px) !important;
+  }
+  .hero-logo,
+  .emblem-wrap {
+    min-height: clamp(60px, 12vmin, 90px);
+    width: clamp(60px, 12vmin, 90px);
+  }
+  .title-line {
+    font-size: clamp(18px, 3.8vmin, 28px) !important;
+  }
+}
+
+@media (max-height: 560px) {
+  .menu-container {
+    gap: 5px;
+  }
+  .hero-logo,
+  .emblem-wrap {
+    min-height: 50px;
+    width: 50px;
+  }
+  .title-line {
+    font-size: clamp(15px, 3.2vmin, 22px) !important;
+  }
+  .subtitle {
+    display: none;
+  }
+}
