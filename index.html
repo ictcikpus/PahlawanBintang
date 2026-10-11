@@ -294,70 +294,71 @@ canvas{display:block}
       </button>
     </div>
 
-    <!-- ========== FEATURE GRID ========== -->
-    <div class="feature-grid">
-      <button id="btn-select-actor" class="feature-card" type="button">
-        <div class="card-glow glow-blue"></div>
-        <div class="card-icon icon-blue"><svg viewBox="0 0 24 24"><use href="#i-mask"/></svg></div>
-        <span class="card-label">HERO</span>
-        <span class="card-sub">20 Karakter</span>
-      </button>
-      <button id="btn-shop" class="feature-card" type="button">
-        <div class="card-glow glow-gold"></div>
-        <div class="card-icon icon-gold"><svg viewBox="0 0 24 24"><use href="#i-shop"/></svg></div>
-        <span class="card-label">TOKO</span>
-        <span class="card-sub">10 Upgrade</span>
-      </button>
-      <button id="btn-leaderboard" class="feature-card" type="button">
-        <div class="card-glow glow-purple"></div>
-        <div class="card-icon icon-purple"><svg viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div>
-        <span class="card-label">PERINGKAT</span>
-        <span class="card-sub">Global</span>
-      </button>
-      <button id="btn-achievements" class="feature-card" type="button">
-        <div class="card-glow glow-pink"></div>
-        <div class="card-icon icon-pink"><svg viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div>
-        <span class="card-label">MISI</span>
-        <span class="card-sub">Achievements</span>
-        <span id="achievement-badge-count" class="card-badge hidden">0</span>
-      </button>
-      <button id="btn-endless" class="feature-card" type="button">
-        <div class="card-glow glow-green"></div>
-        <div class="card-icon icon-green"><svg viewBox="0 0 24 24"><use href="#i-star"/></svg></div>
-        <span class="card-label">ENDLESS</span>
-        <span class="card-sub">∞ Waves</span>
-      </button>
-      <button id="btn-daily" class="feature-card" type="button">
-        <div class="card-glow glow-red"></div>
-        <div class="card-icon icon-red"><svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg></div>
-        <span class="card-label">DAILY</span>
-        <span class="card-sub">3 Bos</span>
-      </button>
-      <button id="btn-boss-rush" class="feature-card" type="button">
-        <div class="card-glow glow-red"></div>
-        <div class="card-icon icon-red"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-bolt"/></svg></div>
-        <span class="card-label">RUSH</span>
-        <span class="card-sub">10 Bos</span>
-      </button>
-      <button id="btn-weekly" class="feature-card" type="button">
-        <div class="card-glow glow-purple"></div>
-        <div class="card-icon icon-purple"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div>
-        <span class="card-label">WEEKLY</span>
-        <span class="card-sub">Event</span>
-      </button>
-      <button id="btn-login" class="feature-card" type="button">
-        <div class="card-glow glow-green"></div>
-        <div class="card-icon icon-green"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-check"/></svg></div>
-        <span class="card-label">LOGIN</span>
-        <span class="card-sub">Reward</span>
-      </button>
-      <button id="btn-raid" class="feature-card" type="button">
-        <div class="card-glow glow-pink"></div>
-        <div class="card-icon icon-pink"><svg class="menu-card-icon" viewBox="0 0 24 24"><use href="#i-users"/></svg></div>
-        <span class="card-label">RAID</span>
-        <span class="card-sub">Co-op</span>
-      </button>
+    <!-- ========== MODE GRID (3 mode utama) ========== -->
+<div class="mode-grid">
+  <button id="btn-arcade" class="mode-card" type="button">
+    <div class="mode-card-icon icon-purple">
+      <svg viewBox="0 0 24 24"><use href="#i-star"/></svg>
     </div>
+    <span class="mode-card-title">ARCADE</span>
+    <span class="mode-card-sub">Survival · Time</span>
+  </button>
+  <button id="btn-challenge" class="mode-card" type="button">
+    <div class="mode-card-icon icon-gold">
+      <svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg>
+    </div>
+    <span class="mode-card-title">TANTANGAN</span>
+    <span class="mode-card-sub" id="challenge-sub">Harian</span>
+  </button>
+  <button id="btn-raid" class="mode-card" type="button">
+    <div class="mode-card-icon icon-red">
+      <svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg>
+    </div>
+    <span class="mode-card-title">RAID</span>
+    <span class="mode-card-sub">Solo · Co-op</span>
+  </button>
+</div>
+
+<!-- ========== UTILITY GRID (5 tombol pendukung) ========== -->
+<div class="feature-grid">
+  <button id="btn-select-actor" class="feature-card" type="button">
+    <div class="card-glow glow-blue"></div>
+    <div class="card-icon icon-blue"><svg viewBox="0 0 24 24"><use href="#i-mask"/></svg></div>
+    <span class="card-label">HERO</span>
+    <span class="card-sub">30 Karakter</span>
+  </button>
+  <button id="btn-shop" class="feature-card" type="button">
+    <div class="card-glow glow-gold"></div>
+    <div class="card-icon icon-gold"><svg viewBox="0 0 24 24"><use href="#i-shop"/></svg></div>
+    <span class="card-label">TOKO</span>
+    <span class="card-sub">10 Upgrade</span>
+  </button>
+  <button id="btn-achievements" class="feature-card" type="button">
+    <div class="card-glow glow-pink"></div>
+    <div class="card-icon icon-pink"><svg viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div>
+    <span class="card-label">MISI</span>
+    <span class="card-sub">Achievements</span>
+    <span id="achievement-badge-count" class="card-badge hidden">0</span>
+  </button>
+  <button id="btn-leaderboard" class="feature-card" type="button">
+    <div class="card-glow glow-purple"></div>
+    <div class="card-icon icon-purple"><svg viewBox="0 0 24 24"><use href="#i-trophy"/></svg></div>
+    <span class="card-label">PERINGKAT</span>
+    <span class="card-sub">Global</span>
+  </button>
+  <button id="btn-login" class="feature-card" type="button">
+    <div class="card-glow glow-green"></div>
+    <div class="card-icon icon-green"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div>
+    <span class="card-label">LOGIN</span>
+    <span class="card-sub">Reward</span>
+  </button>
+</div>
+
+<!-- Hidden backward-compat (jangan dihapus) -->
+<button id="btn-endless" class="hidden" type="button" style="display:none!important"></button>
+<button id="btn-daily" class="hidden" type="button" style="display:none!important"></button>
+<button id="btn-boss-rush" class="hidden" type="button" style="display:none!important"></button>
+<button id="btn-weekly" class="hidden" type="button" style="display:none!important"></button>
     
 
     <!-- ========== FOOTER STATS ========== -->
