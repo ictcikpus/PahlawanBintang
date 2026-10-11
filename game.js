@@ -9883,7 +9883,6 @@ mpActuallyStartCoop = function() {
   }
   return _origMpActuallyStartCoop.call(this);
 };
-}
 
 // ---- Actual: Start raid in co-op mode ----
 function mpActuallyStartRaidCoop() {
