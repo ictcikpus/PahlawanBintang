@@ -11372,3 +11372,27 @@ console.log('✅ [game.js] v24.0.0 — LEGACY EDITION COMPLETE (10/10 PARTS)');
     setTimeout(bindPause, 3000);
   });
 })();
+// =============================================================
+// FIX v24.0.6: PAUSE BUTTON FALLBACK LISTENER
+// =============================================================
+(function fixPauseButton() {
+  function bindPause() {
+    const btn = document.getElementById('btn-pause');
+    if (!btn || btn._pauseFixBound) return;
+    btn._pauseFixBound = true;
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      try { if (navigator.vibrate) navigator.vibrate(10); } catch(err) {}
+      try { if (typeof pauseGame === 'function') pauseGame(); }
+      catch (err) { console.error('❌ [PauseBtn] Error:', err); }
+    }, true);
+    console.log('✅ [PauseBtn] Bound');
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindPause);
+  window.addEventListener('load', () => {
+    bindPause();
+    setTimeout(bindPause, 500);
+    setTimeout(bindPause, 1500);
+  });
+})();
