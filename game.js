@@ -2013,20 +2013,31 @@ function setupEventListeners() {
   window.addEventListener('blur', () => { fireButtonPressed = false; isMovingLeft = false; isMovingRight = false; });
 
   if (canvas) {
-    const setTargetFromClientX = (clientX) => {
-      const rect = canvas.getBoundingClientRect();
-      const x = clientX - rect.left;
-      playerTargetX = Math.max(40, Math.min(VIRTUAL_WIDTH - 40, x));
-    };
-    canvas.addEventListener('pointerdown', (e) => {
-      if (!isGameRunning || isGamePaused || mpSpectatorMode || joystickActive) return;
-      if (e.pointerType === 'touch' || e.buttons > 0) setTargetFromClientX(e.clientX);
-    });
-    canvas.addEventListener('pointermove', (e) => {
-      if (!isGameRunning || isGamePaused || mpSpectatorMode || joystickActive) return;
-      if (e.buttons > 0 || e.pointerType === 'touch') setTargetFromClientX(e.clientX);
-    });
-  }
+  const setTargetFromClientX = (clientX, showRipple) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    playerTargetX = Math.max(40, Math.min(VIRTUAL_WIDTH - 40, x));
+
+    // 🔥 Ripple feedback
+    if (showRipple) {
+      spawnTapRipple(playerTargetX, VIRTUAL_HEIGHT - Math.max(40, VIRTUAL_HEIGHT * 0.07));
+    }
+  };
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!isGameRunning || isGamePaused || mpSpectatorMode || joystickActive) return;
+    if (e.pointerType === 'touch' || e.buttons > 0) {
+      setTargetFromClientX(e.clientX, true);   // ripple saat tap awal
+    }
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (!isGameRunning || isGamePaused || mpSpectatorMode || joystickActive) return;
+    if (e.buttons > 0 || e.pointerType === 'touch') {
+      setTargetFromClientX(e.clientX, false);  // drag tanpa ripple (biar ga spam)
+    }
+  });
+}
 
   const bNext = $('btn-next-level');
   if (bNext) bNext.onclick = () => {
