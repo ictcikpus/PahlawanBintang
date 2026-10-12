@@ -1010,7 +1010,6 @@ const JOYSTICK_SPEED_MULT = 2.0;   // percepat base movement
 
 // 🔥 v20.8.2 — Delta-time untuk frame-rate independent movement
 let lastFrameTime = 0;
-const JOYSTICK_SPEED_MULT = 1.55;
 
 let fireButtonPressed = true;
 
