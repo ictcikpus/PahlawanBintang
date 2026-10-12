@@ -1003,13 +1003,13 @@ let joystickCenterX = 0;
 let joystickCenterY = 0;
 let joystickRadius = 0;
 let joystickMaxOffset = 0;
-const JOYSTICK_DEADZONE = 0.08;      // 8% — cukup untuk filter tremor ringan
-const JOYSTICK_SMOOTH = 0.55;        // 0=super smooth(lewat), 1=instant(jitter). 0.55 optimal
-const JOYSTICK_MAX_MULT = 1.0;       // 1.0 = tidak boost, murni playerSpeed
+const JOYSTICK_DEADZONE = 0.06;    // sedikit lebih toleran
+const JOYSTICK_SMOOTH = 0.75;      // naikkan → respon lebih cepat
+const JOYSTICK_CURVE = 0.55;       // kurva lebih linier → presisi
+const JOYSTICK_SPEED_MULT = 2.0;   // percepat base movement
 
 // 🔥 v20.8.2 — Delta-time untuk frame-rate independent movement
 let lastFrameTime = 0;
-const JOYSTICK_CURVE = 0.65;
 const JOYSTICK_SPEED_MULT = 1.55;
 
 let fireButtonPressed = true;
@@ -1354,7 +1354,7 @@ function handleOrientationChange() {
   setTimeout(() => {
     resizeCanvas(); updateGameScale();
     playerX = VIRTUAL_WIDTH / 2; playerTargetX = playerX;
-    playerSpeed = 11 * GAME_SCALE;
+    playerSpeed = 15 * GAME_SCALE;
     if (mpActive && mpRole === 'host') { mpGuestX = VIRTUAL_WIDTH * 0.75; mpGuestTargetX = mpGuestX; }
   }, 300);
 }
@@ -3960,13 +3960,18 @@ function gameLoop() {
 
   if (localPlayerActive) {
     let moveInput = 0, useJoystick = false;
-    if (Math.abs(joystickAxis) > 0.02) { moveInput = joystickAxis; useJoystick = true; }
+    // ✅ SESUDAH — pakai smoothed + delta-time + accel
+    if (Math.abs(joystickAxisSmoothed) > 0.02) {
+      moveInput = joystickAxisSmoothed;
+      useJoystick = true;
+    }
     else if (isMovingLeft) moveInput = -1;
     else if (isMovingRight) moveInput = 1;
     if (useJoystick) {
-      playerX += moveInput * playerSpeed * JOYSTICK_SPEED_MULT;
-      playerX = Math.max(40 * S, Math.min(W - 40 * S, playerX));
-      playerTargetX = playerX;
+    // Delta-time agar fps-independent
+    playerX += moveInput * playerSpeed * JOYSTICK_SPEED_MULT * _dt;
+    playerX = Math.max(40*S, Math.min(W - 40*S, playerX));
+    playerTargetX = playerX;
     } else {
       if (moveInput !== 0) { playerTargetX += moveInput * playerSpeed; playerTargetX = Math.max(40 * S, Math.min(W - 40 * S, playerTargetX)); }
       const dx = playerTargetX - playerX;
