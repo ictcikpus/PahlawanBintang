@@ -3848,3 +3848,23 @@ kbd{display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(255,2
   letter-spacing: .06em;
   text-align: center;
 }
+/* 🔥 Tap-to-move ripple indicator */
+.tap-ripple {
+  position: fixed;
+  width: 50px;
+  height: 50px;
+  margin-left: -25px;   /* center horizontally */
+  margin-top: -25px;
+  border-radius: 50%;
+  border: 2px solid #00d2ff;
+  background: radial-gradient(circle, rgba(0,210,255,.4) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 55;
+  animation: tapRippleAnim .6s ease-out forwards;
+  box-shadow: 0 0 20px rgba(0,210,255,.8);
+}
+
+@keyframes tapRippleAnim {
+  0%   { transform: scale(.3); opacity: 1; }
+  100% { transform: scale(2);  opacity: 0; }
+}
