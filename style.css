@@ -337,15 +337,15 @@ input:focus{border-color:var(--accent)}
 /* =================== JOYSTICK — Small & Translucent =================== */
 .analog-joystick{
   position:relative;
-  width:clamp(84px, 12vmin, 112px);
-  height:clamp(84px, 12vmin, 112px);
+  width: clamp(110px, 15vmin, 140px);   /* naikkan min */
+  height: clamp(110px, 15vmin, 140px);
   touch-action:none;
   user-select:none;
   -webkit-user-select:none;
   -webkit-tap-highlight-color:transparent;
   cursor:grab;
   pointer-events:auto;
-  opacity:.5;
+  opacity:.65;
   transition:opacity .25s ease;
 }
 .analog-joystick.is-active,
@@ -366,10 +366,10 @@ input:focus{border-color:var(--accent)}
   transition:border-color .15s ease, box-shadow .15s ease;
 }
 .analog-joystick.is-active .joystick-base{
-  border-color:rgba(0,210,255,.75);
+  border-color: rgba(255,215,0,.9);
   box-shadow:
-    inset 0 0 12px rgba(0,0,0,.55),
-    0 0 20px rgba(0,210,255,.38);
+    inset 0 0 16px rgba(255,215,0,.25),
+    0 0 24px rgba(255,215,0,.5);
 }
 
 .joystick-decor{
@@ -393,8 +393,8 @@ input:focus{border-color:var(--accent)}
 
 .joystick-knob{
   position:absolute;
-  width:44%;
-  height:44%;
+  width:52%;
+  height:52%;
   left:50%;
   top:50%;
   border-radius:50%;
