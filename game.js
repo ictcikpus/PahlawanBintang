@@ -994,14 +994,21 @@ let comboBoostLastNotified = 0;
 let isMovingLeft = false;
 let isMovingRight = false;
 
-let joystickAxis = 0;
+// 🔥 v20.8.2 — Analog Joystick State (precise)
+let joystickAxis = 0;               // raw axis -1..1
+let joystickAxisSmoothed = 0;       // smoothed untuk movement (anti-jitter)
 let joystickActive = false;
 let joystickPointerId = null;
 let joystickCenterX = 0;
 let joystickCenterY = 0;
 let joystickRadius = 0;
 let joystickMaxOffset = 0;
-const JOYSTICK_DEADZONE = 0.06;
+const JOYSTICK_DEADZONE = 0.08;      // 8% — cukup untuk filter tremor ringan
+const JOYSTICK_SMOOTH = 0.55;        // 0=super smooth(lewat), 1=instant(jitter). 0.55 optimal
+const JOYSTICK_MAX_MULT = 1.0;       // 1.0 = tidak boost, murni playerSpeed
+
+// 🔥 v20.8.2 — Delta-time untuk frame-rate independent movement
+let lastFrameTime = 0;
 const JOYSTICK_CURVE = 0.65;
 const JOYSTICK_SPEED_MULT = 1.55;
 
@@ -3898,6 +3905,15 @@ function gameLoop() {
   const W = VIRTUAL_WIDTH, H = VIRTUAL_HEIGHT, S = GAME_SCALE;
   const localPlayerActive = !mpSpectatorMode;
   playerPulse += 0.08;
+    // 🔥 v20.8.2 — Hitung delta-time untuk frame-rate independent movement
+  const _nowPerf = performance.now();
+  let _dt = lastFrameTime > 0 ? (_nowPerf - lastFrameTime) / 16.667 : 1.0;
+  _dt = Math.max(0.25, Math.min(3.0, _dt)); // clamp 15fps..240fps
+  lastFrameTime = _nowPerf;
+
+  // 🔥 v20.8.2 — Smoothing axis (anti-jitter)
+  joystickAxisSmoothed += (joystickAxis - joystickAxisSmoothed) * JOYSTICK_SMOOTH;
+  if (Math.abs(joystickAxisSmoothed) < 0.005) joystickAxisSmoothed = 0;
   const theme = currentTheme;
 
   ctx.save();
@@ -4541,6 +4557,15 @@ function gameLoopGuest() {
     if (fl) { fl.style.opacity = String(screenFlash); screenFlash *= 0.75; if (screenFlash < 0.05) { screenFlash = 0; fl.style.opacity = '0'; } }
   }
   playerPulse += 0.08;
+    // 🔥 v20.8.2 — Hitung delta-time untuk frame-rate independent movement
+  const _nowPerf = performance.now();
+  let _dt = lastFrameTime > 0 ? (_nowPerf - lastFrameTime) / 16.667 : 1.0;
+  _dt = Math.max(0.25, Math.min(3.0, _dt)); // clamp 15fps..240fps
+  lastFrameTime = _nowPerf;
+
+  // 🔥 v20.8.2 — Smoothing axis (anti-jitter)
+  joystickAxisSmoothed += (joystickAxis - joystickAxisSmoothed) * JOYSTICK_SMOOTH;
+  if (Math.abs(joystickAxisSmoothed) < 0.005) joystickAxisSmoothed = 0;
   const theme = currentTheme;
   const localPlayerActive = !mpSpectatorMode;
   ctx.save();
